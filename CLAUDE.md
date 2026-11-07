@@ -125,3 +125,7 @@ Default five canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, 
 ### Domain docs
 
 Single-context: root `GLOSSARY.md` + `docs/adr/`. See `docs/agents/domain.md`.
+
+## Git workflow
+
+Commit and push directly to `trunk`. No feature branches or PRs in this repo.

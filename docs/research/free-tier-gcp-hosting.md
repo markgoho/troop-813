@@ -5,7 +5,7 @@ Research for [#2](https://github.com/markgoho/troop-813/issues/2), under map [#1
 ## TL;DR
 
 - **$0/mo is realistic** with Firebase Hosting (static SvelteKit), Go on Cloud Run (scale to zero) and **Firestore**, with Identity Platform for Leader Google sign-in. All usage sits 1–2 orders of magnitude below the free tiers.
-- **Cloud SQL is not free.** The cheapest floor is about **$8.5–9.5/mo** (db-f1-micro plus 10 GB of storage plus IP).
+- **Cloud SQL is not free.** The cheapest floor is about **$8.5–9.5/mo** (db-f1-micro plus 10 GB of storage; public IPv4 billed only while idle).
 - **Postgres on the always-free e2-micro** is $0 for compute and disk. The external IPv4 may cost about **$3.65/mo**, and you run the OS, patching and backups yourself.
 - **SQLite on Cloud Run** costs $0 but is the riskiest for data. GCS FUSE has no file locking, and Litestream needs CPU between requests and exactly one writer.
 - **Neon free** is $0 and is real Postgres, but it runs on AWS only, so you get no GCP experience on the data side.
@@ -43,7 +43,7 @@ So "Spark vs Blaze" and "does X need billing" are moot. You will be on Blaze wit
 **Cold starts and scaling gotchas**
 - With request-based billing, "CPU is only allocated during request processing." An instance "will never stay idle for more than 15 minutes after processing a request", and SIGTERM gives a 10 s grace period ([billing settings](https://docs.cloud.google.com/run/docs/configuring/billing-settings)). So the first request each Monday is a cold start. After that the instance stays warm through the Meeting.
 - Google publishes no cold-start latency figure. Startup CPU boost exists. Requests queue for up to max(3.5× average startup, 10 s) ([general tips](https://docs.cloud.google.com/run/docs/tips/general)). A small static Go binary is about the best case. This is not quantified here, so measure it.
-- `min-instances=1` removes cold starts but **is billed** ([min instances](https://docs.cloud.google.com/run/docs/configuring/min-instances)). At 1 vCPU / 512 MiB idle all month: 2.628M s × ($0.0000025 + 0.5 × $0.0000025) ≈ $9.86 gross. The free-tier credit is worth at most $4.32 + $0.90 = $5.22, so the net is **≈ $4–5/mo** (my arithmetic). Not $0.
+- `min-instances=1` removes cold starts but **is billed** ([min instances](https://docs.cloud.google.com/run/docs/configuring/min-instances)). At 1 vCPU / 512 MiB idle all month: 2.628M s × ($0.0000025 + 0.5 × $0.0000025) ≈ $9.86 gross. The free-tier credit is worth at most $4.32 (CPU) + $0.90 (RAM), plus $0.80 of request credit, so the net is **≈ $4/mo** (my arithmetic). Not $0.
 - Max instances "can be exceeded for a brief period due to circumstances such as traffic spikes". Excess requests get 429 ([max instances](https://docs.cloud.google.com/run/docs/configuring/max-instances)). This matters for any single-writer design (SQLite).
 
 ## 3. Static assets: Firebase Hosting vs Cloud Run

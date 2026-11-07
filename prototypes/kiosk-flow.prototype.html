@@ -111,7 +111,7 @@ body.tabletonly .screen { aspect-ratio: auto; height: 100%; border-radius: 0; }
   <ul class="defaults">
     <li>Attendance is recorded the moment a Scout is confirmed, before any RSVP questions. Walking away mid-RSVP still counts.</li>
     <li>The Handoff screen and "Are you Caleb?" are one screen: Yes / No, I'm someone else / I can't find Caleb.</li>
-    <li>Handoff order is a ring: the next Scout after the current one (alphabetical by first name, or a random order fixed when the Kiosk is unlocked), skipping anyone checked in or not found.</li>
+    <li>Handoff order is a ring: the next Scout after the current one, skipping anyone checked in or not found. <b>Decided: random, reshuffled every Meeting.</b> Walkthroughs use alphabetical so their steps are predictable; "Start over" uses random.</li>
     <li>A Scout marked "can't find" is not named again that Meeting. They can still tap their name on the list.</li>
     <li>RSVP answers: Going / Not going / Ask me next week. "Ask me next week" records nothing, so it asks again at the next Meeting. There is no "Maybe".</li>
     <li>A Scout is asked about every upcoming Event with no answer. Then a summary lets them change any answer.</li>
@@ -429,7 +429,7 @@ document.addEventListener("click", e => {
 });
 $("idle").onclick = () => dispatch({ type: "IDLE" });
 $("nextMeeting").onclick = () => dispatch({ type: "NEXT_MEETING" });
-$("reset").onclick = () => { prev = state = fresh(state.order); render(); };
+$("reset").onclick = () => { prev = state = fresh("random"); render(); };
 $("ordAlpha").onclick = () => dispatch({ type: "SET_ORDER", order: "alpha" });
 $("ordRandom").onclick = () => dispatch({ type: "SET_ORDER", order: "random" });
 const applyHash = () => document.body.classList.toggle("tabletonly", location.hash === "#tablet");

@@ -1,0 +1,438 @@
+<title>Kiosk Flow Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: tablet-shaped Kiosk on the left, state + walkthroughs on the right; stacks on narrow screens. #tablet hides the side panel. */
+:root {
+  --bg: #eef2ef; --surface: #ffffff; --ink: #18221d; --muted: #5b6b62; --line: #d3ddd7;
+  --accent: #2f6b4f; --accent-ink: #ffffff; --accent-soft: #dcebe2;
+  --warn: #9a5b00; --warn-soft: #fbecd2; --bad: #a3322a; --bad-soft: #f7dcd9;
+  --changed: #fff3a8;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121815; --surface: #1b2420; --ink: #e3ebe6; --muted: #9aaba1; --line: #2e3b35;
+  --accent: #6fbf95; --accent-ink: #0d1a13; --accent-soft: #23392d;
+  --warn: #e7b25c; --warn-soft: #3a2e17; --bad: #ef8a80; --bad-soft: #3d2220; --changed: #4a4214; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121815; --surface: #1b2420; --ink: #e3ebe6; --muted: #9aaba1; --line: #2e3b35;
+  --accent: #6fbf95; --accent-ink: #0d1a13; --accent-soft: #23392d;
+  --warn: #e7b25c; --warn-soft: #3a2e17; --bad: #ef8a80; --bad-soft: #3d2220; --changed: #4a4214; color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px; box-sizing: border-box; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: .01em; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.intro { max-width: 1240px; margin: 0 auto 16px; display: grid; gap: 8px; }
+.intro h1 { font-size: 30px; }
+.intro p { margin: 0; max-width: 75ch; color: var(--muted); }
+.defaults { margin: 0; padding-left: 20px; max-width: 95ch; display: grid; gap: 2px; }
+.tag { display: inline-block; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 4px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+.side { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h2 { font-size: 20px; margin-bottom: 8px; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+
+/* Tablet */
+.tablet { background: #0b0f0d; border-radius: 22px; padding: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.18); position: sticky; top: env(safe-area-inset-top, 0px); }
+.screen { background: var(--surface); border-radius: 10px; aspect-ratio: 16 / 10; max-width: 100%; overflow: auto; position: relative; display: flex; flex-direction: column; }
+.k { padding: 22px 26px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.k h2 { font-size: 34px; line-height: 1.05; }
+.k .sub { color: var(--muted); margin: 0; font-size: 17px; }
+.kbtn { border: 2px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 12px; padding: 14px 18px; font-size: 18px; font-weight: 700; text-align: left; }
+.kbtn:hover { border-color: var(--accent); }
+.kbtn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.kbtn.quiet { font-weight: 400; color: var(--muted); }
+.kbtn.small { padding: 8px 12px; font-size: 15px; }
+.kbtn:disabled { opacity: .45; cursor: default; }
+.names { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.names .kbtn { padding: 12px 14px; }
+.names .kbtn .last { font-weight: 400; color: var(--muted); }
+.names .kbtn.in { background: var(--accent-soft); border-color: transparent; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+.stack { display: grid; gap: 10px; }
+.bigname { font-family: var(--display); font-size: 64px; line-height: 1; color: var(--accent); }
+.eventcard { border: 2px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; }
+.eventcard .name { font-size: 24px; font-weight: 700; }
+.leaderbtn { position: absolute; top: 10px; right: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+.kfoot { color: var(--muted); font-size: 14px; }
+.lrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+
+/* Pills */
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.p-in { background: var(--accent-soft); color: var(--accent); }
+.p-nf { background: var(--bad-soft); color: var(--bad); }
+.p-next { background: var(--accent); color: var(--accent-ink); }
+.p-wait { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.p-go { background: var(--accent-soft); color: var(--accent); }
+.p-no { background: var(--bad-soft); color: var(--bad); }
+.p-none { color: var(--muted); border: 1px dashed var(--line); }
+
+/* State panel */
+.just { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; font-weight: 700; }
+.ring { display: grid; gap: 4px; margin-top: 6px; }
+.ring div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.ring .why { color: var(--muted); font-size: 13px; }
+.tablewrap { overflow-x: auto; margin-top: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.changed { background: var(--changed); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.cbtn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 6px 12px; }
+.cbtn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.steps { display: grid; gap: 6px; margin-top: 10px; }
+.step { text-align: left; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 8px 12px; }
+.step.done { color: var(--muted); text-decoration: line-through; }
+.step.next { border-color: var(--accent); border-width: 2px; font-weight: 700; }
+.step:disabled { cursor: default; }
+.desc { margin: 0; color: var(--muted); }
+.watch { margin: 6px 0 0; font-size: 14px; }
+
+/* Tablet-only mode (#tablet) */
+body.tabletonly { padding: 0; }
+body.tabletonly .intro, body.tabletonly .side { display: none; }
+body.tabletonly .wrap { max-width: none; display: block; height: 100%; }
+body.tabletonly .tablet { border-radius: 0; padding: 0; height: 100%; position: static; box-shadow: none; }
+body.tabletonly .screen { aspect-ratio: auto; height: 100%; border-radius: 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="intro">
+  <span class="tag">Prototype · throwaway · example data</span>
+  <h1>Meeting Kiosk flow</h1>
+  <p>Question: how should the Kiosk behave end to end at a Meeting? First Scout, the "Are you …?" Handoff, RSVP prompts, "I can't find them", late arrivals, the end of the chain, and a Leader fixing a wrong check-in. Tap the tablet directly, or run a walkthrough on the right. Open with <b>#tablet</b> on the end of the link to see only the Kiosk screen (for the Pixel Tablet).</p>
+  <p><b>Defaults built in, to agree or disagree with:</b></p>
+  <ul class="defaults">
+    <li>Attendance is recorded the moment a Scout is confirmed, before any RSVP questions. Walking away mid-RSVP still counts.</li>
+    <li>The Handoff screen and "Are you Caleb?" are one screen: Yes / No, I'm someone else / I can't find Caleb.</li>
+    <li>Handoff order is a ring: the next Scout after the current one (alphabetical by first name, or a random order fixed when the Kiosk is unlocked), skipping anyone checked in or not found.</li>
+    <li>A Scout marked "can't find" is not named again that Meeting. They can still tap their name on the list.</li>
+    <li>RSVP answers: Going / Not going / Ask me next week. "Ask me next week" records nothing, so it asks again at the next Meeting. There is no "Maybe".</li>
+    <li>A Scout is asked about every upcoming Event with no answer. Then a summary lets them change any answer.</li>
+    <li>When the tablet sits idle, or the ring runs out, the Kiosk falls back to one resting screen: the name list.</li>
+    <li>A Leader's "Undo check-in" also rolls back the RSVP answers given during that check-in.</li>
+  </ul>
+</header>
+
+<div class="wrap">
+  <div class="tablet"><div class="screen" id="screen"></div></div>
+  <div class="side">
+    <section class="panel">
+      <h2>Walkthroughs</h2>
+      <div class="tabs" id="tabs"></div>
+      <div id="scenario"></div>
+    </section>
+    <section class="panel">
+      <h2>What the Kiosk knows</h2>
+      <div class="just" id="just"></div>
+      <div style="margin-top:10px" class="label">Handoff order (ring)</div>
+      <div class="ring" id="ring"></div>
+      <div style="margin-top:12px" class="label">RSVPs (highlighted = just changed)</div>
+      <div class="tablewrap" id="rsvps"></div>
+    </section>
+    <section class="panel">
+      <h2>Simulate</h2>
+      <div class="controls">
+        <button class="cbtn" id="idle">Tablet sits idle (nobody takes it)</button>
+        <button class="cbtn" id="nextMeeting">Next Monday's Meeting</button>
+        <button class="cbtn" id="reset">Start over</button>
+      </div>
+      <div style="margin-top:10px" class="label">Handoff order</div>
+      <div class="controls" style="margin-top:4px">
+        <button class="cbtn" id="ordAlpha">Alphabetical</button>
+        <button class="cbtn" id="ordRandom">Random (fixed per Meeting)</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+// ===== Pure Kiosk logic (no DOM). Liftable. =====
+const Kiosk = (() => {
+  const name = (s, id) => { const x = s.roster.find(r => r.id === id); return x ? x.first + " " + x.last : id; };
+  const first = (s, id) => s.roster.find(r => r.id === id)?.first ?? id;
+  const isIn = (s, id) => s.attendance.some(a => a.scoutId === id);
+  const unanswered = (s, id) => s.events.filter(e => !s.rsvps[id]?.[e.id]).map(e => e.id);
+  const eligible = (s, id) => !isIn(s, id) && !s.notFound.includes(id);
+
+  function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function buildRing(roster, order, seed) {
+    const ids = [...roster].sort((a, b) => a.first.localeCompare(b.first) || a.last.localeCompare(b.last)).map(r => r.id);
+    if (order === "alpha") return ids;
+    const r = rng(seed); for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+    return ids;
+  }
+  function nextAfter(s, fromId) {
+    const ring = s.ring, start = ring.indexOf(fromId);
+    for (let i = 1; i <= ring.length; i++) { const id = ring[(start + i + ring.length) % ring.length]; if (eligible(s, id)) return id; }
+    return null;
+  }
+  function goHandoff(s, fromId, note) {
+    const next = nextAfter(s, fromId);
+    if (!next) return { ...s, screen: { kind: "names", banner: "end" }, note: note + " Nobody left to name, so the Kiosk shows the name list for late arrivals." };
+    return { ...s, screen: { kind: "handoff", scoutId: next }, note: note + " Handoff names " + name(s, next) + "." };
+  }
+  function checkIn(s, id, via) {
+    const rec = { scoutId: id, seq: s.attendance.length + 1, via, changes: [] };
+    const st = { ...s, attendance: [...s.attendance, rec], current: id };
+    const queue = unanswered(st, id);
+    const note = name(s, id) + " is checked in (Attendance recorded).";
+    if (via === "leader") return { ...st, note: "Leader checked in " + name(s, id) + ". No RSVP questions." };
+    if (!queue.length) return { ...st, screen: { kind: "summary", scoutId: id }, note: note + " No unanswered Events, straight to the summary." };
+    return { ...st, screen: { kind: "rsvp", scoutId: id, eventId: queue[0], mode: "prompt" }, note: note + " Asking about " + queue.length + " unanswered Event" + (queue.length > 1 ? "s" : "") + "." };
+  }
+
+  function init({ roster, events, rsvps = {}, order = "alpha", seed = 813 }) {
+    return { roster, events, rsvps, order, seed, ring: buildRing(roster, order, seed), attendance: [], notFound: [], current: null, screen: { kind: "locked" }, meeting: 1, note: "Kiosk is locked. A Leader unlocks it to start the Meeting." };
+  }
+
+  function reduce(s, a) {
+    const sc = s.screen;
+    switch (a.type) {
+      case "UNLOCK":
+        if (sc.kind !== "locked") return s;
+        return { ...s, ring: buildRing(s.roster, s.order, s.seed + s.meeting), screen: { kind: "names", banner: "first" }, note: "Leader unlocked the Kiosk. It asks who's first." };
+      case "SET_ORDER":
+        return { ...s, order: a.order, ring: buildRing(s.roster, a.order, s.seed + s.meeting), note: "Handoff order set to " + (a.order === "alpha" ? "alphabetical by first name" : "random (fixed for this Meeting)") + "." };
+      case "PICK_NAME":
+        if (sc.kind !== "names" || isIn(s, a.id)) return s;
+        return checkIn(s, a.id, "list");
+      case "HANDOFF_YES":
+        if (sc.kind !== "handoff") return s;
+        return checkIn(s, sc.scoutId, "handoff");
+      case "HANDOFF_SOMEONE_ELSE":
+        if (sc.kind !== "handoff") return s;
+        return { ...s, screen: { kind: "names", banner: "someone-else", waitingFor: sc.scoutId }, note: "Someone other than " + name(s, sc.scoutId) + " has the tablet. " + first(s, sc.scoutId) + " stays in the ring." };
+      case "HANDOFF_CANT_FIND":
+        if (sc.kind !== "handoff") return s;
+        return goHandoff({ ...s, notFound: [...s.notFound, sc.scoutId] }, sc.scoutId, name(s, sc.scoutId) + " marked not found tonight; won't be named again this Meeting.");
+      case "ANSWER": {
+        if (sc.kind !== "rsvp") return s;
+        const id = sc.scoutId, ev = sc.eventId, prev = s.rsvps[id]?.[ev];
+        let rsvps = s.rsvps, attendance = s.attendance;
+        if (a.answer !== "later" && a.answer !== prev) {
+          rsvps = { ...s.rsvps, [id]: { ...(s.rsvps[id] || {}), [ev]: a.answer } };
+          attendance = s.attendance.map(r => r.scoutId === id ? { ...r, changes: [...r.changes, { eventId: ev, prev, next: a.answer }] } : r);
+        }
+        const st = { ...s, rsvps, attendance };
+        const evName = s.events.find(e => e.id === ev).name;
+        const said = a.answer === "going" ? "Going" : a.answer === "not-going" ? "Not going" : "Ask me next week (nothing recorded)";
+        if (sc.mode === "change") return { ...st, screen: { kind: "summary", scoutId: id }, note: first(s, id) + " changed " + evName + " to " + said + "." };
+        const asked = sc.asked ? [...sc.asked, ev] : [ev];
+        const rest = unanswered(st, id).filter(e => !asked.includes(e));
+        if (rest.length) return { ...st, screen: { kind: "rsvp", scoutId: id, eventId: rest[0], mode: "prompt", asked }, note: first(s, id) + ": " + evName + " → " + said + "." };
+        return { ...st, screen: { kind: "summary", scoutId: id }, note: first(s, id) + ": " + evName + " → " + said + ". Showing the summary." };
+      }
+      case "CHANGE_RSVP":
+        if (sc.kind !== "summary") return s;
+        return { ...s, screen: { kind: "rsvp", scoutId: sc.scoutId, eventId: a.eventId, mode: "change" }, note: first(s, sc.scoutId) + " is changing an answer." };
+      case "DONE":
+        if (sc.kind !== "summary") return s;
+        return goHandoff(s, sc.scoutId, first(s, sc.scoutId) + " is done.");
+      case "IDLE":
+        if (!["handoff", "rsvp", "summary"].includes(sc.kind)) return { ...s, note: "Idle: nothing changes on this screen." };
+        return { ...s, screen: { kind: "names", banner: "resting", waitingFor: sc.kind === "handoff" ? sc.scoutId : null }, note: "Tablet sat idle, so the Kiosk went back to the name list (resting screen)." };
+      case "LEADER_OPEN":
+        if (sc.kind === "locked" || sc.kind === "leader") return s;
+        return { ...s, screen: { kind: "leader", back: sc }, note: "A Leader signed in again to open the Leader menu." };
+      case "LEADER_CLOSE": {
+        if (sc.kind !== "leader") return s;
+        const b = sc.back;
+        const stillValid = b.kind === "names" || (b.kind === "handoff" && eligible(s, b.scoutId)) || ((b.kind === "rsvp" || b.kind === "summary") && isIn(s, b.scoutId));
+        return { ...s, screen: stillValid ? b : { kind: "names", banner: "resting" }, note: "Leader went back to the Kiosk." + (stillValid ? "" : " The old screen no longer made sense, so it shows the name list.") };
+      }
+      case "UNDO_CHECKIN": {
+        const rec = s.attendance.find(r => r.scoutId === a.id); if (!rec) return s;
+        const rsvps = { ...s.rsvps, [a.id]: { ...(s.rsvps[a.id] || {}) } };
+        [...rec.changes].reverse().forEach(c => { if (c.prev === undefined) delete rsvps[a.id][c.eventId]; else rsvps[a.id][c.eventId] = c.prev; });
+        return { ...s, rsvps, attendance: s.attendance.filter(r => r.scoutId !== a.id), note: "Leader undid " + name(s, a.id) + "'s check-in and rolled back " + rec.changes.length + " RSVP answer" + (rec.changes.length === 1 ? "" : "s") + " from it." };
+      }
+      case "LEADER_CHECKIN":
+        if (isIn(s, a.id)) return s;
+        return checkIn(s, a.id, "leader");
+      case "END_MEETING":
+        return { ...s, screen: { kind: "locked", ended: true }, note: "Leader ended the Meeting. " + s.attendance.length + " Scouts checked in." };
+      case "NEXT_MEETING":
+        return { ...s, attendance: [], notFound: [], current: null, meeting: s.meeting + 1, ring: buildRing(s.roster, s.order, s.seed + s.meeting + 1), screen: { kind: "locked" }, note: "A week later. Attendance starts empty; RSVPs carry over, so \"Ask me next week\" Events get asked again." };
+    }
+    return s;
+  }
+  return { init, reduce, isIn, eligible, name, first, unanswered };
+})();
+
+// ===== Example data (placeholder names, not the real Roster) =====
+const ROSTER = [
+  ["ava","Ava","Brooks"],["ben","Ben","Carter"],["caleb","Caleb","Diaz"],["dylan","Dylan","Evans"],["eli","Eli","Foster"],
+  ["finn","Finn","Garcia"],["gavin","Gavin","Hughes"],["henry","Henry","Ito"],["isaac","Isaac","Jensen"],["jack","Jack","Kowalski"],
+  ["liam","Liam","Novak"],["mason","Mason","Ortiz"],["noah","Noah","Patel"],["owen","Owen","Quinn"]
+].map(([id, first, last]) => ({ id, first, last }));
+const EVENTS = [
+  { id: "nov", name: "November Campout", dates: "Fri Nov 20 – Sun Nov 22" },
+  { id: "dec", name: "December Campout", dates: "Fri Dec 11 – Sun Dec 13" },
+  { id: "klon", name: "Klondike Derby", dates: "Fri Jan 15 – Sun Jan 17" },
+];
+const RSVPS = {
+  caleb: { nov: "going" },
+  eli: { nov: "not-going" },
+  henry: { nov: "going", dec: "not-going" },
+  owen: { nov: "going", dec: "going", klon: "not-going" },
+  jack: { nov: "going" },
+};
+const fresh = (order = "alpha") => Kiosk.init({ roster: ROSTER, events: EVENTS, rsvps: structuredClone(RSVPS), order });
+
+// ===== Page shell =====
+let state = fresh(), prev = state;
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function dispatch(a) { prev = state; state = Kiosk.reduce(state, a); render(); }
+const run = (s, actions) => actions.reduce(Kiosk.reduce, s);
+
+function nameButtons(s, banner) {
+  const sorted = [...s.roster].sort((a, b) => a.first.localeCompare(b.first));
+  return `<div class="names">${sorted.map(r => { const inn = Kiosk.isIn(s, r.id);
+    return `<button class="kbtn ${inn ? "in" : ""}" ${inn ? "disabled" : ""} data-a='${JSON.stringify({ type: "PICK_NAME", id: r.id })}'>${inn ? "✓ " : ""}${esc(r.first)} <span class="last">${esc(r.last)}</span></button>`; }).join("")}</div>`;
+}
+const answerPill = v => v === "going" ? `<span class="pill p-go">Going</span>` : v === "not-going" ? `<span class="pill p-no">Not going</span>` : `<span class="pill p-none">No answer</span>`;
+
+function renderScreen(s) {
+  const sc = s.screen, N = id => esc(Kiosk.name(s, id)), F = id => esc(Kiosk.first(s, id));
+  const leader = `<button class="leaderbtn" data-a='{"type":"LEADER_OPEN"}'>Leader</button>`;
+  switch (sc.kind) {
+    case "locked": return `<div class="k" style="justify-content:center;align-items:flex-start">
+      <h2>${sc.ended ? "Meeting ended" : "Meeting Kiosk is locked"}</h2>
+      <p class="sub">${sc.ended ? s.attendance.length + " Scouts checked in." : "A Leader unlocks it to start check-in."}</p>
+      ${sc.ended ? "" : `<button class="kbtn primary" data-a='{"type":"UNLOCK"}'>Leader: sign in and unlock (simulated)</button>`}</div>`;
+    case "names": {
+      const head = {
+        first: ["Who's first?", "Tap your name to check in."],
+        "someone-else": ["Who has the tablet?", "Tap your name to check in."],
+        resting: [sc.waitingFor ? F(sc.waitingFor) + " was next." : "Ready for the next Scout.", (sc.waitingFor ? F(sc.waitingFor) + ", or anyone else not checked in yet: " : "") + "tap your name."],
+        end: ["Everyone we could find is in.", "Just got here? Tap your name."],
+      }[sc.banner];
+      return `${leader}<div class="k"><div><h2>${head[0]}</h2><p class="sub">${head[1]}</p></div>${nameButtons(s)}</div>`;
+    }
+    case "handoff": return `${leader}<div class="k">
+      <p class="sub">Pass the tablet to</p><div class="bigname">${N(sc.scoutId)}</div>
+      <h2 style="font-size:26px">Are you ${F(sc.scoutId)}?</h2>
+      <div class="stack" style="max-width:520px">
+        <button class="kbtn primary" data-a='{"type":"HANDOFF_YES"}'>Yes, I'm ${F(sc.scoutId)}</button>
+        <button class="kbtn" data-a='{"type":"HANDOFF_SOMEONE_ELSE"}'>No, I'm someone else</button>
+        <button class="kbtn quiet" data-a='{"type":"HANDOFF_CANT_FIND"}'>I can't find ${F(sc.scoutId)}</button>
+      </div>
+      ${s.notFound.length ? `<p class="kfoot">Not found tonight: ${s.notFound.map(F).join(", ")}</p>` : ""}</div>`;
+    case "rsvp": {
+      const e = s.events.find(x => x.id === sc.eventId), cur = s.rsvps[sc.scoutId]?.[e.id];
+      const total = sc.mode === "prompt" ? (sc.asked?.length || 0) + Kiosk.unanswered(s, sc.scoutId).filter(x => !(sc.asked || []).includes(x)).length : 0;
+      return `${leader}<div class="k">
+      <p class="sub">✓ ${F(sc.scoutId)}, you're checked in.${sc.mode === "prompt" ? ` Question ${(sc.asked?.length || 0) + 1} of ${total}.` : ""}</p>
+      <h2>${sc.mode === "change" ? "Change your answer" : "Are you going?"}</h2>
+      <div class="eventcard"><span class="name">${esc(e.name)}</span><span class="sub">${esc(e.dates)}</span>${sc.mode === "change" ? `<span>Now: ${answerPill(cur)}</span>` : ""}</div>
+      <div class="row">
+        <button class="kbtn primary" data-a='{"type":"ANSWER","answer":"going"}'>Going</button>
+        <button class="kbtn" data-a='{"type":"ANSWER","answer":"not-going"}'>Not going</button>
+        <button class="kbtn quiet" data-a='{"type":"ANSWER","answer":"later"}'>${sc.mode === "change" ? "Keep it as is" : "Ask me next week"}</button>
+      </div></div>`;
+    }
+    case "summary": return `${leader}<div class="k">
+      <h2>You're checked in, ${F(sc.scoutId)}.</h2><p class="sub">Your RSVPs. Tap Change to fix one.</p>
+      <div class="stack">${s.events.map(e => `<div class="lrow"><span><b>${esc(e.name)}</b> <span class="sub" style="font-size:14px">${esc(e.dates)}</span></span>
+        <span class="row" style="align-items:center">${answerPill(s.rsvps[sc.scoutId]?.[e.id])}<button class="kbtn small" data-a='${JSON.stringify({ type: "CHANGE_RSVP", eventId: e.id })}'>Change</button></span></div>`).join("")}</div>
+      <button class="kbtn primary" data-a='{"type":"DONE"}'>Done, pass the tablet on</button></div>`;
+    case "leader": {
+      const inIds = s.attendance.map(r => r.scoutId), outIds = s.ring.filter(id => !Kiosk.isIn(s, id));
+      return `<div class="k"><h2>Leader menu</h2>
+      <div class="row"><button class="kbtn primary small" data-a='{"type":"LEADER_CLOSE"}'>Back to the Kiosk</button><button class="kbtn small" data-a='{"type":"END_MEETING"}'>End Meeting and lock</button></div>
+      <div class="label">Checked in (${inIds.length})</div>
+      <div>${inIds.map(id => { const r = s.attendance.find(x => x.scoutId === id); return `<div class="lrow"><span>${N(id)} <span class="kfoot">#${r.seq}, ${r.via === "leader" ? "by Leader" : r.via === "handoff" ? "via Handoff" : "from name list"}${r.changes.length ? ", " + r.changes.length + " RSVP change" + (r.changes.length > 1 ? "s" : "") : ""}</span></span>
+        <button class="kbtn small" data-a='${JSON.stringify({ type: "UNDO_CHECKIN", id })}'>Undo check-in</button></div>`; }).join("") || `<p class="kfoot">Nobody yet.</p>`}</div>
+      <div class="label">Not checked in (${outIds.length})</div>
+      <div>${outIds.map(id => `<div class="lrow"><span>${N(id)}${s.notFound.includes(id) ? ` <span class="pill p-nf">not found</span>` : ""}</span><button class="kbtn small" data-a='${JSON.stringify({ type: "LEADER_CHECKIN", id })}'>Check in</button></div>`).join("")}</div></div>`;
+    }
+  }
+}
+
+function renderState(s) {
+  $("just").textContent = s.note;
+  const nextId = s.screen.kind === "handoff" ? s.screen.scoutId : null;
+  $("ring").innerHTML = s.ring.map(id => {
+    const rec = s.attendance.find(r => r.scoutId === id);
+    const [cls, txt, why] = rec ? ["p-in", "Checked in #" + rec.seq, "skipped by Handoff"]
+      : s.notFound.includes(id) ? ["p-nf", "Not found tonight", "not named again; can tap own name"]
+      : id === nextId ? ["p-next", "Named now", "Handoff screen is asking for them"]
+      : ["p-wait", "Waiting", "can be named"];
+    return `<div><span>${esc(Kiosk.name(s, id))} <span class="why">${why}</span></span><span class="pill ${cls}">${txt}</span></div>`;
+  }).join("");
+  const rows = [...s.roster].sort((a, b) => a.first.localeCompare(b.first));
+  $("rsvps").innerHTML = `<table><thead><tr><th>Scout</th>${s.events.map(e => `<th>${esc(e.name)}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.first + " " + r.last)}</td>${s.events.map(e => {
+    const v = s.rsvps[r.id]?.[e.id], pv = prev.rsvps[r.id]?.[e.id];
+    return `<td class="${v !== pv ? "changed" : ""}">${v === "going" ? "Going" : v === "not-going" ? "Not going" : "—"}</td>`; }).join("")}</tr>`).join("")}</tbody></table>`;
+  $("ordAlpha").classList.toggle("on", s.order === "alpha");
+  $("ordRandom").classList.toggle("on", s.order === "random");
+}
+
+// ===== Walkthroughs =====
+const U = { type: "UNLOCK" }, A = (answer) => ({ type: "ANSWER", answer }), P = id => ({ type: "PICK_NAME", id });
+const SCENARIOS = [
+  { id: "happy", title: "First Scout + Handoff",
+    desc: "Leader unlocks. Ben is first, answers three Events (one with \"Ask me next week\"), and passes to the next Scout in the ring.",
+    watch: "Ben's Attendance is recorded before any RSVP question. Caleb already said Going to November, so he only gets asked two questions.",
+    setup: () => fresh(),
+    steps: [["Leader unlocks the Kiosk", U], ["Ben taps his name", P("ben")], ["November Campout: Going", A("going")], ["December Campout: Not going", A("not-going")], ["Klondike Derby: Ask me next week", A("later")], ["Ben taps Done", { type: "DONE" }], ["Caleb: \"Yes, I'm Caleb\"", { type: "HANDOFF_YES" }]] },
+  { id: "else", title: "Wrong Scout has the tablet",
+    desc: "The Kiosk names Caleb, but Finn grabbed the tablet first.",
+    watch: "Caleb isn't marked not-found. After Finn, the ring moves on from Finn (to Gavin), and Caleb stays Waiting, so he'll be named again when the ring wraps around.",
+    setup: () => run(fresh(), [U, P("ben"), A("going"), A("going"), A("going"), { type: "DONE" }]),
+    steps: [["Finn: \"No, I'm someone else\"", { type: "HANDOFF_SOMEONE_ELSE" }], ["Finn taps his name", P("finn")], ["November: Going", A("going")], ["December: Ask me next week", A("later")], ["Klondike: Not going", A("not-going")], ["Finn taps Done", { type: "DONE" }]] },
+  { id: "cantfind", title: "Can't find, end of chain, late arrival",
+    desc: "Most Scouts are already in. Only Caleb, Finn and Liam are left, and Caleb and Liam aren't here yet. Then Caleb shows up late.",
+    watch: "Each \"can't find\" moves on without naming that Scout again. When nobody's left, the Kiosk shows the name list. Caleb gets in by tapping his name, not by being named.",
+    setup: () => run(fresh(), [U, ...["ava", "ben", "dylan", "eli", "gavin", "henry", "isaac", "jack", "mason", "noah"].map(id => ({ type: "LEADER_CHECKIN", id }))]),
+    steps: [["Owen taps his name (no unanswered Events)", P("owen")], ["Owen taps Done", { type: "DONE" }], ["\"I can't find Caleb\"", { type: "HANDOFF_CANT_FIND" }], ["Finn: \"Yes, I'm Finn\"", { type: "HANDOFF_YES" }], ["November: Going", A("going")], ["December: Going", A("going")], ["Klondike: Going", A("going")], ["Finn taps Done", { type: "DONE" }], ["\"I can't find Liam\"", { type: "HANDOFF_CANT_FIND" }], ["Caleb arrives late, taps his name", P("caleb")]] },
+  { id: "change", title: "Changing an answer",
+    desc: "Henry already answered November (Going) and December (Not going). His plans changed for December.",
+    watch: "Only Klondike gets asked. The summary is where he changes December. The RSVP table highlights each change.",
+    setup: () => run(fresh(), [U]),
+    steps: [["Henry taps his name", P("henry")], ["Klondike Derby: Going", A("going")], ["Change December Campout", { type: "CHANGE_RSVP", eventId: "dec" }], ["December: Going", A("going")], ["Henry taps Done", { type: "DONE" }]] },
+  { id: "idle", title: "Chain breaks",
+    desc: "Ben finishes and the Kiosk names Caleb, but nobody picks up the tablet. Later Mason, who just arrived, picks it up.",
+    watch: "The resting screen is the same name list as the start, with a note about who was next. After Mason, the ring continues from Mason (Noah), not from Caleb.",
+    setup: () => run(fresh(), [U, P("ben"), A("going"), A("going"), A("going"), { type: "DONE" }]),
+    steps: [["Tablet sits idle", { type: "IDLE" }], ["Mason taps his name", P("mason")], ["November: Not going", A("not-going")], ["December: Going", A("going")], ["Klondike: Going", A("going")], ["Mason taps Done", { type: "DONE" }]] },
+  { id: "fix", title: "Leader fixes a wrong check-in",
+    desc: "Dylan taps Eli's name by mistake and answers Eli's RSVP questions. A Leader notices.",
+    watch: "Undo removes Eli's Attendance and puts his December and Klondike answers back to No answer. His older November answer (Not going) stays.",
+    setup: () => run(fresh(), [U]),
+    steps: [["Dylan taps \"Eli Foster\" by mistake", P("eli")], ["December: Going", A("going")], ["Klondike: Going", A("going")], ["Taps Done", { type: "DONE" }], ["Leader opens the Leader menu", { type: "LEADER_OPEN" }], ["Leader: Undo Eli's check-in", { type: "UNDO_CHECKIN", id: "eli" }], ["Back to the Kiosk", { type: "LEADER_CLOSE" }], ["\"No, I'm someone else\"", { type: "HANDOFF_SOMEONE_ELSE" }], ["Dylan taps his own name", P("dylan")]] },
+];
+let activeScenario = SCENARIOS[0].id, stepIdx = 0;
+function startScenario(id) { activeScenario = id; stepIdx = 0; const sc = SCENARIOS.find(x => x.id === id); prev = state = sc.setup(); state = { ...state, note: "Walkthrough ready: " + sc.title + "." }; render(); }
+function renderScenario() {
+  $("tabs").innerHTML = SCENARIOS.map(s => `<button class="cbtn ${s.id === activeScenario ? "on" : ""}" data-tab="${s.id}">${esc(s.title)}</button>`).join("");
+  const sc = SCENARIOS.find(x => x.id === activeScenario);
+  $("scenario").innerHTML = `<p class="desc">${esc(sc.desc)}</p><p class="watch"><b>Watch:</b> ${esc(sc.watch)}</p>
+    <div class="steps">${sc.steps.map(([label], i) => `<button class="step ${i < stepIdx ? "done" : i === stepIdx ? "next" : ""}" ${i === stepIdx ? "" : "disabled"} data-step="${i}">${i + 1}. ${esc(label)}</button>`).join("")}</div>
+    ${stepIdx >= sc.steps.length ? `<p class="watch">Done. Keep tapping the tablet, or <button class="cbtn" data-tab="${sc.id}">run it again</button>.</p>` : ""}`;
+}
+
+function render() { $("screen").innerHTML = renderScreen(state); renderState(state); renderScenario(); }
+
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-a]"); if (a) return dispatch(JSON.parse(a.dataset.a));
+  const t = e.target.closest("[data-tab]"); if (t) return startScenario(t.dataset.tab);
+  const st = e.target.closest("[data-step]"); if (st) { const sc = SCENARIOS.find(x => x.id === activeScenario); const i = +st.dataset.step; if (i === stepIdx) { stepIdx++; dispatch(sc.steps[i][1]); } }
+});
+$("idle").onclick = () => dispatch({ type: "IDLE" });
+$("nextMeeting").onclick = () => dispatch({ type: "NEXT_MEETING" });
+$("reset").onclick = () => { prev = state = fresh(state.order); render(); };
+$("ordAlpha").onclick = () => dispatch({ type: "SET_ORDER", order: "alpha" });
+$("ordRandom").onclick = () => dispatch({ type: "SET_ORDER", order: "random" });
+const applyHash = () => document.body.classList.toggle("tabletonly", location.hash === "#tablet");
+window.addEventListener("hashchange", applyHash); applyHash();
+startScenario(SCENARIOS[0].id);
+</script>

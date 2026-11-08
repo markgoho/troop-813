@@ -6,8 +6,10 @@
   // Meeting before the Event) saves nothing, and walking away never counts as
   // an answer. "Done, pass the tablet on" hands back to the Handoff.
   //
-  // Nothing pending means no stage at all: onDone() right away, so the
-  // Handoff isn't slowed by a summary the Scout has no reason to read.
+  // With nothing pending the Scout still sees the summary of their answers
+  // (story 30); only when there are no upcoming Events at all is there no
+  // stage: onDone() right away. A reloaded Kiosk (`resume`) skips the
+  // summary too: it only brings the stage back while cards are pending.
   // The cards are fixed when the data first loads, so answering one doesn't
   // reshuffle the rest.
   import { ApiError, type Api } from "./api";
@@ -27,6 +29,7 @@
     live,
     meetingId,
     scout,
+    resume = false,
     onDone,
     onExpired,
     onAsleep,
@@ -37,6 +40,8 @@
     meetingId: string;
     /** The Scout who just checked in. */
     scout: NameListEntry;
+    /** A reloaded Kiosk resuming: with nothing pending, skip the stage (no summary). */
+    resume?: boolean;
     /** The Scout is finished: on to the Handoff. */
     onDone: () => void;
     /** The server says the session is over (22:00 or replaced). */
@@ -69,7 +74,12 @@
     queue = pendingEvents(docsOf($events), docsOf($mine), meetingId).map(
       (e) => e.id,
     );
-    if (queue.length === 0) onDone();
+    // Nothing to ask: skip the stage when there are no upcoming Events at
+    // all, or on a reload resume. Otherwise the summary shows (story 30).
+    const none = resume
+      ? queue.length === 0
+      : upcomingEvents(docsOf($events), meetingId).length === 0;
+    if (none) onDone();
   });
 
   const upcoming = $derived(upcomingEvents(docsOf($events), meetingId));
@@ -129,7 +139,7 @@
   <button type="button" class="primary" onclick={onDone}>
     Done, pass the tablet on
   </button>
-{:else if !loaded || queue === null || (queue.length === 0 && changing === null)}
+{:else if !loaded || queue === null}
   <p>Loading…</p>
 {:else if current}
   {@const event = current}

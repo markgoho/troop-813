@@ -48,6 +48,9 @@ var (
 	ErrScoutNotFound = errors.New("meeting: no such Scout")
 	// ErrInvalidMethod means a check-in method the caller may not use.
 	ErrInvalidMethod = errors.New("meeting: invalid check-in method")
+	// ErrScoutInactive means the Scout is deactivated: the Kiosk neither
+	// checks them in nor marks them not found. A Leader still can check them in.
+	ErrScoutInactive = errors.New("meeting: Scout is inactive")
 )
 
 // Started is the outcome of Start.
@@ -161,11 +164,12 @@ func CheckInAtKiosk(ctx context.Context, fs *firestore.Client, k auth.Kiosk, sco
 		return CheckedIn{}, ErrInvalidMethod
 	}
 	return checkIn(ctx, fs, checkInArgs{
-		meetingID: k.MeetingID,
-		scoutID:   scoutID,
-		method:    method,
-		by:        k.SessionID,
-		session:   k.SessionID,
+		meetingID:  k.MeetingID,
+		scoutID:    scoutID,
+		method:     method,
+		by:         k.SessionID,
+		session:    k.SessionID,
+		activeOnly: true,
 	})
 }
 
@@ -174,10 +178,11 @@ type checkInArgs struct {
 	method             contract.AttendanceMethod
 	by                 string // Attendance.by: Leader uid or kioskSessionId
 	session            string // a Kiosk session to bump, or ""
+	activeOnly         bool   // refuse an inactive Scout (the Kiosk's rule)
 }
 
-// checkIn is the one place Attendance is created (Kiosk now; Leader check-in
-// in #23 calls it with session "").
+// checkIn is the one place Attendance is created. A Kiosk check-in (session
+// set) also moves the Meeting's lastCheckIn; a Leader's (session "") doesn't.
 func checkIn(ctx context.Context, fs *firestore.Client, a checkInArgs) (CheckedIn, error) {
 	if a.scoutID == "" || strings.Contains(a.scoutID, "/") {
 		return CheckedIn{}, ErrScoutNotFound
@@ -196,10 +201,8 @@ func checkIn(ctx context.Context, fs *firestore.Client, a checkInArgs) (CheckedI
 			out = CheckedIn{AttendanceID: id, Repeat: true}
 			return nil
 		}
-		if _, err := tx.Get(scoutRef); status.Code(err) == codes.NotFound {
-			return ErrScoutNotFound
-		} else if err != nil {
-			return fmt.Errorf("meeting: read scouts/%s: %w", a.scoutID, err)
+		if err := readScout(tx, scoutRef, a.activeOnly); err != nil {
+			return err
 		}
 
 		attRef := meetingRef.Collection(Attendance).NewDoc()
@@ -207,7 +210,11 @@ func checkIn(ctx context.Context, fs *firestore.Client, a checkInArgs) (CheckedI
 		if err := tx.Create(attRef, contract.Attendance{ScoutID: a.scoutID, Method: a.method, At: now, By: a.by}); err != nil {
 			return err
 		}
-		if err := tx.Update(meetingRef, []firestore.Update{{FieldPath: firestore.FieldPath{"checkedIn", a.scoutID}, Value: attRef.ID}}); err != nil {
+		updates := []firestore.Update{{FieldPath: firestore.FieldPath{"checkedIn", a.scoutID}, Value: attRef.ID}}
+		if a.session != "" {
+			updates = append(updates, firestore.Update{Path: "lastCheckIn", Value: a.scoutID})
+		}
+		if err := tx.Update(meetingRef, updates); err != nil {
 			return err
 		}
 		if a.session != "" {
@@ -238,10 +245,8 @@ func MarkNotFound(ctx context.Context, fs *firestore.Client, k auth.Kiosk, scout
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Get(scoutRef); status.Code(err) == codes.NotFound {
-			return ErrScoutNotFound
-		} else if err != nil {
-			return fmt.Errorf("meeting: read scouts/%s: %w", scoutID, err)
+		if err := readScout(tx, scoutRef, true); err != nil {
+			return err
 		}
 		if _, in := m.CheckedIn[scoutID]; !in {
 			if err := tx.Update(meetingRef, []firestore.Update{{Path: "notFound", Value: firestore.ArrayUnion(scoutID)}}); err != nil {
@@ -250,6 +255,28 @@ func MarkNotFound(ctx context.Context, fs *firestore.Client, k auth.Kiosk, scout
 		}
 		return tx.Update(fs.Collection(auth.KioskSessions).Doc(k.SessionID), []firestore.Update{{Path: "lastActivityAt", Value: now}})
 	})
+}
+
+// readScout checks the Scout exists and, when activeOnly, is active.
+func readScout(tx *firestore.Transaction, ref *firestore.DocumentRef, activeOnly bool) error {
+	snap, err := tx.Get(ref)
+	if status.Code(err) == codes.NotFound {
+		return ErrScoutNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("meeting: read scouts/%s: %w", ref.ID, err)
+	}
+	if !activeOnly {
+		return nil
+	}
+	var s contract.Scout
+	if err := snap.DataTo(&s); err != nil {
+		return fmt.Errorf("meeting: decode scouts/%s: %w", ref.ID, err)
+	}
+	if !s.Active {
+		return ErrScoutInactive
+	}
+	return nil
 }
 
 func readMeeting(tx *firestore.Transaction, ref *firestore.DocumentRef) (contract.Meeting, error) {

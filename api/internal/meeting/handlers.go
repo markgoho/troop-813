@@ -68,7 +68,7 @@ func (h Handlers) Start(w http.ResponseWriter, r *http.Request) {
 }
 
 // KioskNotFound is POST /api/kiosk/not-found (Kiosk only): 204; 400
-// bad_request for a bad body; 404 not_found for an unknown Scout or Meeting.
+// bad_request for a bad body; 404 not_found for an unknown or inactive Scout, or an unknown Meeting.
 func (h Handlers) KioskNotFound(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	k, ok := router.CallerFrom(ctx).(auth.Kiosk)
@@ -83,7 +83,7 @@ func (h Handlers) KioskNotFound(w http.ResponseWriter, r *http.Request) {
 	}
 	err := MarkNotFound(ctx, h.FS, k, req.ScoutID)
 	switch {
-	case errors.Is(err, ErrScoutNotFound), errors.Is(err, ErrNoMeeting):
+	case errors.Is(err, ErrScoutNotFound), errors.Is(err, ErrScoutInactive), errors.Is(err, ErrNoMeeting):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
 		h.logger().ErrorContext(ctx, "mark not found failed", "err", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)
@@ -97,7 +97,7 @@ func (h Handlers) KioskNotFound(w http.ResponseWriter, r *http.Request) {
 
 // KioskCheckIn is POST /api/kiosk/check-in (Kiosk only): 200 CheckInResponse
 // (new or existing Attendance); 400 bad_request for a bad body or method;
-// 404 not_found for an unknown Scout or a missing Meeting doc.
+// 404 not_found for an unknown or inactive Scout, or a missing Meeting doc.
 func (h Handlers) KioskCheckIn(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	k, ok := router.CallerFrom(ctx).(auth.Kiosk)
@@ -114,7 +114,7 @@ func (h Handlers) KioskCheckIn(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case errors.Is(err, ErrInvalidMethod):
 		router.WriteError(w, http.StatusBadRequest, contract.ErrorCodeBadRequest)
-	case errors.Is(err, ErrScoutNotFound), errors.Is(err, ErrNoMeeting):
+	case errors.Is(err, ErrScoutNotFound), errors.Is(err, ErrScoutInactive), errors.Is(err, ErrNoMeeting):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
 		h.logger().ErrorContext(ctx, "kiosk check-in failed", "err", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)

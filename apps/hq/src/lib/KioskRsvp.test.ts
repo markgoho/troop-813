@@ -5,7 +5,7 @@ import { tick } from "svelte";
 import { describe, expect, test, vi } from "vitest";
 import Kiosk from "./Kiosk.svelte";
 import { ApiError } from "./api";
-import type { Event, RSVP, RSVPAnswer } from "./contract.gen";
+import type { Event, Meeting, RSVP, RSVPAnswer } from "./contract.gen";
 import type { WithId } from "./live";
 import type { SignedInUser } from "./session";
 import { fakeApi } from "./testing/fakeApi";
@@ -69,6 +69,7 @@ function setup(
   apiOverrides: Parameters<typeof fakeApi>[0] = {},
   evs: WithId<Event>[] = events,
   rsvps: WithId<RSVP>[] = [],
+  meetingFields: Partial<Meeting> = {},
 ) {
   const kioskCheckIn = vi.fn(async () => ({ attendanceId: "a1" }));
   const kioskSetRsvp = vi.fn(async () => {});
@@ -77,7 +78,9 @@ function setup(
   live.scoutsStore.set(ready(roster));
   live.eventsStore.set(ready(evs));
   live.rsvpsStore.set(ready(rsvps));
-  live.meetingStore(TODAY).set(meeting(TODAY, { handoffOrder: order }));
+  live
+    .meetingStore(TODAY)
+    .set(meeting(TODAY, { handoffOrder: order, ...meetingFields }));
   const session = fakeSession(kioskUser);
   render(Kiosk, { session, api, live, now });
   return { api, live, session, kioskCheckIn, kioskSetRsvp };
@@ -193,10 +196,32 @@ describe("Kiosk RSVP cards", () => {
     ).toBeInTheDocument();
   });
 
-  test("with nothing pending, goes straight to the Handoff", async () => {
+  test("with every upcoming Event answered, still shows the summary (story 30)", async () => {
     setup({}, events, [
       saved("fall", "s2", "notGoing"),
       saved("winter", "s2", "going"),
+    ]);
+    await checkInRowan();
+
+    expect(
+      await screen.findByRole("heading", { name: "Your answers" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Pass the tablet to Avery" }),
+    ).toBeNull();
+    await click("Done, pass the tablet on");
+    expect(
+      await screen.findByRole("heading", { name: "Pass the tablet to Avery" }),
+    ).toBeInTheDocument();
+  });
+
+  test("with no upcoming Events at all, goes straight to the Handoff", async () => {
+    // One cancelled, one already begun.
+    setup({}, [
+      ev("jan", "Klondike Derby", "2027-01-23", "2027-01-23", {
+        cancelled: true,
+      }),
+      ev("oct", "October Campout", "2026-10-16", "2026-10-18"),
     ]);
     await checkInRowan();
 
@@ -301,6 +326,53 @@ describe("Kiosk RSVP summary", () => {
 
     expect(
       await screen.findByRole("heading", { name: "Pass the tablet to Avery" }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("Kiosk reload resumes from the Meeting doc (story 22)", () => {
+  const rowanIn = { checkedIn: { s2: "a1" }, lastCheckIn: "s2" };
+
+  test("mid-RSVP: the last Scout checked in still has pending Events, so their cards come back", async () => {
+    setup({}, events, [], rowanIn);
+    await tick();
+
+    expect(
+      await screen.findByRole("heading", { name: "Fall Campout" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Rowan, are you going?")).toBeInTheDocument();
+  });
+
+  test("mid-Handoff: nothing pending, so the Handoff names the next Scout after them", async () => {
+    setup(
+      {},
+      events,
+      [saved("fall", "s2", "going"), saved("winter", "s2", "notGoing")],
+      rowanIn,
+    );
+    await tick();
+
+    expect(
+      await screen.findByRole("heading", { name: "Pass the tablet to Avery" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Your answers" })).toBeNull();
+  });
+
+  test("a Leader undid the last check-in: no RSVP stage, the Handoff continues after them", async () => {
+    setup({}, events, [], { checkedIn: {}, lastCheckIn: "s2" });
+    await tick();
+
+    expect(
+      await screen.findByRole("heading", { name: "Pass the tablet to Avery" }),
+    ).toBeInTheDocument();
+  });
+
+  test("no check-in yet: the name list", async () => {
+    setup({}, events, [], { lastCheckIn: null });
+    await tick();
+
+    expect(
+      screen.getByRole("heading", { name: "Who's first?" }),
     ).toBeInTheDocument();
   });
 });

@@ -26,36 +26,56 @@ const state = (
   ...over,
 });
 
+const all = new Set(["a", "b", "c", "d"]);
+
 describe("nextScout", () => {
   test("is the next in handoffOrder after the latest check-in", () => {
-    expect(nextScout(state({ checkedIn: { b: "x" } }), "b")).toBe("c");
+    expect(nextScout(state({ checkedIn: { b: "x" } }), "b", all)).toBe("c");
   });
 
   test("starts at the top when there is no latest check-in", () => {
-    expect(nextScout(state(), null)).toBe("a");
+    expect(nextScout(state(), null, all)).toBe("a");
   });
 
   test("skips Scouts already checked in", () => {
-    expect(nextScout(state({ checkedIn: { a: "1", b: "2" } }), "a")).toBe("c");
+    expect(nextScout(state({ checkedIn: { a: "1", b: "2" } }), "a", all)).toBe(
+      "c",
+    );
   });
 
   test("skips Scouts marked not found", () => {
     const m = state({ checkedIn: { a: "1" }, notFound: ["b"] });
-    expect(nextScout(m, "a")).toBe("c");
+    expect(nextScout(m, "a", all)).toBe("c");
   });
 
   test("wraps at the end of the order", () => {
     const m = state({ checkedIn: { b: "1", c: "2", d: "3" } });
-    expect(nextScout(m, "d")).toBe("a");
+    expect(nextScout(m, "d", all)).toBe("a");
   });
 
   test("is null when everyone is checked in or not found", () => {
     const m = state({ checkedIn: { a: "1", b: "2" }, notFound: ["c", "d"] });
-    expect(nextScout(m, "b")).toBeNull();
+    expect(nextScout(m, "b", all)).toBeNull();
   });
 
   test("a latest Scout not in the order starts from the top", () => {
-    expect(nextScout(state({ checkedIn: { z: "1" } }), "z")).toBe("a");
+    expect(nextScout(state({ checkedIn: { z: "1" } }), "z", all)).toBe("a");
+  });
+
+  test("skips Scouts who are no longer active, even ones still in the order", () => {
+    const active = new Set(["a", "d"]);
+    expect(nextScout(state(), "a", active)).toBe("d");
+    expect(nextScout(state(), "d", active)).toBe("a");
+  });
+
+  test("continues from the right place after a Scout who has since gone inactive", () => {
+    // b went inactive after being checked in; the order still knows where b was.
+    const active = new Set(["a", "c", "d"]);
+    expect(nextScout(state({ checkedIn: { b: "1" } }), "b", active)).toBe("c");
+  });
+
+  test("is null when no active Scout is left", () => {
+    expect(nextScout(state(), "a", new Set())).toBeNull();
   });
 });
 

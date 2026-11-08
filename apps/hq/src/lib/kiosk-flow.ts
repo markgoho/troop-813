@@ -23,19 +23,26 @@ export interface HandoffState {
 
 /**
  * Who the Kiosk names next (story 13): the next in handoffOrder after the
- * Scout who just checked in (`after`), skipping anyone checked in or not
- * found, wrapping at the end. null `after` (or one not in the order) starts at
- * the top. null result when nobody is left.
+ * Scout who just checked in (`after`), skipping anyone checked in, not found
+ * or not in `active` (the IDs of active Scouts; handoffOrder may still hold a
+ * Scout deactivated since), wrapping at the end. null `after` (or one not in
+ * the order) starts at the top. null result when nobody is left.
  */
 export function nextScout(
   m: HandoffState,
   after: string | null,
+  active: ReadonlySet<string>,
 ): string | null {
   const n = m.handoffOrder.length;
   const start = after === null ? -1 : m.handoffOrder.indexOf(after);
   for (let step = 1; step <= n; step++) {
     const id = m.handoffOrder[(start + step) % n];
-    if (id !== undefined && !(id in m.checkedIn) && !m.notFound.includes(id)) {
+    if (
+      id !== undefined &&
+      active.has(id) &&
+      !(id in m.checkedIn) &&
+      !m.notFound.includes(id)
+    ) {
       return id;
     }
   }

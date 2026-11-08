@@ -11,11 +11,15 @@
   // says "<Scout> was next"; "I can't find <Scout>" → marked not found, a
   // different Scout is named. Nobody left to name → the name list.
   // Between a check-in and the Handoff, the Scout answers their pending RSVPs
-  // (KioskRsvp; none pending → straight on). Its "Done, pass the tablet on"
-  // starts the Handoff.
+  // (KioskRsvp; no upcoming Events → straight on). Its "Done, pass the tablet
+  // on" starts the Handoff.
   // The next Scout comes from kiosk-flow over the live Meeting doc, after the
-  // Scout this tablet just checked in (component state, so a reload falls
-  // back to the name list).
+  // Scout last checked in.
+  //
+  // A reload, Back press or crash resumes from the server (story 22): when
+  // the Meeting doc first loads, its lastCheckIn Scout, if still checked in
+  // and with Events left to answer, gets their RSVP cards back; otherwise the
+  // Handoff continues after them. No lastCheckIn means the name list.
   import { ApiError, type Api } from "./api";
   import KioskRsvp from "./KioskRsvp.svelte";
   import {
@@ -60,24 +64,45 @@
   let confirming = $state<NameListEntry | null>(null);
   // The Scout who just checked in and is answering RSVPs.
   let rsvping = $state<NameListEntry | null>(null);
+  // True when rsvping was restored by a reload: no pending Events means no stage.
+  let resumedRsvp = $state(false);
   let saving = $state(false);
   let message = $state<string | null>(null);
 
-  // The Scout this tablet last checked in; the Handoff continues after them.
+  // The Scout this tablet just checked in, until the live Meeting doc shows them.
   let latest = $state<string | null>(null);
+  // The Scout the Handoff continues after: the last one checked in, here or
+  // (after a reload) per the Meeting doc's lastCheckIn.
+  let after = $state<string | null>(null);
   // True after a check-in until "No, I'm someone else" breaks the chain.
   let handingOff = $state(false);
+  // Whether the stage was derived from the Meeting doc yet (once, on load).
+  let resumed = $state(false);
   // The Scout the Handoff named when the chain broke ("<Scout> was next").
   let broken = $state<string | null>(null);
   // Not-found marks sent from here, until the live Meeting doc catches up.
   let sentNotFound = $state<string[]>([]);
 
+  $effect(() => {
+    if (resumed || $meeting.state !== "ready" || !$meeting.doc) return;
+    if ($scouts.state !== "ready") return;
+    resumed = true;
+    const last = $meeting.doc.lastCheckIn;
+    if (!last) return; // null, or a Meeting from before the field existed
+    after = last;
+    handingOff = true;
+    const entry = names.find((n) => n.id === last);
+    if (entry && last in checkedIn) {
+      rsvping = entry;
+      resumedRsvp = true;
+    }
+  });
+
+  const activeIds = $derived(new Set(names.map((n) => n.id)));
   const flow = $derived({
     handoffOrder:
       $meeting.state === "ready" && $meeting.doc
-        ? $meeting.doc.handoffOrder.filter((id) =>
-            names.some((n) => n.id === id),
-          )
+        ? $meeting.doc.handoffOrder
         : [],
     // The Scout just checked in counts as in even before the snapshot lands.
     checkedIn: latest ? { ...checkedIn, [latest]: "" } : checkedIn,
@@ -88,7 +113,9 @@
       ...sentNotFound,
     ],
   });
-  const offeredId = $derived(handingOff ? nextScout(flow, latest) : null);
+  const offeredId = $derived(
+    handingOff ? nextScout(flow, after, activeIds) : null,
+  );
   const offered = $derived(names.find((n) => n.id === offeredId) ?? null);
   const dueId = $derived(wasNext(broken, flow));
   const due = $derived(names.find((n) => n.id === dueId) ?? null);
@@ -129,7 +156,9 @@
     if (!ok) return;
     confirming = null;
     rsvping = entry;
+    resumedRsvp = false;
     latest = entry.id;
+    after = entry.id;
     handingOff = true;
     broken = null;
   }
@@ -154,6 +183,8 @@
   <p>Couldn't load the Meeting. Reload to try again.</p>
 {:else if !$meeting.doc}
   <p>Today's Meeting hasn't started. Ask the Admin.</p>
+{:else if !resumed}
+  <p>Loading…</p>
 {:else if rsvping}
   {#key rsvping.id}
     <KioskRsvp
@@ -161,6 +192,7 @@
       {live}
       meetingId={kiosk.meetingId}
       scout={rsvping}
+      resume={resumedRsvp}
       onDone={() => (rsvping = null)}
       {onExpired}
       {onAsleep}

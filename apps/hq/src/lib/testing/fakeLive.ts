@@ -102,6 +102,7 @@ export function meeting(
       handoffOrder: [],
       notFound: [],
       checkedIn: {},
+      lastCheckIn: null,
       ...fields,
     },
   };

@@ -219,6 +219,11 @@ type Meeting struct {
 	NotFound []string `json:"notFound" firestore:"notFound"`
 	// CheckedIn maps scoutId to the attendanceId of their current (not undone) Attendance.
 	CheckedIn map[string]string `json:"checkedIn" firestore:"checkedIn"`
+	// LastCheckIn is the Scout the Kiosk last checked in (name list or
+	// Handoff; a Leader's check-in doesn't move it), or null before any. A
+	// reloaded Kiosk resumes from it: that Scout's RSVP questions if any are
+	// pending, else the Handoff after them.
+	LastCheckIn *string `json:"lastCheckIn" firestore:"lastCheckIn" tstype:"string | null,required"`
 }
 
 // AttendanceMethod is how a Scout was checked in.

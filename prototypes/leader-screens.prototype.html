@@ -250,6 +250,9 @@ for (const s of db.scouts.filter(s => s.createdAt <= '2026-10-05')) {
   const h = hash(s.id + 'c'); setRsvp('e1', s.id, h % 3 ? 'going' : 'notGoing', '2026-10-05 19:2' + (h % 9), 'kiosk', db.meetings['2026-10-05'].checkedIn[s.id] || null);
 }
 setRsvp('e2', 's9', 'notGoing', '2026-11-05 08:12', 'Dana Whitfield', null);
+// Owen Barrett said Going to Winter cabin last week, then changes to Not going tonight: undoing tonight reverts to Going
+if (!m1102.checkedIn.s1) { const a = { id: 'a' + seq++, scoutId: 's1', method: 'handoff', at: '2026-11-02 19:14', by: 'kiosk', undoneAt: null }; m1102.attendance.push(a); m1102.checkedIn.s1 = a.id; }
+if (db.rsvps.e4_s1?.answer !== 'going') setRsvp('e4', 's1', 'going', '2026-11-02 19:15', 'kiosk', m1102.checkedIn.s1);
 // Tonight
 const order = db.scouts.filter(s => s.active).map(s => s.id).sort((a, b) => hash(a + TODAY) - hash(b + TODAY));
 const tonight = { date: TODAY, startedBy: 'Mark Goho', handoffOrder: order, notFound: ['s10'], checkedIn: {}, attendance: [] };
@@ -285,6 +288,7 @@ const scout = id => db.scouts.find(s => s.id === id);
 const full = s => `${s.firstName} ${s.lastName}`;
 const active = () => db.scouts.filter(s => s.active).sort((a, b) => a.firstName.localeCompare(b.firstName) || a.lastName.localeCompare(b.lastName));
 const ev = id => db.events.find(e => e.id === id);
+const t12 = t => { const [h, m] = t.split(':').map(Number); return isNaN(h) ? t : `${h % 12 || 12}:${String(m).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`; };
 const METHOD = { nameList: 'Name list', handoff: 'Handoff', leader: 'Leader' };
 const liveAtt = m => m.attendance.filter(a => !a.undoneAt);
 const hasTonight = () => ui.kioskState !== 'none' && !!db.meetings[TODAY];
@@ -325,7 +329,7 @@ function leaderRsvp(eid, sid, answer) {
 // ---------- Navigation ----------
 const go = (screen, p = {}) => { ui.stack.push({ screen, ...p }); ui.confirm = null; ui.openHist = null; ui.menu = false; };
 const back = () => { ui.stack.pop(); ui.confirm = null; ui.openHist = null; };
-const top = () => ui.stack[ui.stack.length - 1];
+const curView = () => ui.stack[ui.stack.length - 1];
 
 // ---------- Screen bodies (shared by all variants) ----------
 function kioskBanner() {
@@ -346,7 +350,7 @@ function liveScreen() {
   return `${kioskBanner()}
   <div class="stats"><div><span class="big">${ins.length}</span><span class="label">checked in</span></div><div><span class="big" style="color:var(--muted)">${outs.length}</span><span class="label">not yet</span></div></div>
   <div class="sec"><h3>Checked in <small>newest first</small></h3><div class="list">${ins.map(a => { const s = scout(a.scoutId);
-    return `<div class="item"><div class="main"><span class="t" data-act="scout" data-id="${s.id}" style="cursor:pointer">${esc(full(s))}</span><span class="s">${a.at.slice(11)}pm · ${METHOD[a.method]}${a.method === 'leader' ? ' (' + esc(a.by) + ')' : ''}${rsvpsFrom(a.id).length ? ' · ' + rsvpsFrom(a.id).length + ' RSVP' : ''}</span></div><button class="btn danger" data-act="askundo" data-date="${TODAY}" data-id="${a.id}">Undo</button></div>${ui.confirm === a.id ? `<div style="padding:0 10px 10px">${confirmUndo(TODAY, a.id)}</div>` : ''}`; }).join('') || '<div class="item"><span class="note">Nobody yet.</span></div>'}</div></div>
+    return `<div class="item"><div class="main"><span class="t" data-act="scout" data-id="${s.id}" style="cursor:pointer">${esc(full(s))}</span><span class="s">${t12(a.at.slice(11))} · ${METHOD[a.method]}${a.method === 'leader' ? ' (' + esc(a.by) + ')' : ''}${rsvpsFrom(a.id).length ? ' · ' + rsvpsFrom(a.id).length + ' RSVP' : ''}</span></div><button class="btn danger" data-act="askundo" data-date="${TODAY}" data-id="${a.id}">Undo</button></div>${ui.confirm === a.id ? `<div style="padding:0 10px 10px">${confirmUndo(TODAY, a.id)}</div>` : ''}`; }).join('') || '<div class="item"><span class="note">Nobody yet.</span></div>'}</div></div>
   <div class="sec"><h3>Not checked in <small>Leader check-in asks no RSVPs</small></h3><div class="list">${outs.map(s => `<div class="item"><div class="main"><span class="t" data-act="scout" data-id="${s.id}" style="cursor:pointer">${esc(full(s))}</span>${m.notFound.includes(s.id) ? '<span class="s">Marked not found on the Kiosk</span>' : ''}</div><button class="btn" data-act="leaderin" data-date="${TODAY}" data-id="${s.id}">Check in</button></div>`).join('')}</div></div>`;
 }
 function pastMeetingCta() { return `<button class="btn wide" data-act="go" data-screen="addMeeting">Add a past Meeting</button>`; }
@@ -428,7 +432,7 @@ const barHtml = (title, backable, extra = '') => `<div class="bar">${backable ? 
 function variantA() {
   const tabs = [['live', '●', 'Tonight'], ['roster', '☰', 'Roster'], ['events', '⛺', 'Events'], ['meetings', '▦', 'Meetings']].concat(ui.role === 'admin' ? [['admin', '⚑', 'Users']] : []);
   if (!tabs.some(t => t[0] === ui.tab)) ui.tab = 'live';
-  const cur = top() || { screen: ui.tab }; const r = renderScreen(cur);
+  const cur = curView() || { screen: ui.tab }; const r = renderScreen(cur);
   return `${barHtml(r.title, ui.stack.length > 0)}<div class="body">${r.body}</div><nav class="tabs">${tabs.map(([k, i, l]) => `<button data-act="tab" data-tab="${k}" aria-current="${ui.tab === k}"><span class="ico">${i}</span>${l}</button>`).join('')}</nav>`;
 }
 // ---------- Variant B: Tonight-first home ----------
@@ -444,7 +448,7 @@ function homeB() {
   ${ui.role === 'admin' ? `<button class="item" data-act="go" data-screen="admin"><div class="main"><span class="t">Users</span><span class="s">Parents and Leaders</span></div>${waiting ? `<span class="pill warn">${waiting} waiting</span>` : ''}<span class="chev">›</span></button>` : ''}</div>`;
 }
 function variantB() {
-  const cur = top(); if (!cur) return `${barHtml('Troop 813', false)}<div class="body">${homeB()}</div>`;
+  const cur = curView(); if (!cur) return `${barHtml('Troop 813', false)}<div class="body">${homeB()}</div>`;
   const r = renderScreen(cur); return `${barHtml(r.title, true)}<div class="body">${r.body}</div>`;
 }
 // ---------- Variant C: Timeline ----------
@@ -463,7 +467,7 @@ function feedC() {
   <div class="datehead">Earlier</div><div class="list">${past.map(card).join('')}</div>`;
 }
 function variantC() {
-  const cur = top(); const menuBtn = '<button class="iconbtn" data-act="menu" aria-label="Menu">☰</button>';
+  const cur = curView(); const menuBtn = '<button class="iconbtn" data-act="menu" aria-label="Menu">☰</button>';
   const sheet = ui.menu ? `<div class="sheet" data-act="closemenu"><div><button class="btn wide" data-act="go" data-screen="roster">Roster</button><button class="btn wide" data-act="go" data-screen="addEvent">Add Event</button><button class="btn wide" data-act="go" data-screen="addMeeting">Add a past Meeting</button>${ui.role === 'admin' ? '<button class="btn wide" data-act="go" data-screen="admin">Users</button>' : ''}<button class="btn wide" data-act="closemenu">Close</button></div></div>` : '';
   if (!cur) return `${barHtml('Troop 813', false, menuBtn)}<div class="body">${feedC()}</div>${sheet}`;
   const r = renderScreen(cur); return `${barHtml(r.title, true, menuBtn)}<div class="body">${r.body}</div>${sheet}`;

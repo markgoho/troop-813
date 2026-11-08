@@ -37,6 +37,7 @@ export const ErrorCodeNotFound = "not_found"; // the thing named in the path doe
 export const ErrorCodeFixedRole = "fixed_role"; // an Admin's role can't be changed from HQ (409)
 export const ErrorCodeInUse = "in_use"; // can't delete: other records point at it (409)
 export const ErrorCodeDuplicateScout = "duplicate_scout"; // another Scout has this first + last name (409); inactiveMatchId when that Scout is inactive
+export const ErrorCodeMeetingExists = "meeting_exists"; // a Meeting already exists for that date (409)
 export const ErrorCodeTooLate = "too_late"; // past 22:00 America/New_York: today's Meeting can't be started (409)
 export const ErrorCodeSessionAsleep = "session_asleep"; // Kiosk session idle 30 min; a Leader can wake it (401)
 export const ErrorCodeSessionExpired = "session_expired"; // Kiosk session past 22:00 or replaced by a newer unlock (401)
@@ -49,6 +50,7 @@ export type ErrorCode =
   | typeof ErrorCodeFixedRole
   | typeof ErrorCodeInUse
   | typeof ErrorCodeDuplicateScout
+  | typeof ErrorCodeMeetingExists
   | typeof ErrorCodeTooLate
   | typeof ErrorCodeSessionAsleep
   | typeof ErrorCodeSessionExpired;
@@ -329,6 +331,19 @@ export interface KioskCheckInRequest {
  */
 export interface LeaderCheckInRequest {
   scoutId: string;
+}
+/**
+ * PastMeetingRequest is the body of POST /api/meetings (Leader): backfill a
+ * Meeting for Date (YYYY-MM-DD), which must be before today and have no Meeting.
+ */
+export interface PastMeetingRequest {
+  date: string;
+}
+/**
+ * PastMeetingCreated is the 201 body of POST /api/meetings.
+ */
+export interface PastMeetingCreated {
+  id: string; // the Meeting ID, YYYY-MM-DD
 }
 /**
  * LeaderSummary is one Leader's uid and name, so the Tonight tab can say

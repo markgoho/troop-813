@@ -166,6 +166,7 @@ function liveCurrentKioskSession(
 export function firebaseLive(): Live {
   return {
     meeting: (id) => liveDoc<Meeting>(`meetings/${id}`),
+    meetings: () => liveCollection<Meeting>("meetings"),
     attendance: (id) => liveCollection<Attendance>(`meetings/${id}/attendance`),
     kioskSession: (id) => liveDoc<KioskSession>(`kioskSessions/${id}`),
     currentKioskSession: liveCurrentKioskSession,

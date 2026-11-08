@@ -237,6 +237,10 @@ describe("Leaders read Meetings and their attendance", () => {
         getDocs(collection(db, "meetings/2026-11-09/attendance")),
       );
     });
+    test(`${uid} can list all Meetings (the Meetings tab)`, async () => {
+      const db = env.authenticatedContext(uid).firestore();
+      await expectAllowed(getDocs(collection(db, "meetings")));
+    });
   }
 });
 

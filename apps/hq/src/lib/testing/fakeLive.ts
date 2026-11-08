@@ -17,6 +17,7 @@ export interface FakeLive extends Live {
   meetingStore(id: string): Writable<LiveDoc<Meeting>>;
   /** One store per Meeting ID, like meetingStore. */
   attendanceStore(meetingId: string): Writable<LiveDocs<Attendance>>;
+  meetingsStore: Writable<LiveDocs<Meeting>>;
   /** One store per key; kioskSession(id) and currentKioskSession(meetingId) both read it, keyed by the id they are given. */
   kioskSessionStore(key: string): Writable<LiveDoc<KioskSession>>;
   scoutsStore: Writable<LiveDocs<Scout>>;
@@ -43,6 +44,7 @@ export function fakeLive(): FakeLive {
     }
     return s;
   };
+  const meetingsStore = writable<LiveDocs<Meeting>>({ state: "loading" });
   const sessions = new Map<string, Writable<LiveDoc<KioskSession>>>();
   const kioskSessionStore = (key: string) => {
     let s = sessions.get(key);
@@ -59,12 +61,14 @@ export function fakeLive(): FakeLive {
     meetingStore,
     attendanceStore,
     attendance: attendanceStore,
+    meetingsStore,
     kioskSessionStore,
     kioskSession: kioskSessionStore,
     currentKioskSession: kioskSessionStore,
     scoutsStore,
     eventsStore,
     rsvpsStore,
+    meetings: () => meetingsStore,
     meeting: meetingStore,
     scouts: () => scoutsStore,
     events: () => eventsStore,

@@ -39,6 +39,8 @@ service cloud.firestore {
     // tab gets any Meeting doc and its attendance (never the Kiosk).
     match /meetings/{meetingId} {
       allow get: if (isKiosk() && request.auth.token.meetingId == meetingId) || isLeader();
+      // The Meetings tab lists every Meeting (Leaders only, never the Kiosk).
+      allow list: if isLeader();
       match /attendance/{attendanceId} {
         allow read: if isLeader();
       }

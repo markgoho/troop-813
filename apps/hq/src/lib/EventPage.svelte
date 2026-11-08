@@ -135,8 +135,10 @@
         {event.name}
       {/if}
     </h1>
-    <p>{dateRange(event.startDate, event.endDate)}</p>
-    {#if event.location}<p>{event.location}</p>{/if}
+    <div class="when">
+      <p>{dateRange(event.startDate, event.endDate)}</p>
+      {#if event.location}<p>{event.location}</p>{/if}
+    </div>
 
     {#if editing}
       <EventForm
@@ -239,10 +241,30 @@
 </main>
 
 <style>
+  .when {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--muted);
+  }
   .counts li {
     color: var(--muted);
     font-size: 0.875rem;
     font-weight: 700;
+  }
+  /* Each answer in its own colour, as on the Kiosk: Going green, Not going
+     red, No answer muted. */
+  .counts li:nth-child(1) .big {
+    color: var(--ok);
+  }
+  .counts li:nth-child(2) .big {
+    color: var(--bad);
+  }
+  .counts li:nth-child(3) .big {
+    color: var(--muted);
+  }
+  [role="radiogroup"] label.c-going:has(input:checked) {
+    background: var(--ok);
+    color: var(--surface);
   }
   /* "Not going" chosen reads red, "—" (cleared) neutral, as in the prototype. */
   [role="radiogroup"] label.c-notGoing:has(input:checked) {

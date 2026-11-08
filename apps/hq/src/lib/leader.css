@@ -1,7 +1,18 @@
 /* Leader screens (phones first): the prototype's list-and-pill vocabulary
    (prototype/leader-screens) in the shared burgundy tokens from app.css.
-   Everything is scoped under .leader at zero specificity (:where), so a
-   screen's own styles always win. */
+   Every selector sits wholly inside :where(.leader …), so it has zero
+   specificity: a screen's own styles always win, and within this file the
+   later rule wins. (Pseudo-elements can't go inside :where, so those few
+   rules keep a normal selector.) */
+
+/* Links and struck-through names (first, so later rules refine them). */
+:where(.leader a) {
+  color: var(--accent);
+  font-weight: 700;
+}
+:where(.leader s) {
+  color: var(--muted);
+}
 
 /* Shell: logo bar, tab bar (bottom on phones, top on wider screens). */
 :where(.leader) {
@@ -9,7 +20,7 @@
   display: flex;
   flex-direction: column;
 }
-:where(.leader) > .bar {
+:where(.leader > .bar) {
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -24,7 +35,7 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-:where(.leader) nav[aria-label="Leader tabs"] {
+:where(.leader nav[aria-label="Leader tabs"]) {
   position: fixed;
   inset-inline: 0;
   bottom: 0;
@@ -34,7 +45,7 @@
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
-:where(.leader) nav[aria-label="Leader tabs"] a {
+:where(.leader nav[aria-label="Leader tabs"] a) {
   flex: 1;
   display: grid;
   place-items: center;
@@ -44,12 +55,12 @@
   color: var(--muted);
   text-decoration: none;
 }
-:where(.leader) nav[aria-label="Leader tabs"] a[aria-current="page"] {
+:where(.leader nav[aria-label="Leader tabs"] a[aria-current="page"]) {
   color: var(--accent);
   box-shadow: inset 0 3px 0 var(--accent);
 }
 @media (min-width: 48rem) {
-  :where(.leader) nav[aria-label="Leader tabs"] {
+  :where(.leader nav[aria-label="Leader tabs"]) {
     position: static;
     order: 0;
     justify-content: center;
@@ -58,19 +69,19 @@
     border-bottom: 1px solid var(--line);
     padding: 0 1rem;
   }
-  :where(.leader) nav[aria-label="Leader tabs"] a {
+  :where(.leader nav[aria-label="Leader tabs"] a) {
     flex: none;
     padding: 0 1rem;
     min-height: 3rem;
     font-size: 0.9375rem;
   }
-  :where(.leader) nav[aria-label="Leader tabs"] a[aria-current="page"] {
+  :where(.leader nav[aria-label="Leader tabs"] a[aria-current="page"]) {
     box-shadow: inset 0 -3px 0 var(--accent);
   }
 }
 
 /* Page column. */
-:where(.leader) main {
+:where(.leader main) {
   width: 100%;
   max-width: 42rem;
   margin: 0 auto;
@@ -80,28 +91,21 @@
   gap: 1rem;
 }
 @media (min-width: 48rem) {
-  :where(.leader) main {
+  :where(.leader main) {
     padding-bottom: 3rem;
   }
 }
-:where(.leader) h1 {
+:where(.leader h1) {
   font-size: 2.25rem;
 }
-:where(.leader) h2 {
+:where(.leader h2) {
   font-size: 1.375rem;
   margin-top: 0.75rem;
 }
-:where(.leader) a {
-  color: var(--accent);
-  font-weight: 700;
-}
-:where(.leader) s {
-  color: var(--muted);
-}
 
 /* Lists of rows: one bordered card, a row per item. */
-:where(.leader) main ul:not(.counts),
-:where(.leader) main ol:not([aria-label="History"]) {
+:where(.leader main ul:not(.counts)),
+:where(.leader main ol:not([aria-label="History"])) {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -110,7 +114,7 @@
   border-radius: 10px;
   overflow: hidden;
 }
-:where(.leader) main ul:not(.counts) > li {
+:where(.leader main ul:not(.counts) > li) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -119,65 +123,65 @@
   padding: 0.625rem 0.875rem;
   border-top: 1px solid var(--line);
 }
-:where(.leader) main ul:not(.counts) > li:first-child {
+:where(.leader main ul:not(.counts) > li:first-child) {
   border-top: 0;
 }
 /* Lists inside a row (Undo's rollback list) stay plain. */
-:where(.leader) main li ul:not(.counts) {
+:where(.leader main li ul:not(.counts)) {
   background: none;
   border: 0;
   border-radius: 0;
 }
-:where(.leader) main li ul:not(.counts) > li {
+:where(.leader main li ul:not(.counts) > li) {
   min-height: 0;
   padding: 0;
   border: 0;
 }
-:where(.leader) .name {
+:where(.leader .name) {
   flex: 1 1 10rem;
   min-width: 0;
   font-weight: 700;
 }
-:where(.leader) .name a,
-:where(.leader) li > a:first-child {
+:where(.leader .name a),
+:where(.leader li > a:first-child) {
   color: var(--ink);
   text-decoration: none;
 }
-:where(.leader) .name a:hover,
-:where(.leader) li > a:first-child:hover {
+:where(.leader .name a:hover),
+:where(.leader li > a:first-child:hover) {
   text-decoration: underline;
 }
 /* A row with details under the name: name on its own line, details and the
    row's action on the next, the action pushed to the end. */
-:where(.leader) main li:has(> .time, > .meta, > .email) > .name {
+:where(.leader main li:has(> .time), > .meta, > .email) > .name {
   flex-basis: 100%;
 }
-:where(.leader) main ul:not(.counts) > li > button:last-child {
+:where(.leader main ul:not(.counts) > li > button:last-child) {
   margin-left: auto;
 }
-:where(.leader) .meta,
-:where(.leader) .time,
-:where(.leader) .method,
-:where(.leader) .rsvps,
-:where(.leader) .present,
-:where(.leader) .email,
-:where(.leader) .reason,
-:where(.leader) small,
-:where(.leader) .note {
+:where(.leader .meta),
+:where(.leader .time),
+:where(.leader .method),
+:where(.leader .rsvps),
+:where(.leader .present),
+:where(.leader .email),
+:where(.leader .reason),
+:where(.leader small),
+:where(.leader .note) {
   color: var(--muted);
   font-size: 0.875rem;
 }
-:where(.leader) .reason {
+:where(.leader .reason) {
   flex-basis: 100%;
 }
-:where(.leader) .time,
-:where(.leader) .present,
-:where(.leader) .big {
+:where(.leader .time),
+:where(.leader .present),
+:where(.leader .big) {
   font-variant-numeric: tabular-nums;
 }
 
 /* Pills. */
-:where(.leader) .pill {
+:where(.leader .pill) {
   display: inline-block;
   padding: 0.125rem 0.5rem;
   border-radius: 999px;
@@ -191,25 +195,25 @@
   background: var(--bg);
   color: var(--muted);
 }
-:where(.leader) .pill.ok {
+:where(.leader .pill.ok) {
   background: var(--ok-soft);
   color: var(--ok);
 }
-:where(.leader) .pill.warn {
+:where(.leader .pill.warn) {
   background: var(--warn-soft);
   color: var(--warn);
 }
-:where(.leader) .pill.bad {
+:where(.leader .pill.bad) {
   background: var(--bad-soft);
   color: var(--bad);
 }
-:where(.leader) .pill.live {
+:where(.leader .pill.live) {
   background: var(--fill);
   color: var(--fill-ink);
 }
 
 /* Buttons. */
-:where(.leader) button {
+:where(.leader button) {
   min-height: 2.75rem;
   padding: 0.5rem 0.875rem;
   border: 1px solid var(--line);
@@ -223,32 +227,38 @@
     border-color 160ms var(--ease),
     background-color 160ms var(--ease);
 }
-:where(.leader) button:not(:disabled):hover {
+:where(.leader button:not(:disabled):hover) {
   border-color: var(--accent);
 }
-:where(.leader) button:disabled {
+:where(.leader button:disabled) {
   opacity: 0.45;
 }
-:where(.leader) button[type="submit"],
-:where(.leader) button.primary {
+:where(.leader button[type="submit"]),
+:where(.leader button.primary) {
   background: var(--fill);
   border-color: var(--fill);
   color: var(--fill-ink);
 }
-:where(.leader) button[type="submit"]:not(:disabled):hover,
-:where(.leader) button.primary:not(:disabled):hover {
+:where(.leader button[type="submit"]:not(:disabled):hover),
+:where(.leader button.primary:not(:disabled):hover) {
   background: var(--fill-hover);
   border-color: var(--fill-hover);
 }
-:where(.leader) button.danger {
+:where(.leader button.danger) {
   color: var(--bad);
 }
-:where(.leader) button.danger.solid {
+/* Unavailable, not alarming: muted on a dashed edge. */
+:where(.leader button.danger:disabled) {
+  color: var(--muted);
+  border-style: dashed;
+  opacity: 1;
+}
+:where(.leader button.danger.solid) {
   background: var(--bad);
   border-color: var(--bad);
   color: var(--surface);
 }
-:where(.leader) .row {
+:where(.leader .row) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -256,8 +266,8 @@
 }
 
 /* Forms. */
-:where(.leader) main > form,
-:where(.leader) .form {
+:where(.leader main > form),
+:where(.leader .form) {
   display: grid;
   gap: 0.75rem;
   padding: 1rem;
@@ -265,20 +275,20 @@
   border: 1px solid var(--line);
   border-radius: 10px;
 }
-:where(.leader) li form {
+:where(.leader li form) {
   flex-basis: 100%;
   display: grid;
   gap: 0.625rem;
 }
-:where(.leader) label {
+:where(.leader label) {
   display: grid;
   gap: 0.25rem;
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--muted);
 }
-:where(.leader) input:not([type="checkbox"], [type="radio"]),
-:where(.leader) select {
+:where(.leader input:not([type="checkbox"]), [type="radio"]),
+:where(.leader select) {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
@@ -289,11 +299,11 @@
   font-size: 1rem;
   font-weight: 400;
 }
-:where(.leader) input:not([type="checkbox"], [type="radio"]):focus-visible,
-:where(.leader) select:focus-visible {
+:where(.leader input:not([type="checkbox"]), [type="radio"]):focus-visible,
+:where(.leader select:focus-visible) {
   border-color: var(--accent);
 }
-:where(.leader) input[type="checkbox"] {
+:where(.leader input[type="checkbox"]) {
   width: 1.5rem;
   height: 1.5rem;
   margin: 0;
@@ -301,14 +311,14 @@
 }
 
 /* Messages. */
-:where(.leader) [role="alert"] {
+:where(.leader [role="alert"]) {
   padding: 0.75rem 0.875rem;
   border-radius: var(--radius-sm);
   background: var(--bad-soft);
   color: var(--bad);
   font-weight: 700;
 }
-:where(.leader) .banner {
+:where(.leader .banner) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -317,10 +327,10 @@
   border-radius: 10px;
   background: var(--accent-soft);
 }
-:where(.leader) .banner.warn {
+:where(.leader .banner.warn) {
   background: var(--warn-soft);
 }
-:where(.leader) .confirm {
+:where(.leader .confirm) {
   flex-basis: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -331,28 +341,38 @@
   background: var(--bad-soft);
   font-size: 0.9375rem;
 }
-:where(.leader) .confirm > span:first-child {
+:where(.leader .confirm > span:first-child) {
   flex-basis: 100%;
   font-weight: 700;
 }
-:where(.leader) .confirm ul {
+:where(.leader .confirm ul) {
   flex-basis: 100%;
 }
-:where(.leader) details {
+:where(.leader details) {
   flex-basis: 100%;
   font-size: 0.8125rem;
   color: var(--muted);
 }
-:where(.leader) summary {
+:where(.leader summary) {
   cursor: pointer;
 }
-:where(.leader) details ol {
+:where(.leader) summary::marker {
+  color: var(--muted);
+}
+:where(.leader) input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+:where(.leader) input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+:where(.leader details ol) {
   margin: 0.25rem 0 0;
   padding-left: 1.25rem;
 }
 
 /* Stats: a big display number over a small label. */
-:where(.leader) .stats {
+:where(.leader .stats) {
   display: flex;
   flex-wrap: wrap;
   gap: 1.5rem;
@@ -360,7 +380,7 @@
   padding: 0;
   list-style: none;
 }
-:where(.leader) .big {
+:where(.leader .big) {
   display: block;
   font-family: var(--display);
   font-size: 2.75rem;
@@ -370,29 +390,29 @@
 }
 
 /* Headline counts ("12 checked in"): one string, set large. */
-:where(.leader) .counts strong,
-:where(.leader) .counts > span {
+:where(.leader .counts strong),
+:where(.leader .counts > span) {
   font-family: var(--display);
-  font-size: 1.75rem;
+  font-size: 2.5rem;
   font-weight: 700;
   line-height: 1.1;
 }
-:where(.leader) .counts strong {
+:where(.leader .counts strong) {
   color: var(--accent);
 }
-:where(.leader) .counts > span {
+:where(.leader .counts > span) {
   color: var(--muted);
 }
 
 /* RSVP switch: a radiogroup drawn as a segmented control. */
-:where(.leader) [role="radiogroup"] {
+:where(.leader [role="radiogroup"]) {
   display: inline-flex;
   flex: none;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
-:where(.leader) [role="radiogroup"] label {
+:where(.leader [role="radiogroup"] label) {
   position: relative;
   display: grid;
   place-items: center;
@@ -402,21 +422,21 @@
   color: var(--muted);
   cursor: pointer;
 }
-:where(.leader) [role="radiogroup"] label + label {
+:where(.leader [role="radiogroup"] label + label) {
   border-left: 1px solid var(--line);
 }
-:where(.leader) [role="radiogroup"] input {
+:where(.leader [role="radiogroup"] input) {
   position: absolute;
   inset: 0;
   margin: 0;
   opacity: 0;
   cursor: pointer;
 }
-:where(.leader) [role="radiogroup"] label:has(input:checked) {
+:where(.leader [role="radiogroup"] label:has(input:checked)) {
   background: var(--fill);
   color: var(--fill-ink);
 }
-:where(.leader) [role="radiogroup"] label:has(input:focus-visible) {
+:where(.leader [role="radiogroup"] label:has(input:focus-visible)) {
   outline: 3px solid var(--focus);
   outline-offset: -3px;
 }

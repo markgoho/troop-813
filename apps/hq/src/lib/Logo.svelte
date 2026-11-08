@@ -1,9 +1,9 @@
 <script lang="ts">
-  // The troop logo (static/brand/troop-813-logo.svg), inlined so it takes the
+  // The troop logo (troop-813-logo.svg, beside this file), inlined so it takes the
   // surrounding text colour (currentColor) in both themes, and drawn with a
   // fixed on-screen line width so the monoline art stays crisp at any size.
   // Decorative: the text beside it names the troop.
-  import svg from "../../static/brand/troop-813-logo.svg?raw";
+  import svg from "./troop-813-logo.svg?raw";
 
   let {
     size = "2rem",

@@ -236,50 +236,67 @@
         {@const c = counts[s.id]}
         {#if c}<span class="meta">Present {c.present} of {c.total}</span>{/if}
       {/if}
-      <button
-        type="button"
-        aria-label="Edit {fullName(s)}"
-        onclick={() => startEdit(s)}>Edit</button
-      >
-      <button
-        type="button"
-        aria-label="{s.active ? 'Deactivate' : 'Reactivate'} {fullName(s)}"
-        onclick={() =>
-          void run(fullName(s), s.active ? "deactivate" : "reactivate", () =>
-            s.active ? api.deactivateScout(s.id) : api.reactivateScout(s.id),
-          )}>{s.active ? "Deactivate" : "Reactivate"}</button
-      >
-      {#if confirmingId === s.id}
+      <span class="actions">
         <button
           type="button"
-          class="danger solid"
-          onclick={() => void remove(s)}
+          aria-label="Edit {fullName(s)}"
+          onclick={() => startEdit(s)}>Edit</button
         >
-          Yes, delete {fullName(s)}
-        </button>
-        <button type="button" onclick={() => (confirmingId = null)}>
-          Keep
-        </button>
-      {:else}
         <button
           type="button"
-          aria-label="Delete {fullName(s)}"
-          disabled={inUse(s.id)}
-          aria-describedby={inUse(s.id) ? `reason-${s.id}` : undefined}
-          class="danger"
-          onclick={() => (confirmingId = s.id)}>Delete</button
+          aria-label="{s.active ? 'Deactivate' : 'Reactivate'} {fullName(s)}"
+          onclick={() =>
+            void run(fullName(s), s.active ? "deactivate" : "reactivate", () =>
+              s.active ? api.deactivateScout(s.id) : api.reactivateScout(s.id),
+            )}>{s.active ? "Deactivate" : "Reactivate"}</button
         >
-        {#if inUse(s.id)}
-          <small id="reason-{s.id}" class="reason">
-            Has Attendance or RSVPs, so it can't be deleted. Deactivate instead.
-          </small>
+        {#if confirmingId === s.id}
+          <button
+            type="button"
+            class="danger solid"
+            onclick={() => void remove(s)}
+          >
+            Yes, delete {fullName(s)}
+          </button>
+          <button type="button" onclick={() => (confirmingId = null)}>
+            Keep
+          </button>
+        {:else}
+          <button
+            type="button"
+            aria-label="Delete {fullName(s)}"
+            disabled={inUse(s.id)}
+            aria-describedby={inUse(s.id) ? `reason-${s.id}` : undefined}
+            class="danger"
+            onclick={() => (confirmingId = s.id)}>Delete</button
+          >
         {/if}
+      </span>
+      {#if confirmingId !== s.id && inUse(s.id)}
+        <small id="reason-{s.id}" class="reason">
+          Has Attendance or RSVPs, so it can't be deleted. Deactivate instead.
+        </small>
       {/if}
     {/if}
   </li>
 {/snippet}
 
 <style>
+  /* A Scout row: name and "Present x of y" on one line, the actions on the
+     next, the can't-delete reason under them. */
+  .name {
+    flex: 1 1 auto;
+  }
+  .meta {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+  .actions {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
   /* Rapid entry: first and last name side by side, Add Scout under them. */
   .add {
     grid-template-columns: 1fr 1fr;

@@ -108,6 +108,24 @@ describe("Tonight", () => {
     ]);
   });
 
+  test("Not checked in labels Scouts the Kiosk couldn't find", async () => {
+    const { live } = setup();
+    live
+      .meetingStore(TODAY)
+      .set(meeting(TODAY, { checkedIn: { s1: "a1" }, notFound: ["s3"] }));
+    live
+      .attendanceStore(TODAY)
+      .set(
+        ready([attendanceDoc("a1", "s1", "nameList", "2026-11-10T00:05:00Z")]),
+      );
+
+    await screen.findByText("1 checked in");
+    expect(items("Not checked in")).toEqual([
+      "Ellis Thorne Not found at the Kiosk Check in",
+      "Rowan Fenwick Check in",
+    ]);
+  });
+
   test("Check in calls the API as a Leader for that Scout", async () => {
     const leaderCheckIn = vi.fn(async () => ({ attendanceId: "a9" }));
     const { live } = setup({ leaderCheckIn });

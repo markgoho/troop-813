@@ -163,7 +163,9 @@
       {#each notYet as s (s.id)}
         <li>
           <span class="name">{fullName(s)}</span>
-          <!-- #24: label Scouts the Kiosk couldn't find here, from $meeting.doc.notFound.includes(s.id). -->
+          {#if $meeting.state === "ready" && $meeting.doc?.notFound.includes(s.id)}
+            <span class="not-found">Not found at the Kiosk</span>
+          {/if}
           <button
             type="button"
             aria-label="Check in {fullName(s)}"

@@ -17,6 +17,8 @@ Monorepo for Troop 813 apps and websites.
 scripts/prod-setup-wizard.sh
 ```
 
+Kiosk tablet setup: [docs/kiosk-tablet-setup.md](docs/kiosk-tablet-setup.md).
+
 ## Prerequisites
 
 Bun, Go (version in `api/go.mod`), Java 21+ (Firestore emulator), `golangci-lint` v2. Then `bun install`.

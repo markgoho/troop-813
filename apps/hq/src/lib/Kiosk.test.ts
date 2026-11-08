@@ -34,6 +34,9 @@ function setup(
   const session = fakeSession(user, { "kiosk-token": kioskUser });
   const live = fakeLive();
   live.scoutsStore.set(ready(roster));
+  // No Events to RSVP to: a check-in goes straight to the Handoff (see KioskRsvp.test.ts).
+  live.eventsStore.set(ready([]));
+  live.rsvpsStore.set(ready([]));
   const api = fakeApi(apiOverrides);
   render(Kiosk, { session, api, live, now });
   return { session, live, api };

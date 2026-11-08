@@ -12,8 +12,10 @@ import type {
   LeaderCheckInRequest,
   LeaderList,
   KioskNotFoundRequest,
+  KioskSetRSVPRequest,
   Me,
   RSVPAnswer,
+  RSVPRollbackPreview,
   SetRole,
   SetRSVP,
   StartMeetingResponse,
@@ -64,6 +66,17 @@ export interface Api {
    * Meeting, still able to check in. ApiError 401 session_asleep / session_expired.
    */
   kioskNotFound(req: KioskNotFoundRequest): Promise<void>;
+  /**
+   * Kiosk only: the Scout's Going / Not going for an Event, right after they
+   * checked in on this Kiosk. ApiError 403 forbidden (not checked in here),
+   * 400 bad_request (Event cancelled or begun), 401 session_asleep / session_expired.
+   */
+  kioskSetRsvp(req: KioskSetRSVPRequest): Promise<void>;
+  /** Leader only: the RSVP answers Undo of this check-in would roll back (for the confirm). */
+  rsvpRollbackPreview(
+    meetingId: string,
+    attendanceId: string,
+  ): Promise<RSVPRollbackPreview>;
 }
 
 export class ApiError extends Error {
@@ -189,6 +202,15 @@ export function httpApi(
     kioskNotFound: async (req) => {
       await send(fetchFn, token, "POST", "/api/kiosk/not-found", req);
     },
+    kioskSetRsvp: async (req) => {
+      await send(fetchFn, token, "PUT", "/api/kiosk/rsvps", req);
+    },
+    rsvpRollbackPreview: (meetingId, attendanceId) =>
+      getJSON<RSVPRollbackPreview>(
+        fetchFn,
+        token,
+        `${meetingPath(meetingId)}/attendance/${encodeURIComponent(attendanceId)}/rsvp-rollback`,
+      ),
   };
 }
 

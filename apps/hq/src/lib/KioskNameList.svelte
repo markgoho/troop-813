@@ -10,10 +10,14 @@
   // Yes → handoff check-in; "No, I'm someone else" → the name list, which
   // says "<Scout> was next"; "I can't find <Scout>" → marked not found, a
   // different Scout is named. Nobody left to name → the name list.
+  // Between a check-in and the Handoff, the Scout answers their pending RSVPs
+  // (KioskRsvp; none pending → straight on). Its "Done, pass the tablet on"
+  // starts the Handoff.
   // The next Scout comes from kiosk-flow over the live Meeting doc, after the
   // Scout this tablet just checked in (component state, so a reload falls
   // back to the name list).
   import { ApiError, type Api } from "./api";
+  import KioskRsvp from "./KioskRsvp.svelte";
   import {
     type NameListEntry,
     nameList,
@@ -51,6 +55,8 @@
   const anyoneIn = $derived(Object.keys(checkedIn).length > 0);
 
   let confirming = $state<NameListEntry | null>(null);
+  // The Scout who just checked in and is answering RSVPs.
+  let rsvping = $state<NameListEntry | null>(null);
   let saving = $state(false);
   let message = $state<string | null>(null);
 
@@ -119,6 +125,7 @@
     );
     if (!ok) return;
     confirming = null;
+    rsvping = entry;
     latest = entry.id;
     handingOff = true;
     broken = null;
@@ -144,6 +151,17 @@
   <p>Couldn't load the Meeting. Reload to try again.</p>
 {:else if !$meeting.doc}
   <p>Today's Meeting hasn't started. Ask the Admin.</p>
+{:else if rsvping}
+  {#key rsvping.id}
+    <KioskRsvp
+      {api}
+      {live}
+      meetingId={kiosk.meetingId}
+      scout={rsvping}
+      onDone={() => (rsvping = null)}
+      {onExpired}
+    />
+  {/key}
 {:else if confirming}
   {@const entry = confirming}
   <h1>Are you {entry.label}?</h1>

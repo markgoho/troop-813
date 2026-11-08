@@ -33,4 +33,6 @@ export interface Live {
   events(): Readable<LiveDocs<Event>>;
   /** Every RSVP doc (a few hundred at troop scale); screens filter by eventId. */
   rsvps(): Readable<LiveDocs<RSVP>>;
+  /** One Scout's RSVP docs: the only RSVPs the Kiosk may read, and only for a Scout checked in. */
+  scoutRsvps(scoutId: string): Readable<LiveDocs<RSVP>>;
 }

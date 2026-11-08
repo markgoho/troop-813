@@ -37,6 +37,24 @@ func (h Handlers) LeaderCheckIn(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// RSVPRollbackPreview is GET /api/meetings/{date}/attendance/{id}/rsvp-rollback
+// (Leader): 200 RSVPRollbackPreview, the answers Undo would roll back; 404
+// not_found for an unknown Meeting or Attendance.
+func (h Handlers) RSVPRollbackPreview(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	date, id := r.PathValue("date"), r.PathValue("id")
+	items, err := PreviewUndo(ctx, h.FS, date, id)
+	switch {
+	case errors.Is(err, ErrNoMeeting), errors.Is(err, ErrNoAttendance):
+		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
+	case err != nil:
+		h.logger().ErrorContext(ctx, "rsvp rollback preview failed", "err", err, "meetingId", date, "attendanceId", id)
+		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+	default:
+		router.WriteJSON(w, http.StatusOK, contract.RSVPRollbackPreview{Items: items})
+	}
+}
+
 // UndoCheckIn is POST /api/meetings/{date}/attendance/{id}/undo (Leader):
 // 204; 404 not_found for an unknown Meeting or Attendance.
 func (h Handlers) UndoCheckIn(w http.ResponseWriter, r *http.Request) {

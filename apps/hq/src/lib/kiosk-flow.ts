@@ -2,9 +2,9 @@
 // functions of (Meeting doc, Roster, Events, RSVPs, now). Screens only render
 // what these return; Go never recomputes them.
 //
-// So far: the name list. Later tickets add nextScout and the was-next
-// fallback (#24), pendingEvents / isLastChance (#26) and asleep (#27).
-import type { Scout } from "./contract.gen";
+// So far: the name list, the Handoff (nextScout, wasNext) and the RSVP
+// questions (pendingEvents, upcomingEvents, isLastChance). #27 adds asleep.
+import type { Event, RSVP, Scout } from "./contract.gen";
 import type { WithId } from "./live";
 
 /** One row of the Kiosk name list. */
@@ -80,4 +80,44 @@ export function nameList(scouts: WithId<Scout>[]): NameListEntry[] {
       return { id: s.id, label: shared ? `${first} ${initial}.` : first };
     })
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * Events a Scout is still asked about (stories 24, 32, 33): not cancelled,
+ * the Meeting is before the start date, and no saved answer (a cleared RSVP
+ * has none). Soonest first.
+ */
+export function pendingEvents(
+  events: WithId<Event>[],
+  rsvps: WithId<RSVP>[],
+  meetingDate: string,
+): WithId<Event>[] {
+  const answered = new Set(
+    rsvps.filter((r) => r.answer !== null).map((r) => r.eventId),
+  );
+  return upcomingEvents(events, meetingDate).filter((e) => !answered.has(e.id));
+}
+
+/** Events the Kiosk summary lists: not cancelled and not begun, soonest first. */
+export function upcomingEvents(
+  events: WithId<Event>[],
+  meetingDate: string,
+): WithId<Event>[] {
+  return events
+    .filter((e) => !e.cancelled && meetingDate < e.startDate)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * The last Meeting before an Event (story 28): it starts within 7 days of
+ * the Meeting date. Dates are YYYY-MM-DD with no time zone.
+ */
+export function isLastChance(startDate: string, meetingDate: string): boolean {
+  const days =
+    (Date.parse(`${startDate}T00:00:00Z`) -
+      Date.parse(`${meetingDate}T00:00:00Z`)) /
+    DAY_MS;
+  return days <= 7;
 }

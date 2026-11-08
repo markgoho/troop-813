@@ -24,6 +24,8 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     undoCheckIn: unexpected("undoCheckIn"),
     leaders: unexpected("leaders"),
     kioskNotFound: unexpected("kioskNotFound"),
+    kioskSetRsvp: unexpected("kioskSetRsvp"),
+    rsvpRollbackPreview: unexpected("rsvpRollbackPreview"),
     ...overrides,
   };
 }

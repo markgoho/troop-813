@@ -1,5 +1,15 @@
 import { describe, expect, test } from "vitest";
-import { nameList, nextScout, wasNext } from "./kiosk-flow";
+import { Timestamp } from "firebase/firestore";
+import type { Event, RSVP, RSVPAnswer } from "./contract.gen";
+import type { WithId } from "./live";
+import {
+  isLastChance,
+  nameList,
+  nextScout,
+  pendingEvents,
+  upcomingEvents,
+  wasNext,
+} from "./kiosk-flow";
 
 const state = (
   over: Partial<{
@@ -110,5 +120,97 @@ describe("nameList", () => {
     ]);
 
     expect(list).toEqual([{ id: "s1", label: "Avery" }]);
+  });
+});
+
+const event = (
+  id: string,
+  startDate: string,
+  over: Partial<Event> = {},
+): WithId<Event> => ({
+  id,
+  name: id,
+  startDate,
+  endDate: startDate,
+  cancelled: false,
+  ...over,
+});
+
+const saved = (eventId: string, answer: RSVPAnswer | null): WithId<RSVP> => ({
+  id: `${eventId}_s1`,
+  eventId,
+  scoutId: "s1",
+  answer,
+  history: [
+    {
+      answer,
+      at: Timestamp.fromDate(new Date("2026-11-01T00:00:00Z")),
+      by: "u-leader",
+      attendanceId: null,
+    },
+  ],
+});
+
+const MEETING = "2026-11-09";
+
+describe("pendingEvents", () => {
+  test("are Events not cancelled that start after the Meeting date, soonest first", () => {
+    const events = [
+      event("later", "2026-12-11"),
+      event("soon", "2026-11-13"),
+      event("cancelled", "2026-11-20", { cancelled: true }),
+      event("today", MEETING),
+      event("past", "2026-10-16"),
+    ];
+
+    expect(pendingEvents(events, [], MEETING).map((e) => e.id)).toEqual([
+      "soon",
+      "later",
+    ]);
+  });
+
+  test("leave out Events with a saved answer, but a cleared one is asked again", () => {
+    const events = [
+      event("a", "2026-11-13"),
+      event("b", "2026-11-20"),
+      event("c", "2026-11-27"),
+    ];
+    const rsvps = [
+      saved("a", "going"),
+      saved("b", "notGoing"),
+      saved("c", null),
+    ];
+
+    expect(pendingEvents(events, rsvps, MEETING).map((e) => e.id)).toEqual([
+      "c",
+    ]);
+  });
+});
+
+describe("upcomingEvents", () => {
+  test("include answered Events too, but never cancelled or begun ones", () => {
+    const events = [
+      event("a", "2026-11-13"),
+      event("x", "2026-11-20", { cancelled: true }),
+      event("p", MEETING),
+    ];
+
+    expect(upcomingEvents(events, MEETING).map((e) => e.id)).toEqual(["a"]);
+  });
+});
+
+describe("isLastChance", () => {
+  test("is true exactly 7 days out, and false at 8", () => {
+    expect(isLastChance("2026-11-16", MEETING)).toBe(true);
+    expect(isLastChance("2026-11-17", MEETING)).toBe(false);
+  });
+
+  test("is true for a weekend Event this week", () => {
+    expect(isLastChance("2026-11-13", MEETING)).toBe(true);
+  });
+
+  test("counts days across a month and year end", () => {
+    expect(isLastChance("2027-01-03", "2026-12-27")).toBe(true);
+    expect(isLastChance("2027-01-04", "2026-12-27")).toBe(false);
   });
 });

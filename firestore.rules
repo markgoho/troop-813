@@ -50,12 +50,16 @@ service cloud.firestore {
       allow read: if isLeader() || isKiosk();
     }
 
-    // The Events tab and Event page list Events and every RSVP live.
+    // The Events tab and Event page list Events and every RSVP live. The
+    // Kiosk lists Events for its RSVP cards, and reads an RSVP only for a
+    // Scout checked in on its Meeting (query rsvps where scoutId == that
+    // Scout), so one Scout never sees another's answers.
     match /events/{eventId} {
-      allow read: if isLeader();
+      allow read: if isLeader() || isKiosk();
     }
     match /rsvps/{rsvpId} {
-      allow read: if isLeader();
+      allow read: if isLeader() || (isKiosk()
+        && resource.data.scoutId in get(/databases/$(database)/documents/meetings/$(request.auth.token.meetingId)).data.checkedIn.keys());
     }
   }
 }

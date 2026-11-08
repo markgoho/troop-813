@@ -3,7 +3,13 @@
   // Checked in list (newest first, with Undo and an inline confirm) and the
   // Not checked in list (Leader check-in). A phone never starts a Meeting.
   import { ApiError, type Api } from "./api";
-  import type { Attendance, Scout } from "./contract.gen";
+  import type {
+    Attendance,
+    RSVPAnswer,
+    RSVPRollbackItem,
+    Scout,
+  } from "./contract.gen";
+  import { docsOf } from "./events";
   import { clockTime, localDate } from "./dates";
   import type { Live, WithId } from "./live";
 
@@ -21,6 +27,8 @@
   const attendance = live.attendance(meetingId);
   // svelte-ignore state_referenced_locally
   const scouts = live.scouts();
+  // svelte-ignore state_referenced_locally
+  const rsvps = live.rsvps();
 
   // Leader uid → name, for "Leader: <name>". Unknown → just "Leader".
   let leaderNames = $state<Record<string, string>>({});
@@ -63,6 +71,22 @@
       .sort(byName),
   );
 
+  // RSVPs given in each check-in: RSVP docs with an entry carrying its id.
+  // Still loading or unreadable counts as none, so the list never waits on it.
+  const rsvpsGiven = $derived.by(() => {
+    const given = new Map<string, number>();
+    for (const r of docsOf($rsvps)) {
+      const ids = new Set(r.history.map((h) => h.attendanceId));
+      for (const id of ids) {
+        if (id !== null) given.set(id, (given.get(id) ?? 0) + 1);
+      }
+    }
+    return given;
+  });
+
+  const answerText = (a: RSVPAnswer | null) =>
+    a === "going" ? "Going" : a === "notGoing" ? "Not going" : "No answer";
+
   function nameOf(scoutId: string): string {
     const s = scoutsById.get(scoutId);
     return s ? fullName(s) : "Unknown Scout";
@@ -76,6 +100,8 @@
   }
 
   let confirming = $state<string | null>(null); // attendance id awaiting Yes/Cancel
+  // The answers confirming's Undo rolls back; null when the preview failed.
+  let rollback = $state<RSVPRollbackItem[] | null>(null);
   let busy = $state(false);
   let message = $state<string | null>(null);
 
@@ -100,6 +126,20 @@
     run(`Couldn't check in ${fullName(s)}. Try again.`, () =>
       api.leaderCheckIn(meetingId, s.id),
     );
+  /** Previews the RSVP rollback, then shows the inline confirm. */
+  async function askUndo(a: WithId<Attendance>) {
+    if (busy) return;
+    busy = true;
+    message = null;
+    try {
+      rollback = (await api.rsvpRollbackPreview(meetingId, a.id)).items;
+    } catch {
+      rollback = null;
+    } finally {
+      busy = false;
+    }
+    confirming = a.id;
+  }
   const undo = (a: WithId<Attendance>) =>
     run(`Couldn't undo ${nameOf(a.scoutId)}'s check-in. Try again.`, () =>
       api.undoCheckIn(meetingId, a.id),
@@ -131,9 +171,30 @@
           <span class="name">{nameOf(a.scoutId)}</span>
           <span class="time">{clockTime(a.at.toDate())}</span>
           <span class="method">{methodLabel(a)}</span>
+          {#if rsvpsGiven.get(a.id)}
+            {@const n = rsvpsGiven.get(a.id)}
+            <span class="rsvps">{n} {n === 1 ? "RSVP" : "RSVPs"}</span>
+          {/if}
           {#if confirming === a.id}
             <span class="confirm">
               <span>Undo {nameOf(a.scoutId)}'s check-in?</span>
+              {#if rollback === null}
+                <span>
+                  Couldn't load which RSVPs this rolls back; Undo still rolls
+                  them back.
+                </span>
+              {:else if rollback.length > 0}
+                <span>This rolls back:</span>
+                <ul aria-label="RSVPs this rolls back">
+                  {#each rollback as item (item.eventId)}
+                    <li>
+                      {item.eventName}: {answerText(item.from)} → {answerText(
+                        item.to,
+                      )}
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
               <button type="button" disabled={busy} onclick={() => undo(a)}>
                 Yes, undo
               </button>
@@ -149,7 +210,8 @@
             <button
               type="button"
               aria-label="Undo {nameOf(a.scoutId)}"
-              onclick={() => (confirming = a.id)}
+              disabled={busy}
+              onclick={() => askUndo(a)}
             >
               Undo
             </button>

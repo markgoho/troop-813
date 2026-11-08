@@ -10,9 +10,11 @@
 //	d.Record(change)                             // in memory
 //	err = d.Save(tx)                             // writes only
 //
-// SetByLeader wraps that for the Leader's Event page. The Kiosk sets answers
-// the same way with an AttendanceID; Undo check-in loads that Scout's docs
-// and drops the check-in's entries (both arrive with the Kiosk tickets).
+// SetByLeader wraps that for the Leader's Event page, and SetAtKiosk for the
+// Kiosk (its entries carry the check-in's attendanceId). Undo check-in loads
+// a Scout's docs with ForScout and drops a check-in's entries with
+// RemoveAttendance, inside its own transaction; PreviewRollback shows what
+// that would change.
 package rsvp
 
 import (
@@ -76,6 +78,162 @@ func Get(tx *firestore.Transaction, fs *firestore.Client, eventID, scoutID strin
 		return nil, fmt.Errorf("rsvp: decode %s: %w", ref.ID, err)
 	}
 	return d, nil
+}
+
+func docsOf(snaps []*firestore.DocumentSnapshot) ([]*Doc, error) {
+	out := make([]*Doc, 0, len(snaps))
+	for _, s := range snaps {
+		d := &Doc{ref: s.Ref}
+		if err := s.DataTo(&d.data); err != nil {
+			return nil, fmt.Errorf("rsvp: decode %s: %w", s.Ref.ID, err)
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}
+
+// ForScout reads every RSVP doc of scoutID in tx (reads only).
+func ForScout(tx *firestore.Transaction, fs *firestore.Client, scoutID string) ([]*Doc, error) {
+	snaps, err := tx.Documents(fs.Collection(Collection).Where("scoutId", "==", scoutID)).GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("rsvp: read rsvps of scout: %w", err)
+	}
+	return docsOf(snaps)
+}
+
+// withoutAttendance is the history minus the entries given in attendanceID.
+func (d *Doc) withoutAttendance(attendanceID string) []contract.RSVPEntry {
+	return slices.DeleteFunc(slices.Clone(d.data.History), func(e contract.RSVPEntry) bool {
+		return e.AttendanceID != nil && *e.AttendanceID == attendanceID
+	})
+}
+
+// RemoveAttendance drops the entries given in check-in attendanceID, so
+// answer reverts to the latest remaining entry (null when none is left).
+// Leader entries and other check-ins' entries stay. It reports whether
+// anything was dropped.
+func (d *Doc) RemoveAttendance(attendanceID string) bool {
+	h := d.withoutAttendance(attendanceID)
+	if len(h) == len(d.data.History) {
+		return false
+	}
+	d.setHistory(h)
+	return true
+}
+
+// Rollback is one answer that removing a check-in's entries would change.
+type Rollback struct {
+	EventID  string
+	From, To *contract.RSVPAnswer
+}
+
+// PreviewRollback lists the answers of scoutID that undoing check-in
+// attendanceID would change. Read-only. A doc whose answer stays the same
+// (a Leader edited it after) is left out.
+func PreviewRollback(ctx context.Context, fs *firestore.Client, scoutID, attendanceID string) ([]Rollback, error) {
+	snaps, err := fs.Collection(Collection).Where("scoutId", "==", scoutID).Documents(ctx).GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("rsvp: read rsvps of scout: %w", err)
+	}
+	docs, err := docsOf(snaps)
+	if err != nil {
+		return nil, err
+	}
+	out := []Rollback{}
+	for _, d := range docs {
+		h := d.withoutAttendance(attendanceID)
+		var to *contract.RSVPAnswer
+		if len(h) > 0 {
+			to = h[len(h)-1].Answer
+		}
+		if !sameAnswer(d.data.Answer, to) {
+			out = append(out, Rollback{EventID: d.data.EventID, From: d.data.Answer, To: to})
+		}
+	}
+	return out, nil
+}
+
+// Kiosk names the Kiosk session an RSVP is given in.
+type Kiosk struct{ SessionID, MeetingID string }
+
+var (
+	// ErrNotCheckedIn means the Scout wasn't checked in by this Kiosk session.
+	ErrNotCheckedIn = errors.New("rsvp: Scout not checked in at this Kiosk")
+	// ErrEventClosed means the Event is cancelled or begins on or before the Meeting date.
+	ErrEventClosed = errors.New("rsvp: Event is cancelled or already begun")
+	// ErrNoMeeting means the Kiosk's Meeting doc is missing.
+	ErrNoMeeting = errors.New("rsvp: no such Meeting")
+)
+
+const (
+	meetings   = "meetings"
+	attendance = "attendance"
+	events     = "events"
+	sessions   = "kioskSessions"
+)
+
+// SetAtKiosk records answer (going or notGoing) for scoutID on eventID, given
+// at Kiosk k right after the Scout checked in: the entry carries that
+// check-in's attendanceId, so Undo can take it back. The Scout must be
+// checked in, not undone, by this very session, and the Event must exist,
+// not be cancelled, and start after the Meeting date. Bumps the session's
+// lastActivityAt in the same transaction. Like every caller, an answer equal
+// to the current one appends nothing.
+func SetAtKiosk(ctx context.Context, fs *firestore.Client, k Kiosk, eventID, scoutID string, answer contract.RSVPAnswer) error {
+	now := clock.Now(ctx)
+	meetingRef := fs.Collection(meetings).Doc(k.MeetingID)
+	eventRef := fs.Collection(events).Doc(eventID)
+	return fs.RunTransaction(ctx, func(_ context.Context, tx *firestore.Transaction) error {
+		msnap, err := tx.Get(meetingRef)
+		if status.Code(err) == codes.NotFound {
+			return ErrNoMeeting
+		} else if err != nil {
+			return fmt.Errorf("rsvp: read meetings/%s: %w", k.MeetingID, err)
+		}
+		var m contract.Meeting
+		if err := msnap.DataTo(&m); err != nil {
+			return fmt.Errorf("rsvp: decode meetings/%s: %w", k.MeetingID, err)
+		}
+		attID, in := m.CheckedIn[scoutID]
+		if !in {
+			return ErrNotCheckedIn
+		}
+		asnap, err := tx.Get(meetingRef.Collection(attendance).Doc(attID))
+		if err != nil {
+			return fmt.Errorf("rsvp: read attendance/%s: %w", attID, err)
+		}
+		var a contract.Attendance
+		if err := asnap.DataTo(&a); err != nil {
+			return fmt.Errorf("rsvp: decode attendance/%s: %w", attID, err)
+		}
+		if a.By != k.SessionID || a.Method == contract.AttendanceMethodLeader || a.UndoneAt != nil {
+			return ErrNotCheckedIn
+		}
+		esnap, err := tx.Get(eventRef)
+		if status.Code(err) == codes.NotFound {
+			return ErrEventNotFound
+		} else if err != nil {
+			return fmt.Errorf("rsvp: read events/%s: %w", eventID, err)
+		}
+		var e contract.Event
+		if err := esnap.DataTo(&e); err != nil {
+			return fmt.Errorf("rsvp: decode events/%s: %w", eventID, err)
+		}
+		if e.Cancelled || e.StartDate <= k.MeetingID {
+			return ErrEventClosed
+		}
+		d, err := Get(tx, fs, eventID, scoutID)
+		if err != nil {
+			return err
+		}
+		if _, err := d.Record(Change{Answer: &answer, At: now, By: k.SessionID, AttendanceID: &attID}); err != nil {
+			return err
+		}
+		if err := d.Save(tx); err != nil {
+			return err
+		}
+		return tx.Update(fs.Collection(sessions).Doc(k.SessionID), []firestore.Update{{Path: "lastActivityAt", Value: now}})
+	})
 }
 
 // Answer is the current answer, nil when there is none.

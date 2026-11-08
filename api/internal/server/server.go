@@ -17,6 +17,7 @@ import (
 	"github.com/markgoho/troop-813/api/internal/meeting"
 	"github.com/markgoho/troop-813/api/internal/roster"
 	"github.com/markgoho/troop-813/api/internal/router"
+	"github.com/markgoho/troop-813/api/internal/rsvp"
 )
 
 // Deps is everything a handler may use. Tests leave unused fields zero.
@@ -64,6 +65,9 @@ func Routes(d Deps) *router.Router {
 	r.Gated("POST /api/meetings/{date}/attendance/{id}/undo", leader, mtg.UndoCheckIn)
 	r.Gated("GET /api/leaders", leader, acc.Leaders)
 	r.Gated("POST /api/kiosk/not-found", []router.Accept{router.Kiosk}, mtg.KioskNotFound)
+	rs := rsvp.Handlers{FS: d.Firestore, Logger: d.Logger}
+	r.Gated("PUT /api/kiosk/rsvps", []router.Accept{router.Kiosk}, rs.KioskSet)
+	r.Gated("GET /api/meetings/{date}/attendance/{id}/rsvp-rollback", leader, mtg.RSVPRollbackPreview)
 	return r
 }
 

@@ -1,6 +1,9 @@
 import { render, screen, waitFor, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
+import { Timestamp } from "firebase/firestore";
 import { describe, expect, test, vi } from "vitest";
+import type { RSVP } from "./contract.gen";
+import type { WithId } from "./live";
 import Tonight from "./Tonight.svelte";
 import { ApiError } from "./api";
 import { fakeApi } from "./testing/fakeApi";
@@ -28,6 +31,7 @@ function setup(overrides: Parameters<typeof fakeApi>[0] = {}) {
     leaders: async () => ({
       leaders: [{ uid: "u-leader", displayName: "Lee Leader" }],
     }),
+    rsvpRollbackPreview: async () => ({ items: [] }),
     ...overrides,
   });
   const live = fakeLive();
@@ -46,6 +50,28 @@ function tonight(
 ) {
   live.meetingStore(TODAY).set(meeting(TODAY, { checkedIn }));
   live.attendanceStore(TODAY).set(ready(attendance));
+}
+
+function rsvpDoc(
+  eventId: string,
+  scoutId: string,
+  answer: "going" | "notGoing",
+  attendanceId: string | null,
+): WithId<RSVP> {
+  return {
+    id: `${eventId}_${scoutId}`,
+    eventId,
+    scoutId,
+    answer,
+    history: [
+      {
+        answer,
+        at: Timestamp.fromDate(new Date("2026-11-10T00:06:00Z")),
+        by: "kiosk-sess-1",
+        attendanceId,
+      },
+    ],
+  };
 }
 
 const items = (name: string) =>
@@ -166,11 +192,97 @@ describe("Tonight", () => {
       await screen.findByRole("button", { name: "Undo Avery Quill" }),
     );
     expect(undoCheckIn).not.toHaveBeenCalled();
-    expect(screen.getByText("Undo Avery Quill's check-in?")).toBeVisible();
+    expect(
+      await screen.findByText("Undo Avery Quill's check-in?"),
+    ).toBeVisible();
 
     await userEvent.click(screen.getByRole("button", { name: "Yes, undo" }));
 
     expect(undoCheckIn).toHaveBeenCalledExactlyOnceWith(TODAY, "a1");
+  });
+
+  test("the Undo confirm names the RSVP answers it will roll back", async () => {
+    const rsvpRollbackPreview = vi.fn(async () => ({
+      items: [
+        {
+          eventId: "fall",
+          eventName: "Fall Campout",
+          from: "going" as const,
+          to: "notGoing" as const,
+        },
+        {
+          eventId: "winter",
+          eventName: "Winter Campout",
+          from: "notGoing" as const,
+          to: null,
+        },
+      ],
+    }));
+    const { live } = setup({ rsvpRollbackPreview });
+    tonight(live, { s1: "a1" }, [
+      attendanceDoc("a1", "s1", "nameList", "2026-11-10T00:05:00Z"),
+    ]);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Undo Avery Quill" }),
+    );
+
+    expect(rsvpRollbackPreview).toHaveBeenCalledExactlyOnceWith(TODAY, "a1");
+    const list = await screen.findByRole("list", {
+      name: "RSVPs this rolls back",
+    });
+    expect(
+      within(list)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual([
+      "Fall Campout: Going → Not going",
+      "Winter Campout: Not going → No answer",
+    ]);
+  });
+
+  test("if the rollback can't be previewed, the confirm still works and says so", async () => {
+    const undoCheckIn = vi.fn(async () => {});
+    const { live } = setup({
+      undoCheckIn,
+      rsvpRollbackPreview: async () => {
+        throw new ApiError(500, null);
+      },
+    });
+    tonight(live, { s1: "a1" }, [
+      attendanceDoc("a1", "s1", "nameList", "2026-11-10T00:05:00Z"),
+    ]);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Undo Avery Quill" }),
+    );
+
+    expect(
+      await screen.findByText(/Couldn't load which RSVPs/),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Yes, undo" }));
+    expect(undoCheckIn).toHaveBeenCalledExactlyOnceWith(TODAY, "a1");
+  });
+
+  test("Checked in shows how many RSVPs each check-in gave", async () => {
+    const { live } = setup();
+    tonight(live, { s1: "a1", s2: "a2" });
+    live.rsvpsStore.set(
+      ready([
+        rsvpDoc("fall", "s1", "going", "a1"),
+        rsvpDoc("winter", "s1", "notGoing", "a1"),
+        // A Leader's entry and another check-in's entry don't count.
+        rsvpDoc("spring", "s1", "going", null),
+        rsvpDoc("fall", "s2", "going", "a-other"),
+      ]),
+    );
+
+    await waitFor(() =>
+      expect(items("Checked in")).toEqual([
+        "Rowan Fenwick 7:20 PM Leader: Lee Leader Undo",
+        "Avery Quill 7:05 PM Name list 2 RSVPs Undo",
+      ]),
+    );
   });
 
   test("Cancel on the confirm keeps the check-in", async () => {
@@ -183,7 +295,9 @@ describe("Tonight", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Undo Avery Quill" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Cancel" }),
+    );
 
     expect(undoCheckIn).not.toHaveBeenCalled();
     expect(

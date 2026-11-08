@@ -1,6 +1,6 @@
 // Test helper: a Live whose collections are writable stores the test pushes
 // snapshots into. Add each new Live method here once.
-import { writable, type Writable } from "svelte/store";
+import { derived, writable, type Writable } from "svelte/store";
 import { Timestamp } from "firebase/firestore";
 import type { Attendance, Event, Meeting, RSVP, Scout } from "../contract.gen";
 import type { Live, LiveDoc, LiveDocs, WithId } from "../live";
@@ -48,6 +48,13 @@ export function fakeLive(): FakeLive {
     scouts: () => scoutsStore,
     events: () => eventsStore,
     rsvps: () => rsvpsStore,
+    // The same docs, filtered, like the real query.
+    scoutRsvps: (scoutId) =>
+      derived(rsvpsStore, ($r) =>
+        $r.state === "ready"
+          ? { ...$r, docs: $r.docs.filter((d) => d.scoutId === scoutId) }
+          : $r,
+      ),
   };
 }
 

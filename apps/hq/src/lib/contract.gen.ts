@@ -306,6 +306,35 @@ export interface KioskNotFoundRequest {
   scoutId: string;
 }
 /**
+ * KioskSetRSVPRequest is the body of PUT /api/kiosk/rsvps (Kiosk only): the
+ * Scout's answer to an Event, given right after they checked in. Only going
+ * or notGoing; "ask me next week" and "not sure" send nothing. The Scout must
+ * have been checked in by this Kiosk session.
+ */
+export interface KioskSetRSVPRequest {
+  eventId: string;
+  scoutId: string;
+  answer: RSVPAnswer;
+}
+/**
+ * RSVPRollbackItem is one answer Undo check-in would roll back: the RSVP's
+ * current answer (From) and what it reverts to (To, null when no earlier answer remains).
+ */
+export interface RSVPRollbackItem {
+  eventId: string;
+  eventName: string;
+  from: RSVPAnswer | null;
+  to: RSVPAnswer | null;
+}
+/**
+ * RSVPRollbackPreview is the body of GET /api/meetings/{date}/attendance/{id}/rsvp-rollback
+ * (Leader): the answers Undo would change, so the confirm can name them.
+ * Entries a Leader's later edit already superseded change nothing and aren't listed.
+ */
+export interface RSVPRollbackPreview {
+  items: RSVPRollbackItem[];
+}
+/**
  * CheckInResponse is the 200 body of a check-in: the Scout's Attendance,
  * new or (for a repeat check-in) the existing one.
  */

@@ -65,9 +65,14 @@ beforeAll(async () => {
       });
     }
     await setDoc(doc(db, "scouts/s1"), { firstName: "Avery", lastName: "Q" });
-    await setDoc(doc(db, "meetings/2026-11-09"), { startedBy: "u-admin" });
+    // s1 is checked in tonight; s2 is not.
+    await setDoc(doc(db, "meetings/2026-11-09"), {
+      startedBy: "u-admin",
+      checkedIn: { s1: "a1" },
+    });
     await setDoc(doc(db, "events/e1"), { name: "Fall Campout" });
     await setDoc(doc(db, "rsvps/e1_s1"), { eventId: "e1", scoutId: "s1" });
+    await setDoc(doc(db, "rsvps/e1_s2"), { eventId: "e1", scoutId: "s2" });
     await setDoc(doc(db, "meetings/2026-11-02"), { startedBy: "u-admin" });
     await setDoc(doc(db, "meetings/2026-11-09/attendance/a1"), {
       scoutId: "s1",
@@ -114,10 +119,6 @@ describe("the Kiosk reads its Meeting and the Roster", () => {
     await expectDenied(
       getDocs(collection(db, "meetings/2026-11-09/attendance")),
     );
-    await expectDenied(getDoc(doc(db, "events/e1")));
-    await expectDenied(getDocs(collection(db, "events")));
-    await expectDenied(getDoc(doc(db, "rsvps/e1_s1")));
-    await expectDenied(getDocs(collection(db, "rsvps")));
     await expectDenied(getDoc(doc(db, "users/u-admin")));
     await expectDenied(getDoc(doc(db, "kioskSessions/session-1")));
   });
@@ -160,6 +161,37 @@ describe("users docs", () => {
   test("anonymous users can't read users docs", async () => {
     const db = env.unauthenticatedContext().firestore();
     await expectDenied(getDoc(doc(db, "users/u-parent")));
+  });
+});
+
+describe("the Kiosk reads Events and its checked-in Scouts' RSVPs", () => {
+  test("it can get and list Events", async () => {
+    const db = kiosk();
+    await expectAllowed(getDoc(doc(db, "events/e1")));
+    await expectAllowed(getDocs(collection(db, "events")));
+  });
+
+  test("it can read a checked-in Scout's RSVPs, by query or get", async () => {
+    const db = kiosk();
+    await expectAllowed(
+      getDocs(query(collection(db, "rsvps"), where("scoutId", "==", "s1"))),
+    );
+    await expectAllowed(getDoc(doc(db, "rsvps/e1_s1")));
+  });
+
+  test("it can't read a Scout who isn't checked in, or list every RSVP", async () => {
+    const db = kiosk();
+    await expectDenied(getDoc(doc(db, "rsvps/e1_s2")));
+    await expectDenied(
+      getDocs(query(collection(db, "rsvps"), where("scoutId", "==", "s2"))),
+    );
+    await expectDenied(getDocs(collection(db, "rsvps")));
+  });
+
+  test("a replaced session reads no Events or RSVPs", async () => {
+    const db = kiosk("session-old");
+    await expectDenied(getDoc(doc(db, "events/e1")));
+    await expectDenied(getDoc(doc(db, "rsvps/e1_s1")));
   });
 });
 

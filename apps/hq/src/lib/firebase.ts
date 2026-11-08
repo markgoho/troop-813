@@ -28,6 +28,8 @@ import {
   doc,
   getFirestore,
   onSnapshot,
+  query,
+  where,
 } from "firebase/firestore";
 import { type Readable, readable } from "svelte/store";
 import type { Attendance, Event, Meeting, RSVP, Scout } from "./contract.gen";
@@ -90,6 +92,25 @@ export function liveCollection<T>(path: string): Readable<LiveDocs<T>> {
   );
 }
 
+/** Docs whose `field` equals `value`, as a store (same lifetime as liveCollection). */
+export function liveWhere<T>(
+  path: string,
+  field: string,
+  value: string,
+): Readable<LiveDocs<T>> {
+  return readable<LiveDocs<T>>({ state: "loading" }, (set) =>
+    onSnapshot(
+      query(collection(firestore(), path), where(field, "==", value)),
+      (snap) =>
+        set({
+          state: "ready",
+          docs: snap.docs.map((d) => ({ ...(d.data() as T), id: d.id })),
+        }),
+      (error) => set({ state: "error", error }),
+    ),
+  );
+}
+
 /**
  * One doc as a store, through onSnapshot (same lifetime as liveCollection).
  * A doc that doesn't exist (yet) is ready with doc: null.
@@ -116,6 +137,7 @@ export function firebaseLive(): Live {
     scouts: () => liveCollection<Scout>("scouts"),
     events: () => liveCollection<Event>("events"),
     rsvps: () => liveCollection<RSVP>("rsvps"),
+    scoutRsvps: (scoutId) => liveWhere<RSVP>("rsvps", "scoutId", scoutId),
   };
 }
 

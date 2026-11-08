@@ -34,17 +34,68 @@ func (h Handlers) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, err := Add(r.Context(), h.FS, req.FirstName, req.LastName)
+	if err != nil {
+		h.fail(w, r, "add scout", err)
+		return
+	}
+	h.logger().InfoContext(r.Context(), "scout added", "scoutId", id)
+	router.WriteJSON(w, http.StatusCreated, contract.AddScoutResponse{ID: id})
+}
+
+// Edit is PUT /api/scouts/{id} with EditScoutRequest → 204; 400 bad_request,
+// 404 not_found, 409 duplicate_scout (inactiveMatchId when that match is inactive).
+func (h Handlers) Edit(w http.ResponseWriter, r *http.Request) {
+	var req contract.EditScoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		router.WriteError(w, http.StatusBadRequest, contract.ErrorCodeBadRequest)
+		return
+	}
+	h.done(w, r, "edit scout", Rename(r.Context(), h.FS, r.PathValue("id"), req.FirstName, req.LastName))
+}
+
+// Deactivate is POST /api/scouts/{id}/deactivate → 204.
+func (h Handlers) Deactivate(w http.ResponseWriter, r *http.Request) {
+	h.done(w, r, "deactivate scout", Deactivate(r.Context(), h.FS, r.PathValue("id")))
+}
+
+// Reactivate is POST /api/scouts/{id}/reactivate → 204; 409 duplicate_scout
+// while an active Scout has the same name.
+func (h Handlers) Reactivate(w http.ResponseWriter, r *http.Request) {
+	h.done(w, r, "reactivate scout", Reactivate(r.Context(), h.FS, r.PathValue("id")))
+}
+
+// Delete is DELETE /api/scouts/{id} → 204; 409 in_use while the Scout has
+// Attendance or RSVPs.
+func (h Handlers) Delete(w http.ResponseWriter, r *http.Request) {
+	h.done(w, r, "delete scout", Delete(r.Context(), h.FS, r.PathValue("id")))
+}
+
+func (h Handlers) done(w http.ResponseWriter, r *http.Request, op string, err error) {
+	if err != nil {
+		h.fail(w, r, op, err)
+		return
+	}
+	h.logger().InfoContext(r.Context(), op, "scoutId", r.PathValue("id"))
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h Handlers) fail(w http.ResponseWriter, r *http.Request, op string, err error) {
 	var dup *DuplicateError
 	switch {
 	case errors.Is(err, ErrEmptyName):
 		router.WriteError(w, http.StatusBadRequest, contract.ErrorCodeBadRequest)
+	case errors.Is(err, ErrNotFound):
+		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
+	case errors.Is(err, ErrInUse):
+		router.WriteError(w, http.StatusConflict, contract.ErrorCodeInUse)
 	case errors.As(err, &dup):
-		router.WriteError(w, http.StatusConflict, contract.ErrorCodeDuplicateScout)
-	case err != nil:
-		h.logger().ErrorContext(r.Context(), "add scout failed", "err", err)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		body := contract.ErrorBody{Code: contract.ErrorCodeDuplicateScout}
+		if !dup.Active {
+			body.InactiveMatchID = dup.MatchID
+		}
+		router.WriteJSON(w, http.StatusConflict, body)
 	default:
-		h.logger().InfoContext(r.Context(), "scout added", "scoutId", id)
-		router.WriteJSON(w, http.StatusCreated, contract.AddScoutResponse{ID: id})
+		h.logger().ErrorContext(r.Context(), op+" failed", "err", err)
+		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
 	}
 }

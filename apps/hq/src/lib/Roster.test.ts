@@ -23,7 +23,7 @@ function names(section: string) {
   const list = screen.getByRole("list", { name: section });
   return within(list)
     .queryAllByRole("listitem")
-    .map((li) => li.textContent?.trim());
+    .map((li) => li.querySelector(".name")?.textContent?.trim());
 }
 
 describe("Add Scout rapid entry", () => {

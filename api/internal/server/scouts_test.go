@@ -99,21 +99,6 @@ func TestAScoutSharingOnlyOneNameIsNotADuplicate(t *testing.T) {
 	}
 }
 
-func TestAMatchingInactiveScoutDoesNotBlockAnAdd(t *testing.T) {
-	t.Parallel()
-	env := testenv.Setup(t)
-	leader := env.RoleToken(t, "u-leader", contract.RoleLeader)
-	if _, _, err := env.Firestore.Collection("scouts").Add(context.Background(), contract.Scout{
-		FirstName: "Avery", LastName: "Quill", Active: false, CreatedAt: testenv.DefaultNow,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if status, _, code := addScout(t, env, leader, contract.AddScoutRequest{FirstName: "Avery", LastName: "Quill"}); status != http.StatusCreated {
-		t.Fatalf("POST = %d %q, want 201 (inactive matches get the Reactivate offer in a later ticket)", status, code)
-	}
-}
-
 func TestAddScoutNeedsBothNames(t *testing.T) {
 	t.Parallel()
 	env := testenv.Setup(t)

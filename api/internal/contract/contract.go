@@ -29,7 +29,7 @@ const (
 	ErrorCodeNotFound        ErrorCode = "not_found"       // the thing named in the path doesn't exist (404)
 	ErrorCodeFixedRole       ErrorCode = "fixed_role"      // an Admin's role can't be changed from HQ (409)
 	ErrorCodeInUse           ErrorCode = "in_use"          // can't delete: other records point at it (409)
-	ErrorCodeDuplicateScout  ErrorCode = "duplicate_scout" // an active Scout already has this first + last name (409)
+	ErrorCodeDuplicateScout  ErrorCode = "duplicate_scout" // another Scout has this first + last name (409); inactiveMatchId when that Scout is inactive
 	ErrorCodeTooLate         ErrorCode = "too_late"        // past 22:00 America/New_York: today's Meeting can't be started (409)
 	ErrorCodeSessionAsleep   ErrorCode = "session_asleep"  // Kiosk session idle 30 min; a Leader can wake it (401)
 	ErrorCodeSessionExpired  ErrorCode = "session_expired" // Kiosk session past 22:00 or replaced by a newer unlock (401)
@@ -38,6 +38,9 @@ const (
 // ErrorBody is the body of every non-2xx API response.
 type ErrorBody struct {
 	Code ErrorCode `json:"code"`
+	// InactiveMatchID is set on a duplicate_scout whose match is an inactive
+	// Scout: the UI offers Reactivate for that ID.
+	InactiveMatchID string `json:"inactiveMatchId,omitempty"`
 }
 
 // Role is a signed-in person's access level, stored in users/{uid}.role.
@@ -157,6 +160,12 @@ type Scout struct {
 
 // AddScoutRequest is the body of POST /api/scouts.
 type AddScoutRequest struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
+// EditScoutRequest is the body of PUT /api/scouts/{id}: the Scout's new name.
+type EditScoutRequest struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 }

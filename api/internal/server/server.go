@@ -56,6 +56,8 @@ func Routes(d Deps) *router.Router {
 	r.Gated("DELETE /api/events/{id}", leader, ev.Delete)
 	r.Gated("PUT /api/events/{id}/rsvps/{scoutId}", leader, ev.SetRSVP)
 	ros := roster.Handlers{FS: d.Firestore, Logger: d.Logger}
+	r.Gated("GET /api/scouts/attendance", leader, ros.Attendance)
+	r.Gated("GET /api/scouts/{id}/history", leader, ros.History)
 	r.Gated("POST /api/scouts", leader, ros.Add)
 	r.Gated("PUT /api/scouts/{id}", leader, ros.Edit)
 	r.Gated("POST /api/scouts/{id}/deactivate", leader, ros.Deactivate)

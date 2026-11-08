@@ -175,6 +175,36 @@ type AddScoutResponse struct {
 	ID string `json:"id"`
 }
 
+// MeetingPresence is one row of a Scout's history: a Meeting and whether they
+// were present at it.
+type MeetingPresence struct {
+	Date    string `json:"date"` // the Meeting ID, YYYY-MM-DD
+	Present bool   `json:"present"`
+}
+
+// ScoutHistory is the 200 body of GET /api/scouts/{id}/history. Since is where
+// the count starts: the earlier of the Scout's createdAt date and their first
+// non-undone Attendance, so backfilled Meetings count. Present of Total
+// Meetings on or after Since; Meetings is newest first.
+type ScoutHistory struct {
+	Since    string            `json:"since"`
+	Present  int               `json:"present"`
+	Total    int               `json:"total"`
+	Meetings []MeetingPresence `json:"meetings"`
+}
+
+// AttendanceCount is a Scout's X of Y, by the same rule as ScoutHistory.
+type AttendanceCount struct {
+	Present int `json:"present"`
+	Total   int `json:"total"`
+}
+
+// ScoutAttendance is the 200 body of GET /api/scouts/attendance: every
+// Scout's count by Scout ID, for the Roster's "Present X of Y".
+type ScoutAttendance struct {
+	Scouts map[string]AttendanceCount `json:"scouts"`
+}
+
 // Meeting is the Firestore doc meetings/{YYYY-MM-DD}: one Meeting, keyed by
 // its local date (ADR 0004). It is also the Kiosk's live state, read through
 // onSnapshot. There is no status field: a Meeting stops being live at 22:00.

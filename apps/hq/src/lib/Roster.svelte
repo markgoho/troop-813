@@ -5,8 +5,9 @@
   // Rapid entry: Enter in last name submits (native form submit); on success
   // the form clears and focus returns to first name for the next Scout.
   import { ApiError, type Api } from "./api";
-  import type { Scout } from "./contract.gen";
+  import type { AttendanceCount, Scout } from "./contract.gen";
   import type { Live, WithId } from "./live";
+  import ScoutLink from "./ScoutLink.svelte";
 
   let { api, live }: { api: Api; live: Live } = $props();
 
@@ -14,6 +15,16 @@
   const scouts = live.scouts();
   // svelte-ignore state_referenced_locally
   const rsvps = live.rsvps();
+
+  // "Present X of Y" per Scout, from Go (it owns the start rule). Loaded when
+  // the Roster opens; a failed load just leaves the counts off.
+  let counts = $state<Record<string, AttendanceCount>>({});
+  $effect(() => {
+    api.scoutAttendance().then(
+      (r) => (counts = r.scouts),
+      () => {},
+    );
+  });
 
   let firstName = $state("");
   let lastName = $state("");
@@ -221,7 +232,11 @@
         <button type="button" onclick={() => (editingId = null)}>Cancel</button>
       </form>
     {:else}
-      <span class="name">{fullName(s)}</span>
+      <span class="name"><ScoutLink scout={s} /></span>
+      {#if s.active}
+        {@const c = counts[s.id]}
+        {#if c}<span>Present {c.present} of {c.total}</span>{/if}
+      {/if}
       <button
         type="button"
         aria-label="Edit {fullName(s)}"

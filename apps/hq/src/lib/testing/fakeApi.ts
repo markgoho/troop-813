@@ -18,6 +18,8 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     deleteEvent: unexpected("deleteEvent"),
     setRsvp: unexpected("setRsvp"),
     addScout: unexpected("addScout"),
+    scoutHistory: unexpected("scoutHistory"),
+    scoutAttendance: unexpected("scoutAttendance"),
     editScout: unexpected("editScout"),
     deactivateScout: unexpected("deactivateScout"),
     reactivateScout: unexpected("reactivateScout"),

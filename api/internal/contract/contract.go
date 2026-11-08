@@ -25,6 +25,8 @@ const (
 	ErrorCodeUnauthenticated ErrorCode = "unauthenticated" // no valid credential (401)
 	ErrorCodeForbidden       ErrorCode = "forbidden"       // valid credential, caller not accepted (403)
 	ErrorCodeInternal        ErrorCode = "internal"        // server-side failure, e.g. Firestore unreachable (500)
+	ErrorCodeInvalidRequest  ErrorCode = "invalidRequest"  // malformed body or a required field empty (400)
+	ErrorCodeDuplicateScout  ErrorCode = "duplicateScout"  // an active Scout already has this first + last name (409)
 )
 
 // ErrorBody is the body of every non-2xx API response.
@@ -56,4 +58,24 @@ type User struct {
 type Me struct {
 	UID  string `json:"uid"`
 	Role Role   `json:"role"`
+}
+
+// Scout is the Firestore doc scouts/{id}: one Scout on the Roster. Leaders
+// read it live (firestore.rules); only Go writes it.
+type Scout struct {
+	FirstName string    `json:"firstName" firestore:"firstName"`
+	LastName  string    `json:"lastName" firestore:"lastName"`
+	Active    bool      `json:"active" firestore:"active"`
+	CreatedAt time.Time `json:"createdAt" firestore:"createdAt"`
+}
+
+// AddScoutRequest is the body of POST /api/scouts.
+type AddScoutRequest struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
+// AddScoutResponse is the 201 body of POST /api/scouts.
+type AddScoutResponse struct {
+	ID string `json:"id"`
 }

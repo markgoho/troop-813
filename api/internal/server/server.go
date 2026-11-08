@@ -40,6 +40,7 @@ func Routes(d Deps) *router.Router {
 	r := router.New(authn)
 	r.Open("GET /api/health", "liveness probe and the HQ smoke check; reveals only today's date", health)
 	r.Gated("GET /api/me", []router.Accept{router.Leader, router.Parent}, me)
+	r.Gated("POST /api/scouts", []router.Accept{router.Leader}, addScout(d.Firestore, logger(d)))
 	return r
 }
 
@@ -55,6 +56,14 @@ func me(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	router.WriteJSON(w, http.StatusOK, contract.Me{UID: auth.UID(c), Role: role})
+}
+
+// logger is d.Logger, or a discarding one when unset (tests that only walk routes).
+func logger(d Deps) *slog.Logger {
+	if d.Logger == nil {
+		return slog.New(slog.DiscardHandler)
+	}
+	return d.Logger
 }
 
 func health(w http.ResponseWriter, r *http.Request) {

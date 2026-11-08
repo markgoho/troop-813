@@ -9,8 +9,16 @@ A youth member of Troop 813 on the troop roster.
 _Avoid_: Member, kid, user
 
 **Leader**:
-An adult who runs troop business and unlocks troop-only screens.
-_Avoid_: Admin, Scoutmaster (a specific Leader role, not the general term)
+An adult who runs troop business and can use troop-only screens.
+_Avoid_: Scoutmaster (a specific Leader role, not the general term)
+
+**Admin**:
+The one Leader who grants Leader access, starts Meetings and unlocks the Meeting Kiosk.
+_Avoid_: Super admin, owner
+
+**Parent**:
+An adult who signs in but isn't a Leader.
+_Avoid_: Guardian, user
 
 **Roster**:
 The list of current Scouts, by first and last name.

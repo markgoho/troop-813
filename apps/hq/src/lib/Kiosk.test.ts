@@ -153,6 +153,181 @@ describe("Kiosk unlock", () => {
   });
 });
 
+describe("Kiosk Handoff", () => {
+  // Order: Rowan (s3), Avery Q. (s1), Avery M. (s2).
+  const order = ["s3", "s1", "s2"];
+
+  /** Rowan checks in by name list; returns the pieces the tests drive. */
+  async function afterRowan(apiOverrides: Parameters<typeof fakeApi>[0] = {}) {
+    const kioskCheckIn = vi.fn(async () => ({ attendanceId: "a1" }));
+    const kioskNotFound = vi.fn(async () => {});
+    const ctx = setup(kioskUser, {
+      kioskCheckIn,
+      kioskNotFound,
+      ...apiOverrides,
+    });
+    const store = ctx.live.meetingStore(TODAY);
+    store.set(meeting(TODAY, { handoffOrder: order }));
+    await tick();
+    await userEvent.click(screen.getByRole("button", { name: "Rowan" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, I'm Rowan" }),
+    );
+    store.set(meeting(TODAY, { handoffOrder: order, checkedIn: { s3: "a1" } }));
+    await tick();
+    return { ...ctx, store, kioskCheckIn, kioskNotFound };
+  }
+
+  test("after a check-in, names the next Scout in the order", async () => {
+    await afterRowan();
+
+    expect(
+      screen.getByRole("heading", { name: "Pass the tablet to Avery Q." }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Are you Avery Q.?")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Scouts" })).toBeNull();
+  });
+
+  test("Yes checks the named Scout in by handoff, then names the next", async () => {
+    const { kioskCheckIn, store } = await afterRowan();
+
+    await userEvent.click(screen.getByRole("button", { name: "Yes" }));
+
+    expect(kioskCheckIn).toHaveBeenLastCalledWith({
+      scoutId: "s1",
+      method: "handoff",
+    });
+    store.set(
+      meeting(TODAY, {
+        handoffOrder: order,
+        checkedIn: { s3: "a1", s1: "a2" },
+      }),
+    );
+    await tick();
+    expect(
+      screen.getByRole("heading", { name: "Pass the tablet to Avery M." }),
+    ).toBeInTheDocument();
+  });
+
+  test("No, I'm someone else goes to the name list and doesn't mark anyone not found", async () => {
+    const { kioskNotFound } = await afterRowan();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "No, I'm someone else" }),
+    );
+
+    expect(screen.getByRole("list", { name: "Scouts" })).toBeInTheDocument();
+    expect(kioskNotFound).not.toHaveBeenCalled();
+    // The named Scout is still tappable, and is flagged as due.
+    expect(screen.getByRole("button", { name: "Avery Q." })).toBeEnabled();
+    expect(screen.getByText("Avery Q. was next")).toBeInTheDocument();
+  });
+
+  test("tapping a name after the fallback checks in by name list and hands off from there", async () => {
+    const { kioskCheckIn, store } = await afterRowan();
+    await userEvent.click(
+      screen.getByRole("button", { name: "No, I'm someone else" }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Avery M." }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, I'm Avery M." }),
+    );
+
+    expect(kioskCheckIn).toHaveBeenLastCalledWith({
+      scoutId: "s2",
+      method: "nameList",
+    });
+    store.set(
+      meeting(TODAY, {
+        handoffOrder: order,
+        checkedIn: { s3: "a1", s2: "a3" },
+      }),
+    );
+    await tick();
+    // Next after Avery M. wraps to Rowan (in) → Avery Q., who was due.
+    expect(
+      screen.getByRole("heading", { name: "Pass the tablet to Avery Q." }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Avery Q. was next")).toBeNull();
+  });
+
+  test("I can't find <Scout> marks them not found and names a different Scout", async () => {
+    const { kioskNotFound } = await afterRowan();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "I can't find Avery Q." }),
+    );
+
+    expect(kioskNotFound).toHaveBeenCalledWith({ scoutId: "s1" });
+    expect(
+      await screen.findByRole("heading", {
+        name: "Pass the tablet to Avery M.",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  test("a not-found Scout is not named again, but can tap their own name", async () => {
+    const { store } = await afterRowan();
+    store.set(
+      meeting(TODAY, {
+        handoffOrder: order,
+        checkedIn: { s3: "a1", s2: "a2" },
+        notFound: ["s1"],
+      }),
+    );
+    await tick();
+
+    // Only the not-found Scout is left: nobody to name, so the name list.
+    expect(
+      screen.getByRole("heading", { name: "Tap your name" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Avery Q. was next")).toBeNull();
+    expect(screen.getByRole("button", { name: "Avery Q." })).toBeEnabled();
+  });
+
+  test("with nobody left to name, shows the name list", async () => {
+    const { store } = await afterRowan();
+    store.set(
+      meeting(TODAY, {
+        handoffOrder: order,
+        checkedIn: { s3: "a1", s1: "a2", s2: "a3" },
+      }),
+    );
+    await tick();
+
+    expect(screen.getByRole("list", { name: "Scouts" })).toBeInTheDocument();
+  });
+
+  test("a failed Yes stays on the Handoff and says so", async () => {
+    const { kioskCheckIn } = await afterRowan();
+    kioskCheckIn.mockRejectedValueOnce(new ApiError(500, { code: "internal" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Yes" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Try again");
+    expect(
+      screen.getByRole("heading", { name: "Pass the tablet to Avery Q." }),
+    ).toBeInTheDocument();
+  });
+
+  test("a failed I can't find stays on the Handoff and says so", async () => {
+    const { kioskNotFound } = await afterRowan();
+    kioskNotFound.mockRejectedValueOnce(
+      new ApiError(500, { code: "internal" }),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "I can't find Avery Q." }),
+    );
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Pass the tablet to Avery Q." }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("Kiosk session", () => {
   test("a reload with a live Kiosk session resumes the name list from the Meeting doc", async () => {
     const { live } = setup(kioskUser);

@@ -23,6 +23,7 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     leaderCheckIn: unexpected("leaderCheckIn"),
     undoCheckIn: unexpected("undoCheckIn"),
     leaders: unexpected("leaders"),
+    kioskNotFound: unexpected("kioskNotFound"),
     ...overrides,
   };
 }

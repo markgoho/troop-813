@@ -221,6 +221,37 @@ func checkIn(ctx context.Context, fs *firestore.Client, a checkInArgs) (CheckedI
 	return out, nil
 }
 
+// MarkNotFound records that the Kiosk couldn't find scoutID this Meeting, and
+// bumps the session's lastActivityAt, in one transaction. It never blocks a
+// later check-in: the Scout can still tap their own name or be checked in by
+// a Leader. Marking twice, or marking a Scout already checked in, writes
+// nothing but the activity bump.
+func MarkNotFound(ctx context.Context, fs *firestore.Client, k auth.Kiosk, scoutID string) error {
+	if scoutID == "" || strings.Contains(scoutID, "/") {
+		return ErrScoutNotFound
+	}
+	now := clock.Now(ctx)
+	meetingRef := fs.Collection(Meetings).Doc(k.MeetingID)
+	scoutRef := fs.Collection(scouts).Doc(scoutID)
+	return fs.RunTransaction(ctx, func(_ context.Context, tx *firestore.Transaction) error {
+		m, err := readMeeting(tx, meetingRef)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Get(scoutRef); status.Code(err) == codes.NotFound {
+			return ErrScoutNotFound
+		} else if err != nil {
+			return fmt.Errorf("meeting: read scouts/%s: %w", scoutID, err)
+		}
+		if _, in := m.CheckedIn[scoutID]; !in {
+			if err := tx.Update(meetingRef, []firestore.Update{{Path: "notFound", Value: firestore.ArrayUnion(scoutID)}}); err != nil {
+				return err
+			}
+		}
+		return tx.Update(fs.Collection(auth.KioskSessions).Doc(k.SessionID), []firestore.Update{{Path: "lastActivityAt", Value: now}})
+	})
+}
+
 func readMeeting(tx *firestore.Transaction, ref *firestore.DocumentRef) (contract.Meeting, error) {
 	snap, err := tx.Get(ref)
 	if status.Code(err) == codes.NotFound {

@@ -299,6 +299,13 @@ export interface LeaderList {
   leaders: LeaderSummary[];
 }
 /**
+ * KioskNotFoundRequest is the body of POST /api/kiosk/not-found (Kiosk only):
+ * the Kiosk couldn't find this Scout. The Meeting is the Kiosk session's.
+ */
+export interface KioskNotFoundRequest {
+  scoutId: string;
+}
+/**
  * CheckInResponse is the 200 body of a check-in: the Scout's Attendance,
  * new or (for a repeat check-in) the existing one.
  */

@@ -67,6 +67,34 @@ func (h Handlers) Start(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// KioskNotFound is POST /api/kiosk/not-found (Kiosk only): 204; 400
+// bad_request for a bad body; 404 not_found for an unknown Scout or Meeting.
+func (h Handlers) KioskNotFound(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	k, ok := router.CallerFrom(ctx).(auth.Kiosk)
+	if !ok {
+		router.WriteError(w, http.StatusForbidden, contract.ErrorCodeForbidden)
+		return
+	}
+	var req contract.KioskNotFoundRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ScoutID == "" {
+		router.WriteError(w, http.StatusBadRequest, contract.ErrorCodeBadRequest)
+		return
+	}
+	err := MarkNotFound(ctx, h.FS, k, req.ScoutID)
+	switch {
+	case errors.Is(err, ErrScoutNotFound), errors.Is(err, ErrNoMeeting):
+		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
+	case err != nil:
+		h.logger().ErrorContext(ctx, "mark not found failed", "err", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)
+		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+	default:
+		h.logger().InfoContext(ctx, "marked not found",
+			"meetingId", k.MeetingID, "scoutId", req.ScoutID, "kioskSessionId", k.SessionID)
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 // KioskCheckIn is POST /api/kiosk/check-in (Kiosk only): 200 CheckInResponse
 // (new or existing Attendance); 400 bad_request for a bad body or method;
 // 404 not_found for an unknown Scout or a missing Meeting doc.

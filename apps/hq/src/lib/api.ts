@@ -11,6 +11,7 @@ import type {
   KioskCheckInRequest,
   LeaderCheckInRequest,
   LeaderList,
+  KioskNotFoundRequest,
   Me,
   RSVPAnswer,
   SetRole,
@@ -58,6 +59,11 @@ export interface Api {
   undoCheckIn(meetingId: string, attendanceId: string): Promise<void>;
   /** Leader only: every Leader and the Admin by uid and name (no emails). */
   leaders(): Promise<LeaderList>;
+  /**
+   * Kiosk only: the Kiosk couldn't find this Scout. Never named again this
+   * Meeting, still able to check in. ApiError 401 session_asleep / session_expired.
+   */
+  kioskNotFound(req: KioskNotFoundRequest): Promise<void>;
 }
 
 export class ApiError extends Error {
@@ -180,6 +186,9 @@ export function httpApi(
       );
     },
     leaders: () => getJSON<LeaderList>(fetchFn, token, "/api/leaders"),
+    kioskNotFound: async (req) => {
+      await send(fetchFn, token, "POST", "/api/kiosk/not-found", req);
+    },
   };
 }
 

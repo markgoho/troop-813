@@ -21,9 +21,14 @@ import {
 } from "firebase/auth";
 import {
   type Firestore,
+  collection,
   connectFirestoreEmulator,
   getFirestore,
+  onSnapshot,
 } from "firebase/firestore";
+import { type Readable, readable } from "svelte/store";
+import type { Scout } from "./contract.gen";
+import type { Live, LiveDocs } from "./live";
 import type { Session } from "./session";
 
 let app: FirebaseApp | undefined;
@@ -61,6 +66,32 @@ export function firestore(): Firestore {
     }
   }
   return db;
+}
+
+/**
+ * A collection as a store, through onSnapshot. The listener starts with the
+ * first subscriber and stops with the last, so a screen only listens while shown.
+ * T is the doc's contract type; rules decide who may read (Go writes).
+ */
+export function liveCollection<T>(path: string): Readable<LiveDocs<T>> {
+  return readable<LiveDocs<T>>({ state: "loading" }, (set) =>
+    onSnapshot(
+      collection(firestore(), path),
+      (snap) =>
+        set({
+          state: "ready",
+          docs: snap.docs.map((d) => ({ ...(d.data() as T), id: d.id })),
+        }),
+      (error) => set({ state: "error", error }),
+    ),
+  );
+}
+
+/** The real live source. */
+export function firebaseLive(): Live {
+  return {
+    scouts: () => liveCollection<Scout>("scouts"),
+  };
 }
 
 /** The real Session: Google sign-in by redirect. */

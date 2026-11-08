@@ -35,13 +35,15 @@ export const ErrorCodeInternal = "internal"; // server-side failure, e.g. Firest
 export const ErrorCodeBadRequest = "bad_request"; // malformed or disallowed request body (400)
 export const ErrorCodeNotFound = "not_found"; // the thing named in the path doesn't exist (404)
 export const ErrorCodeFixedRole = "fixed_role"; // an Admin's role can't be changed from HQ (409)
+export const ErrorCodeDuplicateScout = "duplicate_scout"; // an active Scout already has this first + last name (409)
 export type ErrorCode =
   | typeof ErrorCodeUnauthenticated
   | typeof ErrorCodeForbidden
   | typeof ErrorCodeInternal
   | typeof ErrorCodeBadRequest
   | typeof ErrorCodeNotFound
-  | typeof ErrorCodeFixedRole;
+  | typeof ErrorCodeFixedRole
+  | typeof ErrorCodeDuplicateScout;
 /**
  * ErrorBody is the body of every non-2xx API response.
  */
@@ -97,4 +99,27 @@ export interface UserList {
  */
 export interface SetRole {
   role: Role;
+}
+/**
+ * Scout is the Firestore doc scouts/{id}: one Scout on the Roster. Leaders
+ * read it live (firestore.rules); only Go writes it.
+ */
+export interface Scout {
+  firstName: string;
+  lastName: string;
+  active: boolean;
+  createdAt: Timestamp;
+}
+/**
+ * AddScoutRequest is the body of POST /api/scouts.
+ */
+export interface AddScoutRequest {
+  firstName: string;
+  lastName: string;
+}
+/**
+ * AddScoutResponse is the 201 body of POST /api/scouts.
+ */
+export interface AddScoutResponse {
+  id: string;
 }

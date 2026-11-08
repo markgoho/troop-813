@@ -9,5 +9,6 @@
 
 <nav aria-label="Leader tabs">
   <a href={resolve("/(leader)")}>Tonight</a>
+  <a href={resolve("/(leader)/roster")}>Roster</a>
   {#if role === "admin"}<a href={resolve("/(leader)/access")}>Access</a>{/if}
 </nav>

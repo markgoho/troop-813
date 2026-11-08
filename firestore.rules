@@ -12,5 +12,18 @@ service cloud.firestore {
     match /users/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
     }
+
+    // A Leader (Admin included), by the role Go stored in users/{uid}.
+    function isLeader() {
+      let user = /databases/$(database)/documents/users/$(request.auth.uid);
+      return request.auth != null
+        && exists(user)
+        && get(user).data.role in ['leader', 'admin'];
+    }
+
+    // The Roster tab lists scouts live (onSnapshot = list) and opens Scouts (get).
+    match /scouts/{scoutId} {
+      allow read: if isLeader();
+    }
   }
 }

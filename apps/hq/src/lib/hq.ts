@@ -2,13 +2,15 @@
 // context. Pages call getHq(); tests render components with fakes as props.
 import { getContext, setContext } from "svelte";
 import { type Api, httpApi } from "./api";
-import { firebaseSession } from "./firebase";
+import { firebaseLive, firebaseSession } from "./firebase";
 import type { Me } from "./contract.gen";
+import type { Live } from "./live";
 import type { Session } from "./session";
 
 export interface Hq {
   session: Session;
   api: Api;
+  live: Live;
 }
 
 const key = Symbol("hq");
@@ -16,7 +18,11 @@ const key = Symbol("hq");
 /** Builds the real Session and Api and puts them in context for descendants. */
 export function provideHq(): Hq {
   const session = firebaseSession();
-  const hq: Hq = { session, api: httpApi(fetch, () => session.idToken()) };
+  const hq: Hq = {
+    session,
+    api: httpApi(fetch, () => session.idToken()),
+    live: firebaseLive(),
+  };
   setContext(key, hq);
   return hq;
 }

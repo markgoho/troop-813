@@ -11,6 +11,14 @@ describe("LeaderTabs", () => {
     );
   });
 
+  test("every Leader has the Roster tab", () => {
+    render(LeaderTabs, { role: "leader" });
+    expect(screen.getByRole("link", { name: "Roster" })).toHaveAttribute(
+      "href",
+      "/roster",
+    );
+  });
+
   test("a Leader who isn't the Admin doesn't", () => {
     render(LeaderTabs, { role: "leader" });
     expect(screen.getByRole("link", { name: "Tonight" })).toBeInTheDocument();

@@ -1,6 +1,14 @@
 // Typed client for the Go API. Components take an Api so tests can pass a fake.
 // Body types come from contract.gen.ts (generated from Go, ADR 0002): never hand-write them.
-import type { ErrorBody, Health, Me, SetRole, UserList } from "./contract.gen";
+import type {
+  AddScoutRequest,
+  AddScoutResponse,
+  ErrorBody,
+  Health,
+  Me,
+  SetRole,
+  UserList,
+} from "./contract.gen";
 
 export interface Api {
   health(): Promise<Health>;
@@ -10,6 +18,8 @@ export interface Api {
   users(): Promise<UserList>;
   /** Admin only: Parent↔Leader. Applies on that person's next request. */
   setRole(uid: string, role: "parent" | "leader"): Promise<void>;
+  /** Leader only: adds an active Scout. ApiError 409 duplicate_scout for an active exact match. */
+  addScout(scout: AddScoutRequest): Promise<AddScoutResponse>;
 }
 
 export class ApiError extends Error {
@@ -74,6 +84,10 @@ export function httpApi(
         `/api/users/${encodeURIComponent(uid)}/role`,
         body,
       );
+    },
+    addScout: async (scout) => {
+      const res = await send(fetchFn, token, "POST", "/api/scouts", scout);
+      return (await res.json()) as AddScoutResponse;
     },
   };
 }

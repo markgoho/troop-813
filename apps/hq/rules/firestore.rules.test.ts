@@ -8,7 +8,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 const rules = readFileSync(
@@ -48,6 +48,7 @@ beforeAll(async () => {
     for (const [uid, role] of [
       ["u-parent", "parent"],
       ["u-leader", "leader"],
+      ["u-admin", "admin"],
     ]) {
       await setDoc(doc(db, `users/${uid}`), {
         email: `${uid}@example.com`,
@@ -81,15 +82,28 @@ describe("users docs", () => {
   });
 });
 
+describe("Leaders read the Roster", () => {
+  for (const uid of ["u-leader", "u-admin"]) {
+    test(`${uid} can get a Scout and list scouts (onSnapshot)`, async () => {
+      const db = env.authenticatedContext(uid).firestore();
+      await expectAllowed(getDoc(doc(db, "scouts/s1")));
+      await expectAllowed(getDocs(collection(db, "scouts")));
+    });
+  }
+});
+
 describe("Parents and anonymous users read nothing else", () => {
   const identities = {
     anonymous: () => env.unauthenticatedContext(),
     parent: () => env.authenticatedContext("u-parent"),
+    // Signed in, but no users doc yet (Go creates it on the first API call).
+    "first sign-in": () => env.authenticatedContext("u-new"),
   };
   for (const [name, context] of Object.entries(identities)) {
     test(`${name} can't read scouts or meetings`, async () => {
       const db = context().firestore();
       await expectDenied(getDoc(doc(db, "scouts/s1")));
+      await expectDenied(getDocs(collection(db, "scouts")));
       await expectDenied(getDoc(doc(db, "meetings/2026-11-09")));
     });
   }

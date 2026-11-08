@@ -231,6 +231,12 @@ type KioskCheckInRequest struct {
 	Method  AttendanceMethod `json:"method"`
 }
 
+// KioskNotFoundRequest is the body of POST /api/kiosk/not-found (Kiosk only):
+// the Kiosk couldn't find this Scout. The Meeting is the Kiosk session's.
+type KioskNotFoundRequest struct {
+	ScoutID string `json:"scoutId"`
+}
+
 // CheckInResponse is the 200 body of a check-in: the Scout's Attendance,
 // new or (for a repeat check-in) the existing one.
 type CheckInResponse struct {

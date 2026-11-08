@@ -20,6 +20,7 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     addScout: unexpected("addScout"),
     startMeeting: unexpected("startMeeting"),
     kioskCheckIn: unexpected("kioskCheckIn"),
+    kioskNotFound: unexpected("kioskNotFound"),
     ...overrides,
   };
 }

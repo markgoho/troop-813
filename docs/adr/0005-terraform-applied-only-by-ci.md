@@ -1,6 +1,6 @@
 # Terraform applied only by CI; path-filtered single-job workflows
 
-Status: accepted (2026-11-08). Decided in [Deploy, CI and environments](https://github.com/markgoho/troop-813/issues/10). Builds on [ADR 0001](0001-stack-and-hosting.md). Amended 2026-11-08 by [Domain and URL](https://github.com/markgoho/troop-813/issues/14): Terraform also owns Hosting sites, custom-domain mappings and the authorized-domain list.
+Status: accepted (2026-11-08). Decided in [Deploy, CI and environments](https://github.com/markgoho/troop-813/issues/10). Builds on [ADR 0001](0001-stack-and-hosting.md). Amended 2026-11-08 by [Domain and URL](https://github.com/markgoho/troop-813/issues/14): Terraform also owns Hosting sites, custom-domain mappings and the authorized-domain list. Amended 2026-11-08: the repo is now public, so standard GitHub-hosted runner minutes are free and unlimited. The minutes cap below no longer applies, but path filters and single-job workflows stay, to keep CI fast and quiet.
 
 ## Context
 

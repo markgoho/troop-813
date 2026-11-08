@@ -43,6 +43,10 @@ Everyone who signs in starts as a Parent. `admin` is set only by `bun run bootst
 
 In `bun run dev`, "Sign in with Google" opens the Auth emulator's fake Google page: add an account with a fictional email, then bootstrap it.
 
+## Anonymizing a Scout
+
+To anonymize a Scout (e.g. a family's deletion request): on the Roster tab, Edit their name to "Former Scout N" and Deactivate them; Attendance and RSVP counts stay right and the name is gone.
+
 ## HQ Firebase config
 
 HQ reads its Firebase web config at build time: `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_PROJECT_ID` (the web deploy sets troop-813's; `bun run dev` sets demo values plus `VITE_FIREBASE_AUTH_EMULATOR_URL` and `VITE_FIRESTORE_EMULATOR_HOST`). `authDomain` is always the page's own host, so sign-in redirects through Hosting's `/__/auth/handler` on the same site.

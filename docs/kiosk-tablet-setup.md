@@ -20,5 +20,5 @@ Checklist for the troop Pixel Tablet as the Meeting Kiosk ([#32](https://github.
 
 ## After the Meeting
 
-1. End Meeting from the Leader screens on a phone (revokes the Kiosk session).
+1. Nothing to end: the Kiosk session expires at 22:00 America/New_York on its own (and sleeps after 30 min idle).
 2. Unpin on the tablet: swipe up and hold, enter the PIN.

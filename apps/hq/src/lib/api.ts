@@ -14,6 +14,8 @@ import type {
   LeaderList,
   KioskNotFoundRequest,
   Me,
+  PastMeetingCreated,
+  PastMeetingRequest,
   RSVPAnswer,
   ScoutAttendance,
   ScoutHistory,
@@ -72,6 +74,13 @@ export interface Api {
   leaderCheckIn(meetingId: string, scoutId: string): Promise<CheckInResponse>;
   /** Leader only: soft-deletes a check-in; the Scout can check in again. Idempotent. */
   undoCheckIn(meetingId: string, attendanceId: string): Promise<void>;
+  /**
+   * Leader only: backfills a Meeting for a past date (YYYY-MM-DD). ApiError
+   * 400 bad_request (not a past day), 409 meeting_exists.
+   */
+  createPastMeeting(date: string): Promise<PastMeetingCreated>;
+  /** Leader only: deletes a Meeting nobody is present at. ApiError 409 in_use while a Scout is present, 404 not_found. */
+  deleteMeeting(meetingId: string): Promise<void>;
   /** Leader only: every Leader and the Admin by uid and name (no emails). */
   leaders(): Promise<LeaderList>;
   /**
@@ -211,6 +220,14 @@ export function httpApi(
         body,
       );
       return (await res.json()) as CheckInResponse;
+    },
+    createPastMeeting: async (date) => {
+      const body: PastMeetingRequest = { date };
+      const res = await send(fetchFn, token, "POST", "/api/meetings", body);
+      return (await res.json()) as PastMeetingCreated;
+    },
+    deleteMeeting: async (meetingId) => {
+      await send(fetchFn, token, "DELETE", meetingPath(meetingId));
     },
     undoCheckIn: async (meetingId, attendanceId) => {
       await send(

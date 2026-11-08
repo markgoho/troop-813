@@ -2,6 +2,7 @@
   // Tonight tab (spec stories 44–52): today's Meeting live. Counts, the
   // Checked in list (newest first, with Undo and an inline confirm) and the
   // Not checked in list (Leader check-in). A phone never starts a Meeting.
+  import { resolve } from "$app/paths";
   import { ApiError, type Api } from "./api";
   import type { Attendance, Scout } from "./contract.gen";
   import { clockTime, localDate } from "./dates";
@@ -112,6 +113,7 @@
 
   {#if $meeting.state === "ready" && !$meeting.doc}
     <p>No Meeting today: the Admin starts it on the Kiosk</p>
+    <p><a href={resolve("/(leader)/meetings/new")}>Add a past Meeting</a></p>
   {:else if $meeting.state === "error" || $attendance.state === "error" || $scouts.state === "error"}
     <p role="alert">Couldn't load tonight's Meeting. Reload to try again.</p>
   {:else if $meeting.state === "loading" || $attendance.state === "loading" || $scouts.state === "loading"}

@@ -68,6 +68,8 @@ func Routes(d Deps) *router.Router {
 	r.Gated("POST /api/kiosk/check-in", []router.Accept{router.Kiosk}, mtg.KioskCheckIn)
 	r.Gated("POST /api/meetings/{date}/check-ins", leader, mtg.LeaderCheckIn)
 	r.Gated("POST /api/meetings/{date}/attendance/{id}/undo", leader, mtg.UndoCheckIn)
+	r.Gated("POST /api/meetings", leader, mtg.CreatePast)
+	r.Gated("DELETE /api/meetings/{date}", leader, mtg.DeleteMeeting)
 	r.Gated("GET /api/leaders", leader, acc.Leaders)
 	r.Gated("POST /api/kiosk/not-found", []router.Accept{router.Kiosk}, mtg.KioskNotFound)
 	return r

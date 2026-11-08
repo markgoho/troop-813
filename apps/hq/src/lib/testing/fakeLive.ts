@@ -10,6 +10,7 @@ export interface FakeLive extends Live {
   meetingStore(id: string): Writable<LiveDoc<Meeting>>;
   /** One store per Meeting ID, like meetingStore. */
   attendanceStore(meetingId: string): Writable<LiveDocs<Attendance>>;
+  meetingsStore: Writable<LiveDocs<Meeting>>;
   scoutsStore: Writable<LiveDocs<Scout>>;
   eventsStore: Writable<LiveDocs<Event>>;
   rsvpsStore: Writable<LiveDocs<RSVP>>;
@@ -34,6 +35,7 @@ export function fakeLive(): FakeLive {
     }
     return s;
   };
+  const meetingsStore = writable<LiveDocs<Meeting>>({ state: "loading" });
   const scoutsStore = writable<LiveDocs<Scout>>({ state: "loading" });
   const eventsStore = writable<LiveDocs<Event>>({ state: "loading" });
   const rsvpsStore = writable<LiveDocs<RSVP>>({ state: "loading" });
@@ -41,9 +43,11 @@ export function fakeLive(): FakeLive {
     meetingStore,
     attendanceStore,
     attendance: attendanceStore,
+    meetingsStore,
     scoutsStore,
     eventsStore,
     rsvpsStore,
+    meetings: () => meetingsStore,
     meeting: meetingStore,
     scouts: () => scoutsStore,
     events: () => eventsStore,

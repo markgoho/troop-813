@@ -30,6 +30,7 @@ const (
 	ErrorCodeFixedRole       ErrorCode = "fixed_role"      // an Admin's role can't be changed from HQ (409)
 	ErrorCodeInUse           ErrorCode = "in_use"          // can't delete: other records point at it (409)
 	ErrorCodeDuplicateScout  ErrorCode = "duplicate_scout" // another Scout has this first + last name (409); inactiveMatchId when that Scout is inactive
+	ErrorCodeMeetingExists   ErrorCode = "meeting_exists"  // a Meeting already exists for that date (409)
 	ErrorCodeTooLate         ErrorCode = "too_late"        // past 22:00 America/New_York: today's Meeting can't be started (409)
 	ErrorCodeSessionAsleep   ErrorCode = "session_asleep"  // Kiosk session idle 30 min; a Leader can wake it (401)
 	ErrorCodeSessionExpired  ErrorCode = "session_expired" // Kiosk session past 22:00 or replaced by a newer unlock (401)
@@ -274,6 +275,17 @@ type KioskCheckInRequest struct {
 // (Leader): check a Scout in with method leader.
 type LeaderCheckInRequest struct {
 	ScoutID string `json:"scoutId"`
+}
+
+// PastMeetingRequest is the body of POST /api/meetings (Leader): backfill a
+// Meeting for Date (YYYY-MM-DD), which must be before today and have no Meeting.
+type PastMeetingRequest struct {
+	Date string `json:"date"`
+}
+
+// PastMeetingCreated is the 201 body of POST /api/meetings.
+type PastMeetingCreated struct {
+	ID string `json:"id"` // the Meeting ID, YYYY-MM-DD
 }
 
 // LeaderSummary is one Leader's uid and name, so the Tonight tab can say

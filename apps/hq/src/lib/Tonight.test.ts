@@ -64,6 +64,9 @@ describe("Tonight", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Add a past Meeting" }),
+    ).toHaveAttribute("href", "/meetings/new");
   });
 
   test("shows checked-in and not-yet counts (active Scouts only for not-yet)", async () => {

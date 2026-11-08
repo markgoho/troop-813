@@ -25,6 +25,8 @@ export type LiveDoc<T> =
 export interface Live {
   /** One Meeting doc (meetings/{YYYY-MM-DD}): the Kiosk's live state, and Tonight's. */
   meeting(id: string): Readable<LiveDoc<Meeting>>;
+  /** Every Meeting doc, any date (Leaders only): the Meetings tab. */
+  meetings(): Readable<LiveDocs<Meeting>>;
   /** Every Attendance record of a Meeting, undone ones included (Leaders only). */
   attendance(meetingId: string): Readable<LiveDocs<Attendance>>;
   /** The whole Roster, active and inactive, unordered. */

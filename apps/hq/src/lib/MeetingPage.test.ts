@@ -1,0 +1,180 @@
+import { render, screen, within } from "@testing-library/svelte";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, test, vi } from "vitest";
+import MeetingPage from "./MeetingPage.svelte";
+import { ApiError } from "./api";
+import { fakeApi } from "./testing/fakeApi";
+import { fakeLive, meeting, ready, scout } from "./testing/fakeLive";
+
+const TODAY = "2026-11-09";
+const PAST = "2026-11-02";
+
+const roster = [
+  scout("s1", "Avery", "Quill"),
+  scout("s2", "Rowan", "Fenwick"),
+  scout("s3", "Juniper", "Marsh", false),
+  scout("s4", "Ellis", "Thorne", false),
+];
+
+function setup(
+  checkedIn: Record<string, string> | null,
+  overrides: Parameters<typeof fakeApi>[0] = {},
+  meetingId = PAST,
+) {
+  const api = fakeApi(overrides);
+  const live = fakeLive();
+  live.scoutsStore.set(ready(roster));
+  live
+    .meetingStore(meetingId)
+    .set(
+      checkedIn === null
+        ? { state: "ready", doc: null }
+        : meeting(meetingId, { checkedIn }),
+    );
+  const onDeleted = vi.fn();
+  render(MeetingPage, { api, live, meetingId, today: TODAY, onDeleted });
+  return { onDeleted };
+}
+
+const box = (name: string) => screen.findByRole("checkbox", { name });
+
+describe("MeetingPage checklist", () => {
+  test("lists active Scouts by name, ticked when present; names link to the Scout", async () => {
+    setup({ s2: "a2" });
+
+    expect(await box("Avery Quill")).not.toBeChecked();
+    expect(await box("Rowan Fenwick")).toBeChecked();
+    expect(screen.getByRole("link", { name: "Avery Quill" })).toHaveAttribute(
+      "href",
+      "/roster/s1",
+    );
+    expect(screen.getByText("1 present")).toBeInTheDocument();
+  });
+
+  test("an inactive Scout appears only when they were present", async () => {
+    setup({ s3: "a3" });
+
+    expect(await box("Juniper Marsh")).toBeChecked();
+    expect(
+      screen.queryByRole("checkbox", { name: "Ellis Thorne" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("ticking a Scout checks them in as a Leader", async () => {
+    const leaderCheckIn = vi.fn(async () => ({ attendanceId: "a9" }));
+    setup({}, { leaderCheckIn });
+
+    await userEvent.click(await box("Avery Quill"));
+
+    expect(leaderCheckIn).toHaveBeenCalledWith(PAST, "s1");
+  });
+
+  test("unticking asks first, then undoes that Scout's current check-in", async () => {
+    const undoCheckIn = vi.fn(async () => {});
+    setup({ s1: "a1" }, { undoCheckIn });
+
+    await userEvent.click(await box("Avery Quill"));
+
+    expect(screen.getByText("Undo Avery Quill's check-in?")).toBeVisible();
+    expect(undoCheckIn).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Yes, undo" }));
+    expect(undoCheckIn).toHaveBeenCalledWith(PAST, "a1");
+  });
+
+  test("Cancel leaves them present", async () => {
+    const undoCheckIn = vi.fn();
+    setup({ s1: "a1" }, { undoCheckIn });
+
+    await userEvent.click(await box("Avery Quill"));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(undoCheckIn).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Undo Avery/)).not.toBeInTheDocument();
+    expect(await box("Avery Quill")).toBeChecked();
+  });
+
+  test("a failed tick says so", async () => {
+    setup(
+      {},
+      {
+        leaderCheckIn: async () => {
+          throw new ApiError(500, { code: "internal" });
+        },
+      },
+    );
+
+    await userEvent.click(await box("Avery Quill"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn't check in Avery Quill",
+    );
+  });
+
+  test("a Meeting that doesn't exist says so", async () => {
+    setup(null);
+
+    expect(await screen.findByText("No Meeting on Mon 11/2.")).toBeVisible();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+});
+
+describe("MeetingPage delete", () => {
+  test("Delete this Meeting shows only while nobody is present", async () => {
+    setup({ s1: "a1" });
+    await box("Avery Quill");
+
+    expect(
+      screen.queryByRole("button", { name: "Delete this Meeting" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("it confirms, deletes and reports back", async () => {
+    const deleteMeeting = vi.fn(async () => {});
+    const { onDeleted } = setup({}, { deleteMeeting });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Delete this Meeting" }),
+    );
+    expect(deleteMeeting).not.toHaveBeenCalled();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, delete this Meeting" }),
+    );
+
+    expect(deleteMeeting).toHaveBeenCalledWith(PAST);
+    await vi.waitFor(() => expect(onDeleted).toHaveBeenCalled());
+  });
+
+  test("someone ticked meanwhile: the server's refusal is shown", async () => {
+    setup(
+      {},
+      {
+        deleteMeeting: async () => {
+          throw new ApiError(409, { code: "in_use" });
+        },
+      },
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Delete this Meeting" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, delete this Meeting" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Someone is present",
+    );
+  });
+
+  test("tonight's Meeting can't be deleted from here", async () => {
+    setup({}, {}, TODAY);
+    await box("Avery Quill");
+
+    expect(
+      screen.queryByRole("button", { name: "Delete this Meeting" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(document.body).getByRole("link", { name: "Open Tonight" }),
+    ).toHaveAttribute("href", "/");
+  });
+});

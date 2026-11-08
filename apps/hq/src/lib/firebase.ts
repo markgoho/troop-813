@@ -112,6 +112,7 @@ export function liveDoc<T>(path: string): Readable<LiveDoc<T>> {
 export function firebaseLive(): Live {
   return {
     meeting: (id) => liveDoc<Meeting>(`meetings/${id}`),
+    meetings: () => liveCollection<Meeting>("meetings"),
     attendance: (id) => liveCollection<Attendance>(`meetings/${id}/attendance`),
     scouts: () => liveCollection<Scout>("scouts"),
     events: () => liveCollection<Event>("events"),

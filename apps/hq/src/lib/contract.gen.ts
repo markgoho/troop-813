@@ -36,7 +36,7 @@ export const ErrorCodeBadRequest = "bad_request"; // malformed or disallowed req
 export const ErrorCodeNotFound = "not_found"; // the thing named in the path doesn't exist (404)
 export const ErrorCodeFixedRole = "fixed_role"; // an Admin's role can't be changed from HQ (409)
 export const ErrorCodeInUse = "in_use"; // can't delete: other records point at it (409)
-export const ErrorCodeDuplicateScout = "duplicate_scout"; // an active Scout already has this first + last name (409)
+export const ErrorCodeDuplicateScout = "duplicate_scout"; // another Scout has this first + last name (409); inactiveMatchId when that Scout is inactive
 export const ErrorCodeTooLate = "too_late"; // past 22:00 America/New_York: today's Meeting can't be started (409)
 export const ErrorCodeSessionAsleep = "session_asleep"; // Kiosk session idle 30 min; a Leader can wake it (401)
 export const ErrorCodeSessionExpired = "session_expired"; // Kiosk session past 22:00 or replaced by a newer unlock (401)
@@ -57,6 +57,11 @@ export type ErrorCode =
  */
 export interface ErrorBody {
   code: ErrorCode;
+  /**
+   * InactiveMatchID is set on a duplicate_scout whose match is an inactive
+   * Scout: the UI offers Reactivate for that ID.
+   */
+  inactiveMatchId?: string;
 }
 /**
  * Role is a signed-in person's access level, stored in users/{uid}.role.
@@ -189,10 +194,51 @@ export interface AddScoutRequest {
   lastName: string;
 }
 /**
+ * EditScoutRequest is the body of PUT /api/scouts/{id}: the Scout's new name.
+ */
+export interface EditScoutRequest {
+  firstName: string;
+  lastName: string;
+}
+/**
  * AddScoutResponse is the 201 body of POST /api/scouts.
  */
 export interface AddScoutResponse {
   id: string;
+}
+/**
+ * MeetingPresence is one row of a Scout's history: a Meeting and whether they
+ * were present at it.
+ */
+export interface MeetingPresence {
+  date: string; // the Meeting ID, YYYY-MM-DD
+  present: boolean;
+}
+/**
+ * ScoutHistory is the 200 body of GET /api/scouts/{id}/history. Since is where
+ * the count starts: the earlier of the Scout's createdAt date and their first
+ * non-undone Attendance, so backfilled Meetings count. Present of Total
+ * Meetings on or after Since; Meetings is newest first.
+ */
+export interface ScoutHistory {
+  since: string;
+  present: number /* int */;
+  total: number /* int */;
+  meetings: MeetingPresence[];
+}
+/**
+ * AttendanceCount is a Scout's X of Y, by the same rule as ScoutHistory.
+ */
+export interface AttendanceCount {
+  present: number /* int */;
+  total: number /* int */;
+}
+/**
+ * ScoutAttendance is the 200 body of GET /api/scouts/attendance: every
+ * Scout's count by Scout ID, for the Roster's "Present X of Y".
+ */
+export interface ScoutAttendance {
+  scouts: { [key: string]: AttendanceCount };
 }
 /**
  * Meeting is the Firestore doc meetings/{YYYY-MM-DD}: one Meeting, keyed by

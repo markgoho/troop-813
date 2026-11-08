@@ -113,6 +113,19 @@ describe("Tonight", () => {
     );
   });
 
+  test("names in both lists link to the Scout's page", async () => {
+    const { live } = setup();
+    tonight(live, { s1: "a1", s2: "a2" });
+
+    expect(
+      await screen.findByRole("link", { name: "Avery Quill" }),
+    ).toHaveAttribute("href", "/roster/s1");
+    expect(screen.getByRole("link", { name: "Ellis Thorne" })).toHaveAttribute(
+      "href",
+      "/roster/s3",
+    );
+  });
+
   test("a Handoff check-in says Handoff", async () => {
     const { live } = setup();
     tonight(live, { s1: "a1" }, [

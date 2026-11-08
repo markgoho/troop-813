@@ -122,6 +122,14 @@ function scoutRow(name: string) {
 }
 
 describe("EventPage", () => {
+  test("each Scout's name links to their page", () => {
+    setup({ rsvps: [] });
+
+    expect(
+      screen.getByRole("link", { name: "Avery Fictional" }),
+    ).toHaveAttribute("href", "/roster/s-avery");
+  });
+
   test("shows the Event and Going / Not going / No answer counts among active Scouts", () => {
     setup({
       rsvps: [

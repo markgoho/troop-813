@@ -12,6 +12,7 @@
   import { docsOf } from "./events";
   import { clockTime, localDate } from "./dates";
   import type { Live, WithId } from "./live";
+  import ScoutLink from "./ScoutLink.svelte";
 
   let {
     api,
@@ -167,8 +168,13 @@
     <h2>Checked in</h2>
     <ul aria-label="Checked in">
       {#each present as a (a.id)}
+        {@const who = scoutsById.get(a.scoutId)}
         <li>
-          <span class="name">{nameOf(a.scoutId)}</span>
+          <span class="name"
+            >{#if who}<ScoutLink scout={who} />{:else}{nameOf(
+                a.scoutId,
+              )}{/if}</span
+          >
           <span class="time">{clockTime(a.at.toDate())}</span>
           <span class="method">{methodLabel(a)}</span>
           {#if rsvpsGiven.get(a.id)}
@@ -224,7 +230,7 @@
     <ul aria-label="Not checked in">
       {#each notYet as s (s.id)}
         <li>
-          <span class="name">{fullName(s)}</span>
+          <span class="name"><ScoutLink scout={s} /></span>
           {#if $meeting.state === "ready" && $meeting.doc?.notFound.includes(s.id)}
             <span class="not-found">Not found at the Kiosk</span>
           {/if}

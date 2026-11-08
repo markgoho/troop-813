@@ -4,6 +4,7 @@
   // last with full history on tap, and Edit, Cancel / Uncancel, Delete.
   // Reads are live (onSnapshot); every change goes through the API.
   import EventForm from "./EventForm.svelte";
+  import ScoutLink from "./ScoutLink.svelte";
   import { ApiError, type Api } from "./api";
   import type {
     EventInput,
@@ -193,7 +194,7 @@
         {@const doc = byScout.get(s.id)}
         {@const last = doc?.history.at(-1)}
         <li>
-          <span>{s.firstName} {s.lastName}</span>
+          <ScoutLink scout={s} />
           <div role="radiogroup" aria-label="{s.firstName} {s.lastName}">
             {#each choices as c (c.label)}
               <label>

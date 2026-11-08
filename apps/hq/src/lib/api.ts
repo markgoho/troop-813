@@ -4,6 +4,7 @@ import type {
   AddScoutRequest,
   AddScoutResponse,
   CheckInResponse,
+  EditScoutRequest,
   ErrorBody,
   EventCreated,
   EventInput,
@@ -16,6 +17,8 @@ import type {
   Me,
   RSVPAnswer,
   RSVPRollbackPreview,
+  ScoutAttendance,
+  ScoutHistory,
   SetRole,
   SetRSVP,
   StartMeetingResponse,
@@ -45,6 +48,18 @@ export interface Api {
   ): Promise<void>;
   /** Leader only: adds an active Scout. ApiError 409 duplicate_scout for an active exact match. */
   addScout(scout: AddScoutRequest): Promise<AddScoutResponse>;
+  /** Leader only: the Scout's present/absent Meetings since their start, newest first. ApiError 404 not_found. */
+  scoutHistory(id: string): Promise<ScoutHistory>;
+  /** Leader only: every Scout's X of Y Meetings present, by Scout id. */
+  scoutAttendance(): Promise<ScoutAttendance>;
+  /** Leader only: renames a Scout. ApiError 409 duplicate_scout when another Scout has the name. */
+  editScout(id: string, name: EditScoutRequest): Promise<void>;
+  /** Leader only: drops a Scout off the Kiosk, keeping their history. */
+  deactivateScout(id: string): Promise<void>;
+  /** Leader only: ApiError 409 duplicate_scout while an active Scout has the same name. */
+  reactivateScout(id: string): Promise<void>;
+  /** Leader only: ApiError 409 in_use while the Scout has Attendance or RSVPs. */
+  deleteScout(id: string): Promise<void>;
   /**
    * Admin only: starts (or re-opens) today's Meeting and issues a new Kiosk
    * session. ApiError 409 too_late from 22:00 New York time.
@@ -165,6 +180,26 @@ export function httpApi(
       const res = await send(fetchFn, token, "POST", "/api/scouts", scout);
       return (await res.json()) as AddScoutResponse;
     },
+    scoutHistory: (id) =>
+      getJSON<ScoutHistory>(
+        fetchFn,
+        token,
+        `/api/scouts/${encodeURIComponent(id)}/history`,
+      ),
+    scoutAttendance: () =>
+      getJSON<ScoutAttendance>(fetchFn, token, "/api/scouts/attendance"),
+    editScout: async (id, name) => {
+      await send(fetchFn, token, "PUT", scoutPath(id), name);
+    },
+    deactivateScout: async (id) => {
+      await send(fetchFn, token, "POST", `${scoutPath(id)}/deactivate`);
+    },
+    reactivateScout: async (id) => {
+      await send(fetchFn, token, "POST", `${scoutPath(id)}/reactivate`);
+    },
+    deleteScout: async (id) => {
+      await send(fetchFn, token, "DELETE", scoutPath(id));
+    },
     startMeeting: async () => {
       const res = await send(fetchFn, token, "POST", "/api/kiosk/start");
       return (await res.json()) as StartMeetingResponse;
@@ -216,6 +251,10 @@ export function httpApi(
 
 function meetingPath(id: string): string {
   return `/api/meetings/${encodeURIComponent(id)}`;
+}
+
+function scoutPath(id: string): string {
+  return `/api/scouts/${encodeURIComponent(id)}`;
 }
 
 function eventPath(id: string): string {

@@ -57,7 +57,13 @@ func Routes(d Deps) *router.Router {
 	r.Gated("DELETE /api/events/{id}", leader, ev.Delete)
 	r.Gated("PUT /api/events/{id}/rsvps/{scoutId}", leader, ev.SetRSVP)
 	ros := roster.Handlers{FS: d.Firestore, Logger: d.Logger}
-	r.Gated("POST /api/scouts", []router.Accept{router.Leader}, ros.Add)
+	r.Gated("GET /api/scouts/attendance", leader, ros.Attendance)
+	r.Gated("GET /api/scouts/{id}/history", leader, ros.History)
+	r.Gated("POST /api/scouts", leader, ros.Add)
+	r.Gated("PUT /api/scouts/{id}", leader, ros.Edit)
+	r.Gated("POST /api/scouts/{id}/deactivate", leader, ros.Deactivate)
+	r.Gated("POST /api/scouts/{id}/reactivate", leader, ros.Reactivate)
+	r.Gated("DELETE /api/scouts/{id}", leader, ros.Delete)
 	mtg := meeting.Handlers{FS: d.Firestore, Auth: d.Auth, Logger: d.Logger}
 	r.Gated("POST /api/kiosk/start", []router.Accept{router.Admin}, mtg.Start)
 	r.Gated("POST /api/kiosk/check-in", []router.Accept{router.Kiosk}, mtg.KioskCheckIn)

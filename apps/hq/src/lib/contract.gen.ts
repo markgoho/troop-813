@@ -195,6 +195,40 @@ export interface AddScoutResponse {
   id: string;
 }
 /**
+ * MeetingPresence is one row of a Scout's history: a Meeting and whether they
+ * were present at it.
+ */
+export interface MeetingPresence {
+  date: string; // the Meeting ID, YYYY-MM-DD
+  present: boolean;
+}
+/**
+ * ScoutHistory is the 200 body of GET /api/scouts/{id}/history. Since is where
+ * the count starts: the earlier of the Scout's createdAt date and their first
+ * non-undone Attendance, so backfilled Meetings count. Present of Total
+ * Meetings on or after Since; Meetings is newest first.
+ */
+export interface ScoutHistory {
+  since: string;
+  present: number /* int */;
+  total: number /* int */;
+  meetings: MeetingPresence[];
+}
+/**
+ * AttendanceCount is a Scout's X of Y, by the same rule as ScoutHistory.
+ */
+export interface AttendanceCount {
+  present: number /* int */;
+  total: number /* int */;
+}
+/**
+ * ScoutAttendance is the 200 body of GET /api/scouts/attendance: every
+ * Scout's count by Scout ID, for the Roster's "Present X of Y".
+ */
+export interface ScoutAttendance {
+  scouts: { [key: string]: AttendanceCount };
+}
+/**
  * Meeting is the Firestore doc meetings/{YYYY-MM-DD}: one Meeting, keyed by
  * its local date (ADR 0004). It is also the Kiosk's live state, read through
  * onSnapshot. There is no status field: a Meeting stops being live at 22:00.

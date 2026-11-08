@@ -25,6 +25,31 @@ func (h Handlers) logger() *slog.Logger {
 	return h.Logger
 }
 
+// History is GET /api/scouts/{id}/history: 200 ScoutHistory; 404 not_found.
+func (h Handlers) History(w http.ResponseWriter, r *http.Request) {
+	out, err := History(r.Context(), h.FS, r.PathValue("id"))
+	switch {
+	case errors.Is(err, ErrScoutNotFound):
+		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
+	case err != nil:
+		h.logger().ErrorContext(r.Context(), "scout history failed", "err", err)
+		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+	default:
+		router.WriteJSON(w, http.StatusOK, out)
+	}
+}
+
+// Attendance is GET /api/scouts/attendance: 200 ScoutAttendance.
+func (h Handlers) Attendance(w http.ResponseWriter, r *http.Request) {
+	counts, err := Attendances(r.Context(), h.FS)
+	if err != nil {
+		h.logger().ErrorContext(r.Context(), "scout attendance failed", "err", err)
+		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		return
+	}
+	router.WriteJSON(w, http.StatusOK, contract.ScoutAttendance{Scouts: counts})
+}
+
 // Add is POST /api/scouts: 201 AddScoutResponse; 400 bad_request for a bad
 // body or a blank name; 409 duplicate_scout for an active exact match.
 func (h Handlers) Add(w http.ResponseWriter, r *http.Request) {

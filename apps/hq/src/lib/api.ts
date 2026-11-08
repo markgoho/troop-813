@@ -12,6 +12,8 @@ import type {
   KioskNotFoundRequest,
   Me,
   RSVPAnswer,
+  ScoutAttendance,
+  ScoutHistory,
   SetRole,
   SetRSVP,
   StartMeetingResponse,
@@ -41,6 +43,10 @@ export interface Api {
   ): Promise<void>;
   /** Leader only: adds an active Scout. ApiError 409 duplicate_scout for an active exact match. */
   addScout(scout: AddScoutRequest): Promise<AddScoutResponse>;
+  /** Leader only: the Scout's present/absent Meetings since their start, newest first. ApiError 404 not_found. */
+  scoutHistory(id: string): Promise<ScoutHistory>;
+  /** Leader only: every Scout's X of Y Meetings present, by Scout id. */
+  scoutAttendance(): Promise<ScoutAttendance>;
   /**
    * Admin only: starts (or re-opens) today's Meeting and issues a new Kiosk
    * session. ApiError 409 too_late from 22:00 New York time.
@@ -144,6 +150,14 @@ export function httpApi(
       const res = await send(fetchFn, token, "POST", "/api/scouts", scout);
       return (await res.json()) as AddScoutResponse;
     },
+    scoutHistory: (id) =>
+      getJSON<ScoutHistory>(
+        fetchFn,
+        token,
+        `/api/scouts/${encodeURIComponent(id)}/history`,
+      ),
+    scoutAttendance: () =>
+      getJSON<ScoutAttendance>(fetchFn, token, "/api/scouts/attendance"),
     startMeeting: async () => {
       const res = await send(fetchFn, token, "POST", "/api/kiosk/start");
       return (await res.json()) as StartMeetingResponse;

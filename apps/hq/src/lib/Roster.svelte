@@ -4,13 +4,24 @@
   // Rapid entry: Enter in last name submits (native form submit); on success
   // the form clears and focus returns to first name for the next Scout.
   import { ApiError, type Api } from "./api";
-  import type { Scout } from "./contract.gen";
+  import type { AttendanceCount, Scout } from "./contract.gen";
   import type { Live, WithId } from "./live";
+  import ScoutLink from "./ScoutLink.svelte";
 
   let { api, live }: { api: Api; live: Live } = $props();
 
   // svelte-ignore state_referenced_locally
   const scouts = live.scouts();
+
+  // "Present X of Y" per Scout, from Go (it owns the start rule). Loaded when
+  // the Roster opens; a failed load just leaves the counts off.
+  let counts = $state<Record<string, AttendanceCount>>({});
+  $effect(() => {
+    api.scoutAttendance().then(
+      (r) => (counts = r.scouts),
+      () => {},
+    );
+  });
 
   let firstName = $state("");
   let lastName = $state("");
@@ -87,12 +98,18 @@
   {:else}
     <h2 id="active-heading">Active Scouts</h2>
     <ul aria-labelledby="active-heading">
-      {#each active as s (s.id)}<li>{s.firstName} {s.lastName}</li>{/each}
+      {#each active as s (s.id)}
+        {@const c = counts[s.id]}
+        <li>
+          <ScoutLink scout={s} />
+          {#if c}<span>Present {c.present} of {c.total}</span>{/if}
+        </li>
+      {/each}
     </ul>
     {#if inactive.length > 0}
       <h2 id="inactive-heading">Inactive Scouts</h2>
       <ul aria-labelledby="inactive-heading">
-        {#each inactive as s (s.id)}<li>{s.firstName} {s.lastName}</li>{/each}
+        {#each inactive as s (s.id)}<li><ScoutLink scout={s} /></li>{/each}
       </ul>
     {/if}
   {/if}

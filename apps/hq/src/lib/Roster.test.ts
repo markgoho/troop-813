@@ -23,7 +23,7 @@ function names(section: string) {
   const list = screen.getByRole("list", { name: section });
   return within(list)
     .queryAllByRole("listitem")
-    .map((li) => li.textContent?.trim());
+    .map((li) => li.querySelector("a")?.textContent?.trim());
 }
 
 describe("Add Scout rapid entry", () => {
@@ -151,6 +151,69 @@ describe("Roster list", () => {
 
     expect(await screen.findByText("Avery Quill")).toBeInTheDocument();
     expect(screen.queryByText("No Scouts yet.")).not.toBeInTheDocument();
+  });
+
+  test("each Active Scout shows Present X of Y; Inactive Scouts don't", async () => {
+    const scoutAttendance = vi.fn(async () => ({
+      scouts: {
+        s1: { present: 2, total: 3 },
+        s2: { present: 0, total: 0 },
+        s3: { present: 1, total: 1 },
+      },
+    }));
+    const live = fakeLive();
+    render(Roster, { api: fakeApi({ scoutAttendance }), live });
+    live.scoutsStore.set({
+      state: "ready",
+      docs: [
+        scout("s1", "Avery", "Quill"),
+        scout("s2", "Rowan", "Pike"),
+        scout("s3", "Quincy", "Harrow", false),
+      ],
+    });
+    await tick();
+
+    const active = screen.getByRole("list", { name: "Active Scouts" });
+    expect(await within(active).findByText("Present 2 of 3")).toBeVisible();
+    expect(within(active).getByText("Present 0 of 0")).toBeVisible();
+    const inactive = screen.getByRole("list", { name: "Inactive Scouts" });
+    expect(within(inactive).queryByText(/Present/)).not.toBeInTheDocument();
+  });
+
+  test("a Scout with no counts yet shows none, and a failed load leaves the names", async () => {
+    const live = fakeLive();
+    render(Roster, {
+      api: fakeApi({
+        scoutAttendance: vi.fn(async () => ({ scouts: {} })),
+      }),
+      live,
+    });
+    live.scoutsStore.set({
+      state: "ready",
+      docs: [scout("s1", "Avery", "Quill")],
+    });
+    await tick();
+
+    expect(await screen.findByText("Avery Quill")).toBeInTheDocument();
+    expect(screen.queryByText(/Present/)).not.toBeInTheDocument();
+  });
+
+  test("each name links to that Scout's page", async () => {
+    const { live } = setup();
+    live.scoutsStore.set({
+      state: "ready",
+      docs: [scout("s1", "Avery", "Quill"), scout("s2", "Q", "H", false)],
+    });
+    await tick();
+
+    expect(screen.getByRole("link", { name: "Avery Quill" })).toHaveAttribute(
+      "href",
+      "/roster/s1",
+    );
+    expect(screen.getByRole("link", { name: "Q H" })).toHaveAttribute(
+      "href",
+      "/roster/s2",
+    );
   });
 
   test("says when the Roster can't be read", async () => {

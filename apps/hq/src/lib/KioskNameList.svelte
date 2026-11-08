@@ -200,12 +200,14 @@
   {/key}
 {:else if confirming}
   {@const entry = confirming}
-  <h1 class="hero">
-    <span class="lead">Are you</span>
-    <span class="bigname" style:--len={entry.label.length + 1}
-      >{entry.label}?</span
-    >
-  </h1>
+  {#key entry.id}
+    <h1 class="hero">
+      <span class="lead">Are you</span>
+      <span class="bigname" style:--len={entry.label.length + 1}
+        >{entry.label}?</span
+      >
+    </h1>
+  {/key}
   <div class="choices">
     <button
       type="button"
@@ -222,10 +224,13 @@
   {#if message}<p role="alert" class="alert">{message}</p>{/if}
 {:else if offered}
   {@const entry = offered}
-  <h1 class="hero">
-    <span class="lead">Pass the tablet to</span>
-    <span class="bigname" style:--len={entry.label.length}>{entry.label}</span>
-  </h1>
+  {#key entry.id}
+    <h1 class="hero">
+      <span class="lead">Pass the tablet to</span>
+      <span class="bigname" style:--len={entry.label.length}>{entry.label}</span
+      >
+    </h1>
+  {/key}
   <p class="ask">Are you {entry.label}?</p>
   <div class="choices handoff">
     <button

@@ -78,69 +78,203 @@
 </script>
 
 {#snippet signOut()}
-  <button type="button" onclick={() => void session.signOut()}>Sign out</button>
+  <button type="button" class="quiet" onclick={() => void session.signOut()}>
+    Sign out
+  </button>
 {/snippet}
 
-<main class="kiosk">
-  {#if user === undefined || stale}
-    <p>Loading…</p>
-  {:else if user === null}
-    <h1>Troop 813 Meeting Kiosk</h1>
-    <p>The Admin unlocks the Kiosk to start today's Meeting.</p>
-    <button type="button" class="primary" onclick={() => void session.signIn()}>
-      Sign in with Google
-    </button>
-  {:else if user.kiosk}
-    {#key user.kiosk.sessionId}
-      <KioskSession
-        {api}
-        {live}
-        kiosk={user.kiosk}
-        {at}
-        onExpired={() => void session.signOut()}
-      />
-    {/key}
-  {:else if me}
-    {#await me}
-      <p>Loading…</p>
-    {:then caller}
-      {#if caller.role === "admin"}
+<div class="kiosk">
+  <header class="bar">
+    <img src="/brand/troop-813-logo.png" alt="" class="logo" />
+    <span>Troop 813</span>
+  </header>
+  <main class="stage">
+    {#if user === undefined || stale}
+      <p class="status">Loading…</p>
+    {:else if user === null}
+      <div class="lock">
+        <img src="/brand/troop-813-logo.png" alt="" class="crest" />
         <h1>Troop 813 Meeting Kiosk</h1>
+        <p class="sub">The Admin unlocks the Kiosk to start today's Meeting.</p>
         <button
           type="button"
           class="primary"
-          disabled={starting}
-          onclick={() => void start()}
+          onclick={() => void session.signIn()}
         >
-          Start today's Meeting
+          Sign in with Google
         </button>
-        {#if startError}<p role="alert">{startError}</p>{/if}
-      {:else}
-        <h1>Troop 813 Meeting Kiosk</h1>
-        <p>Only the Admin can unlock the Kiosk.</p>
-      {/if}
-      {@render signOut()}
-    {:catch}
-      <p>Couldn't reach Troop 813 HQ. Try again in a moment.</p>
-      {@render signOut()}
-    {/await}
-  {/if}
-</main>
+      </div>
+    {:else if user.kiosk}
+      {#key user.kiosk.sessionId}
+        <KioskSession
+          {api}
+          {live}
+          kiosk={user.kiosk}
+          {at}
+          onExpired={() => void session.signOut()}
+        />
+      {/key}
+    {:else if me}
+      {#await me}
+        <p class="status">Loading…</p>
+      {:then caller}
+        <div class="lock">
+          <img src="/brand/troop-813-logo.png" alt="" class="crest" />
+          <h1>Troop 813 Meeting Kiosk</h1>
+          {#if caller.role === "admin"}
+            <button
+              type="button"
+              class="primary"
+              disabled={starting}
+              onclick={() => void start()}
+            >
+              Start today's Meeting
+            </button>
+            {#if startError}<p role="alert" class="alert">{startError}</p>{/if}
+          {:else}
+            <p class="sub">Only the Admin can unlock the Kiosk.</p>
+          {/if}
+          {@render signOut()}
+        </div>
+      {:catch}
+        <div class="lock">
+          <p class="sub">Couldn't reach Troop 813 HQ. Try again in a moment.</p>
+          {@render signOut()}
+        </div>
+      {/await}
+    {/if}
+  </main>
+</div>
 
 <style>
+  /* The Kiosk is read at arm's length on a shared tablet: a larger base size,
+     tall tap targets, one question per screen. Button and text styles here are
+     :global so the Kiosk's child screens share one vocabulary. */
   .kiosk {
-    max-width: 40rem;
-    margin: 0 auto;
-    padding: 1.5rem;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-rows: auto 1fr;
     font-size: 1.25rem;
   }
-  .kiosk :global(button) {
-    font-size: inherit;
-    min-height: 3rem;
-    padding: 0.5rem 1.25rem;
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem max(1.5rem, env(safe-area-inset-left));
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.125rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
-  .primary {
-    display: block;
-    margin-block: 1rem;
+  .logo {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  .crest {
+    width: 9rem;
+    height: 9rem;
+  }
+  .logo,
+  .crest {
+    filter: var(--logo-filter);
+  }
+  .stage {
+    width: 100%;
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 1rem max(1.5rem, env(safe-area-inset-right)) 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+  .lock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.25rem;
+  }
+  .lock h1 {
+    font-size: 3rem;
+  }
+
+  /* Shared Kiosk vocabulary, at zero specificity so each screen can override. */
+  :global(:where(.kiosk) h1) {
+    font-size: 3rem;
+  }
+  :global(:where(.kiosk) .sub),
+  :global(:where(.kiosk) .status) {
+    color: var(--muted);
+    font-size: 1.375rem;
+  }
+  :global(:where(.kiosk) .status) {
+    text-align: center;
+  }
+  :global(:where(.kiosk) .alert) {
+    background: var(--bad-soft);
+    color: var(--bad);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+  }
+  :global(:where(.kiosk) button) {
+    min-height: 4rem;
+    padding: 0.75rem 1.5rem;
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 1.375rem;
+    font-weight: 700;
+    transition:
+      border-color 160ms var(--ease),
+      background-color 160ms var(--ease),
+      transform 160ms var(--ease);
+  }
+  :global(:where(.kiosk) button:not(:disabled):hover) {
+    border-color: var(--accent);
+  }
+  :global(:where(.kiosk) button:not(:disabled):active) {
+    transform: scale(0.98);
+  }
+  :global(:where(.kiosk) button:disabled) {
+    opacity: 0.55;
+  }
+  :global(:where(.kiosk) button.primary),
+  :global(:where(.kiosk) button.yes) {
+    background: var(--fill);
+    border-color: var(--fill);
+    color: var(--fill-ink);
+  }
+  :global(:where(.kiosk) button.primary:not(:disabled):hover),
+  :global(:where(.kiosk) button.yes:not(:disabled):hover) {
+    background: var(--fill-hover);
+    border-color: var(--fill-hover);
+  }
+  :global(:where(.kiosk) button.quiet) {
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  :global(:where(.kiosk) .choices) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  :global(:where(.kiosk) .choices button) {
+    flex: 1 1 14rem;
+  }
+  /* Upright tablet: answers stack full-width, so long labels stay on one line. */
+  @media (orientation: portrait) {
+    :global(:where(.kiosk) .choices) {
+      flex-direction: column;
+    }
+    :global(:where(.kiosk) .choices button) {
+      flex-basis: auto;
+    }
   }
 </style>

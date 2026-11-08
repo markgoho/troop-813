@@ -42,7 +42,8 @@ Capture happens in the room, by the Scouts themselves: the tablet passes Scout t
 - Name: "Troop 813 HQ" (short "813 HQ"). Troop 813 of Spencerport, NY, Scouts BSA.
 - **Logo** (must be used): circular single-line badge, black line art: two outer rings around mountains, crescent moon, stars, pine trees, a tent and campfire, with "TROOP 813" lettered along the bottom arc. Monoline, hand-drawn feel.
 - **Troop colour: burgundy.** A troop flyer uses `#7a004b`; the troop's usual burgundy is a bit darker than that (exact value not fixed). The manifest's `#1f4d2b` green is a placeholder, not a troop colour.
-- Look-and-feel reference the user liked: branches `prototype/kiosk-flow` and `prototype/leader-screens` (see [#34](https://github.com/markgoho/troop-813/issues/34)).
+- **Pinned look (2026-11-08):** the prototypes on branches `prototype/kiosk-flow` and `prototype/leader-screens` (see [#34](https://github.com/markgoho/troop-813/issues/34)), with troop burgundy replacing the prototype's green accent; green stays only as a success/"Going" state. The user rejected the impeccable direction roll (and its safer re-roll) in favour of this.
+- The Kiosk must not feel like a wall of names: the Handoff (one name, big) is the main experience; the name list (required by the spec) stays secondary.
 
 ## Evidence on Hand
 

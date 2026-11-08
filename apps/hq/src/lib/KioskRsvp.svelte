@@ -135,17 +135,22 @@
 </script>
 
 {#if failed}
-  <p role="alert">Couldn't load the Events.</p>
+  <p role="alert" class="alert">Couldn't load the Events.</p>
   <button type="button" class="primary" onclick={onDone}>
     Done, pass the tablet on
   </button>
 {:else if !loaded || queue === null}
-  <p>Loading…</p>
+  <p class="status">Loading…</p>
 {:else if current}
   {@const event = current}
-  <h1>{event.name}</h1>
-  <p class="when">{dateRange(event.startDate, event.endDate)}</p>
-  {#if event.location}<p>{event.location}</p>{/if}
+  <div class="event">
+    <h1>{event.name}</h1>
+    <p class="when">
+      {dateRange(event.startDate, event.endDate)}{#if event.location}<span
+          class="where">{event.location}</span
+        >{/if}
+    </p>
+  </div>
   {#if changing === null && isLastChance(event.startDate, meetingId)}
     <p class="last-chance">
       This is the last chance: {event.name} is this coming weekend ({dateRange(
@@ -154,7 +159,7 @@
       )})
     </p>
   {/if}
-  <p>{scout.label}, are you going?</p>
+  <p class="ask">{scout.label}, are you going?</p>
   <div class="choices">
     <button
       type="button"
@@ -181,7 +186,7 @@
       </button>
     {/if}
   </div>
-  {#if message}<p role="alert">{message}</p>{/if}
+  {#if message}<p role="alert" class="alert">{message}</p>{/if}
 {:else}
   <h1>Your answers</h1>
   <ul aria-label="Upcoming Events" class="summary">
@@ -189,7 +194,9 @@
       <li>
         <strong>{event.name}</strong>
         <span>{dateRange(event.startDate, event.endDate)}</span>
-        <span class="answer">{answerText(answerOf(event.id))}</span>
+        <span class="answer {answerOf(event.id) ?? 'none'}"
+          >{answerText(answerOf(event.id))}</span
+        >
         <button
           type="button"
           aria-label="Change {event.name}"
@@ -206,27 +213,85 @@
 {/if}
 
 <style>
-  .choices {
+  .event {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .event h1 {
+    font-size: 3.5rem;
+  }
+  .when {
+    color: var(--muted);
+    font-size: 1.375rem;
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 0 1rem;
   }
   .last-chance {
-    font-weight: 600;
+    background: var(--warn-soft);
+    color: var(--warn);
+    border-radius: var(--radius-sm);
+    padding: 0.875rem 1.125rem;
+    font-weight: 700;
+  }
+  .ask {
+    font-size: 1.75rem;
+    font-weight: 700;
   }
   .summary {
     list-style: none;
+    margin: 0;
     padding: 0;
     display: grid;
     gap: 0.75rem;
   }
   .summary li {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 0.5rem 1rem;
+    gap: 0.25rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+  }
+  .summary strong {
+    font-size: 1.375rem;
+  }
+  .summary li > span:not(.answer) {
+    grid-column: 1;
+    grid-row: 2;
+    color: var(--muted);
+    font-size: 1.125rem;
+  }
+  .summary li button {
+    grid-row: 1 / span 2;
+    min-height: 3.5rem;
+    font-size: 1.25rem;
+  }
+  .answer {
+    grid-row: 1 / span 2;
+    padding: 0.25rem 0.875rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 1.125rem;
+    white-space: nowrap;
+  }
+  .answer.going {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+  .answer.notGoing {
+    background: var(--bad-soft);
+    color: var(--bad);
+  }
+  .answer.none {
+    color: var(--muted);
+    border: 2px dashed var(--line);
   }
   .primary {
-    margin-block: 1rem;
+    align-self: stretch;
+    min-height: 5rem;
+    font-size: 1.75rem;
   }
 </style>

@@ -58,10 +58,15 @@
 </script>
 
 {#if sleeping}
-  <h1>Kiosk asleep, ask a Leader</h1>
-  <p>A Leader can wake it from their phone.</p>
+  <div class="asleep">
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="moon">
+      <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
+    </svg>
+    <h1>Kiosk asleep, ask a Leader</h1>
+    <p class="sub">A Leader can wake it from their phone.</p>
+  </div>
 {/if}
-<div hidden={sleeping}>
+<div class="flow" hidden={sleeping}>
   <KioskNameList
     {api}
     {live}
@@ -70,3 +75,29 @@
     onAsleep={() => (serverSaysAsleepFrom = lastActivity?.getTime() ?? 0)}
   />
 </div>
+
+<style>
+  .asleep {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+  .moon {
+    width: 4rem;
+    height: 4rem;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .flow[hidden] {
+    display: none;
+  }
+</style>

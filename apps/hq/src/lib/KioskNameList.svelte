@@ -178,13 +178,13 @@
 </script>
 
 {#if $meeting.state === "loading" || $scouts.state === "loading"}
-  <p>Loading…</p>
+  <p class="status">Loading…</p>
 {:else if $meeting.state === "error" || $scouts.state === "error"}
-  <p>Couldn't load the Meeting. Reload to try again.</p>
+  <p class="status">Couldn't load the Meeting. Reload to try again.</p>
 {:else if !$meeting.doc}
-  <p>Today's Meeting hasn't started. Ask the Admin.</p>
+  <p class="status">Today's Meeting hasn't started. Ask the Admin.</p>
 {:else if !resumed}
-  <p>Loading…</p>
+  <p class="status">Loading…</p>
 {:else if rsvping}
   {#key rsvping.id}
     <KioskRsvp
@@ -200,7 +200,10 @@
   {/key}
 {:else if confirming}
   {@const entry = confirming}
-  <h1>Are you {entry.label}?</h1>
+  <h1 class="hero">
+    <span class="lead">Are you</span>
+    <span class="bigname">{entry.label}?</span>
+  </h1>
   <div class="choices">
     <button
       type="button"
@@ -214,12 +217,15 @@
       No
     </button>
   </div>
-  {#if message}<p role="alert">{message}</p>{/if}
+  {#if message}<p role="alert" class="alert">{message}</p>{/if}
 {:else if offered}
   {@const entry = offered}
-  <h1>Pass the tablet to {entry.label}</h1>
-  <p>Are you {entry.label}?</p>
-  <div class="choices">
+  <h1 class="hero">
+    <span class="lead">Pass the tablet to</span>
+    <span class="bigname">{entry.label}</span>
+  </h1>
+  <p class="ask">Are you {entry.label}?</p>
+  <div class="choices handoff">
     <button
       type="button"
       class="yes"
@@ -239,11 +245,13 @@
       I can't find {entry.label}
     </button>
   </div>
-  {#if message}<p role="alert">{message}</p>{/if}
+  {#if message}<p role="alert" class="alert">{message}</p>{/if}
 {:else}
-  <h1>{anyoneIn ? "Tap your name" : "Who's first?"}</h1>
-  {#if due}<p>{due.label} was next</p>{/if}
-  {#if message}<p role="alert">{message}</p>{/if}
+  <div class="listhead">
+    <h1>{anyoneIn ? "Tap your name" : "Who's first?"}</h1>
+    {#if due}<p class="sub">{due.label} was next</p>{/if}
+  </div>
+  {#if message}<p role="alert" class="alert">{message}</p>{/if}
   <ul aria-label="Scouts" class="names">
     {#each names as entry (entry.id)}
       {@const done = entry.id in checkedIn}
@@ -254,7 +262,7 @@
           disabled={done}
           onclick={() => pick(entry)}
         >
-          {done ? `✓ ${entry.label}` : entry.label}
+          {#if done}<span class="sr-only">✓</span>{/if}{entry.label}
         </button>
       </li>
     {/each}
@@ -262,22 +270,81 @@
 {/if}
 
 <style>
+  .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .lead {
+    font-family: var(--body);
+    font-weight: 400;
+    font-size: 1.5rem;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .bigname {
+    font-size: clamp(4.5rem, 11vw, 7.5rem);
+    line-height: 0.95;
+    color: var(--accent);
+    overflow-wrap: anywhere;
+  }
+  .ask {
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+  .handoff button {
+    flex: 1 1 12rem;
+  }
+  .handoff .yes {
+    flex-basis: 100%;
+    min-height: 5rem;
+    font-size: 1.75rem;
+  }
+  @media (orientation: portrait) {
+    .handoff button,
+    .handoff .yes {
+      flex-basis: auto;
+    }
+  }
+  .listhead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1.25rem;
+  }
   .names {
     list-style: none;
+    margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: 0.875rem;
   }
   .names button {
     width: 100%;
-  }
-  .done {
-    opacity: 0.45;
-  }
-  .choices {
+    min-height: 4.5rem;
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: left;
+    font-size: 1.5rem;
+  }
+  .names .done {
+    background: transparent;
+    border-color: transparent;
+    color: var(--muted);
+    font-weight: 400;
+    opacity: 1;
+  }
+  /* The check mark (spec story 11), drawn; the button text carries a hidden
+     "✓" for screen readers. */
+  .names .done::before {
+    content: "";
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--ok);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
   }
 </style>

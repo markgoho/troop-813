@@ -5,7 +5,7 @@
 // Add one method per live view (Events, today's Meeting, RSVPs…), each
 // returning a Readable of the generic shapes below.
 import type { Readable } from "svelte/store";
-import type { Scout } from "./contract.gen";
+import type { Event, RSVP, Scout } from "./contract.gen";
 
 /** A Firestore doc's data with its ID. */
 export type WithId<T> = T & { id: string };
@@ -19,4 +19,8 @@ export type LiveDocs<T> =
 export interface Live {
   /** The whole Roster, active and inactive, unordered. */
   scouts(): Readable<LiveDocs<Scout>>;
+  /** Every Event, past and upcoming, cancelled or not, unordered. */
+  events(): Readable<LiveDocs<Event>>;
+  /** Every RSVP doc (a few hundred at troop scale); screens filter by eventId. */
+  rsvps(): Readable<LiveDocs<RSVP>>;
 }

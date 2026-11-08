@@ -13,6 +13,7 @@ import (
 	"github.com/markgoho/troop-813/api/internal/auth"
 	"github.com/markgoho/troop-813/api/internal/clock"
 	"github.com/markgoho/troop-813/api/internal/contract"
+	"github.com/markgoho/troop-813/api/internal/events"
 	"github.com/markgoho/troop-813/api/internal/roster"
 	"github.com/markgoho/troop-813/api/internal/router"
 )
@@ -45,6 +46,14 @@ func Routes(d Deps) *router.Router {
 	acc := access.Handlers{FS: d.Firestore}
 	r.Gated("GET /api/users", []router.Accept{router.Admin}, acc.List)
 	r.Gated("PUT /api/users/{uid}/role", []router.Accept{router.Admin}, acc.SetRole)
+	ev := events.Handlers{FS: d.Firestore}
+	leader := []router.Accept{router.Leader}
+	r.Gated("POST /api/events", leader, ev.Create)
+	r.Gated("PUT /api/events/{id}", leader, ev.Update)
+	r.Gated("POST /api/events/{id}/cancel", leader, ev.Cancel)
+	r.Gated("POST /api/events/{id}/uncancel", leader, ev.Uncancel)
+	r.Gated("DELETE /api/events/{id}", leader, ev.Delete)
+	r.Gated("PUT /api/events/{id}/rsvps/{scoutId}", leader, ev.SetRSVP)
 	ros := roster.Handlers{FS: d.Firestore, Logger: d.Logger}
 	r.Gated("POST /api/scouts", []router.Accept{router.Leader}, ros.Add)
 	return r

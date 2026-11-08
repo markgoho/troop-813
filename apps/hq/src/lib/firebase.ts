@@ -27,7 +27,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { type Readable, readable } from "svelte/store";
-import type { Scout } from "./contract.gen";
+import type { Event, RSVP, Scout } from "./contract.gen";
 import type { Live, LiveDocs } from "./live";
 import type { Session } from "./session";
 
@@ -91,6 +91,8 @@ export function liveCollection<T>(path: string): Readable<LiveDocs<T>> {
 export function firebaseLive(): Live {
   return {
     scouts: () => liveCollection<Scout>("scouts"),
+    events: () => liveCollection<Event>("events"),
+    rsvps: () => liveCollection<RSVP>("rsvps"),
   };
 }
 

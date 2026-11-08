@@ -28,6 +28,7 @@ const (
 	ErrorCodeBadRequest      ErrorCode = "bad_request"     // malformed or disallowed request body (400)
 	ErrorCodeNotFound        ErrorCode = "not_found"       // the thing named in the path doesn't exist (404)
 	ErrorCodeFixedRole       ErrorCode = "fixed_role"      // an Admin's role can't be changed from HQ (409)
+	ErrorCodeInUse           ErrorCode = "in_use"          // can't delete: other records point at it (409)
 	ErrorCodeDuplicateScout  ErrorCode = "duplicate_scout" // an active Scout already has this first + last name (409)
 )
 
@@ -60,6 +61,65 @@ type User struct {
 type Me struct {
 	UID  string `json:"uid"`
 	Role Role   `json:"role"`
+}
+
+// Event is the Firestore doc events/{id}: a non-Meeting troop activity
+// Scouts RSVP to. Dates are YYYY-MM-DD with no time; endDate >= startDate.
+type Event struct {
+	Name      string `json:"name" firestore:"name"`
+	StartDate string `json:"startDate" firestore:"startDate"`
+	EndDate   string `json:"endDate" firestore:"endDate"`
+	Location  string `json:"location,omitempty" firestore:"location,omitempty"`
+	Cancelled bool   `json:"cancelled" firestore:"cancelled"`
+}
+
+// EventInput is the body of POST /api/events and PUT /api/events/{id}.
+// Name is trimmed and required; Location is optional (empty removes it).
+type EventInput struct {
+	Name      string `json:"name"`
+	StartDate string `json:"startDate"`
+	EndDate   string `json:"endDate"`
+	Location  string `json:"location,omitempty"`
+}
+
+// EventCreated is the body of a 201 from POST /api/events.
+type EventCreated struct {
+	ID string `json:"id"`
+}
+
+// RSVPAnswer is a saved RSVP answer. No answer is null, never a third value.
+type RSVPAnswer string
+
+const (
+	RSVPAnswerGoing    RSVPAnswer = "going"
+	RSVPAnswerNotGoing RSVPAnswer = "notGoing"
+)
+
+// RSVPEntry is one change to an RSVP (ADR 0004). AttendanceID is the Kiosk
+// check-in the answer was given in, or null for a Leader's change. A null
+// Answer is a clear: the Kiosk asks the Scout again.
+type RSVPEntry struct {
+	Answer       *RSVPAnswer `json:"answer" firestore:"answer" tstype:"RSVPAnswer | null,required"`
+	At           time.Time   `json:"at" firestore:"at"`
+	By           string      `json:"by" firestore:"by"` // a Leader's uid or a kioskSessionId
+	AttendanceID *string     `json:"attendanceId" firestore:"attendanceId" tstype:"string | null,required"`
+}
+
+// RSVP is the Firestore doc rsvps/{eventId}_{scoutId}. Answer always equals
+// the last History entry's answer (Go keeps them consistent in one
+// transaction). EventID and ScoutID repeat the doc ID's parts so the Event
+// page, the Scout page and Undo check-in can query by either.
+type RSVP struct {
+	EventID string      `json:"eventId" firestore:"eventId"`
+	ScoutID string      `json:"scoutId" firestore:"scoutId"`
+	Answer  *RSVPAnswer `json:"answer" firestore:"answer" tstype:"RSVPAnswer | null,required"`
+	History []RSVPEntry `json:"history" firestore:"history"`
+}
+
+// SetRSVP is the body of PUT /api/events/{eventId}/rsvps/{scoutId}, a
+// Leader setting or (with null) clearing a Scout's RSVP.
+type SetRSVP struct {
+	Answer *RSVPAnswer `json:"answer" tstype:"RSVPAnswer | null,required"`
 }
 
 // UserSummary is one row of the Access tab.

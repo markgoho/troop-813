@@ -4,9 +4,13 @@ import type {
   AddScoutRequest,
   AddScoutResponse,
   ErrorBody,
+  EventCreated,
+  EventInput,
   Health,
   Me,
+  RSVPAnswer,
   SetRole,
+  SetRSVP,
   UserList,
 } from "./contract.gen";
 
@@ -18,6 +22,19 @@ export interface Api {
   users(): Promise<UserList>;
   /** Admin only: Parent↔Leader. Applies on that person's next request. */
   setRole(uid: string, role: "parent" | "leader"): Promise<void>;
+  /** Adds an Event (not cancelled); resolves to its id. */
+  createEvent(input: EventInput): Promise<EventCreated>;
+  /** Replaces an Event's name, dates and location; keeps cancelled. */
+  updateEvent(id: string, input: EventInput): Promise<void>;
+  setEventCancelled(id: string, cancelled: boolean): Promise<void>;
+  /** Refused with 409 in_use while the Event has any RSVP doc. */
+  deleteEvent(id: string): Promise<void>;
+  /** A Leader sets, changes or (null) clears a Scout's RSVP. */
+  setRsvp(
+    eventId: string,
+    scoutId: string,
+    answer: RSVPAnswer | null,
+  ): Promise<void>;
   /** Leader only: adds an active Scout. ApiError 409 duplicate_scout for an active exact match. */
   addScout(scout: AddScoutRequest): Promise<AddScoutResponse>;
 }
@@ -85,9 +102,32 @@ export function httpApi(
         body,
       );
     },
+    createEvent: async (input) => {
+      const res = await send(fetchFn, token, "POST", "/api/events", input);
+      return (await res.json()) as EventCreated;
+    },
+    updateEvent: async (id, input) => {
+      await send(fetchFn, token, "PUT", eventPath(id), input);
+    },
+    setEventCancelled: async (id, cancelled) => {
+      const action = cancelled ? "cancel" : "uncancel";
+      await send(fetchFn, token, "POST", `${eventPath(id)}/${action}`);
+    },
+    deleteEvent: async (id) => {
+      await send(fetchFn, token, "DELETE", eventPath(id));
+    },
+    setRsvp: async (eventId, scoutId, answer) => {
+      const body: SetRSVP = { answer };
+      const path = `${eventPath(eventId)}/rsvps/${encodeURIComponent(scoutId)}`;
+      await send(fetchFn, token, "PUT", path, body);
+    },
     addScout: async (scout) => {
       const res = await send(fetchFn, token, "POST", "/api/scouts", scout);
       return (await res.json()) as AddScoutResponse;
     },
   };
+}
+
+function eventPath(id: string): string {
+  return `/api/events/${encodeURIComponent(id)}`;
 }

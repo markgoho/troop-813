@@ -51,7 +51,7 @@ var scouts = []scout{
 	{"Quincy", "Harrow", false},
 }
 
-// Events: add fictional Events here once the Events ticket lands.
+// Events are in events.go (LoadEvents).
 
 // Load adds each fictional Scout not already on the Roster (by exact name,
 // active or not) and returns how many it added. Re-running is a no-op.

@@ -8,7 +8,15 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  where,
+} from "firebase/firestore";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 const rules = readFileSync(
@@ -58,6 +66,8 @@ beforeAll(async () => {
     }
     await setDoc(doc(db, "scouts/s1"), { firstName: "Avery", lastName: "Q" });
     await setDoc(doc(db, "meetings/2026-11-09"), { startedBy: "u-admin" });
+    await setDoc(doc(db, "events/e1"), { name: "Fall Campout" });
+    await setDoc(doc(db, "rsvps/e1_s1"), { eventId: "e1", scoutId: "s1" });
   });
 });
 
@@ -92,6 +102,21 @@ describe("Leaders read the Roster", () => {
   }
 });
 
+describe("Leaders read Events and RSVPs", () => {
+  for (const uid of ["u-leader", "u-admin"]) {
+    test(`${uid} can get and list events and rsvps`, async () => {
+      const db = env.authenticatedContext(uid).firestore();
+      await expectAllowed(getDoc(doc(db, "events/e1")));
+      await expectAllowed(getDocs(collection(db, "events")));
+      await expectAllowed(getDoc(doc(db, "rsvps/e1_s1")));
+      await expectAllowed(getDocs(collection(db, "rsvps")));
+      await expectAllowed(
+        getDocs(query(collection(db, "rsvps"), where("eventId", "==", "e1"))),
+      );
+    });
+  }
+});
+
 describe("Parents and anonymous users read nothing else", () => {
   const identities = {
     anonymous: () => env.unauthenticatedContext(),
@@ -100,11 +125,15 @@ describe("Parents and anonymous users read nothing else", () => {
     "first sign-in": () => env.authenticatedContext("u-new"),
   };
   for (const [name, context] of Object.entries(identities)) {
-    test(`${name} can't read scouts or meetings`, async () => {
+    test(`${name} can't read scouts, meetings, events or rsvps`, async () => {
       const db = context().firestore();
       await expectDenied(getDoc(doc(db, "scouts/s1")));
       await expectDenied(getDocs(collection(db, "scouts")));
       await expectDenied(getDoc(doc(db, "meetings/2026-11-09")));
+      await expectDenied(getDoc(doc(db, "events/e1")));
+      await expectDenied(getDocs(collection(db, "events")));
+      await expectDenied(getDoc(doc(db, "rsvps/e1_s1")));
+      await expectDenied(getDocs(collection(db, "rsvps")));
     });
   }
 });
@@ -129,6 +158,8 @@ describe("writes are denied for every identity", () => {
         setDoc(doc(db, "meetings/2026-11-09"), { startedBy: "x" }),
       );
       await expectDenied(setDoc(doc(db, "scouts/s1"), { firstName: "Avery" }));
+      await expectDenied(setDoc(doc(db, "events/e1"), { cancelled: true }));
+      await expectDenied(setDoc(doc(db, "rsvps/e1_s1"), { answer: "going" }));
       // Not even their own users doc: only Go sets roles.
       await expectDenied(
         setDoc(doc(db, "users/u-parent"), { role: "admin" }, { merge: true }),

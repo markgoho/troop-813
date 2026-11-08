@@ -25,5 +25,13 @@ service cloud.firestore {
     match /scouts/{scoutId} {
       allow read: if isLeader();
     }
+
+    // The Events tab and Event page list Events and every RSVP live.
+    match /events/{eventId} {
+      allow read: if isLeader();
+    }
+    match /rsvps/{rsvpId} {
+      allow read: if isLeader();
+    }
   }
 }

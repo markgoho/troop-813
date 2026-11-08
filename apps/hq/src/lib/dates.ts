@@ -13,6 +13,19 @@ export function localDate(now: Date): string {
   }).format(now);
 }
 
+const DAY_MS = 86_400_000;
+
+/** `date` (YYYY-MM-DD) moved by `days` calendar days, as YYYY-MM-DD. */
+export function addDays(date: string, days: number): string {
+  const t = Date.parse(`${date}T00:00:00Z`) + days * DAY_MS;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/** Whether `date` (YYYY-MM-DD) is a Monday: the Troop's Meeting night. */
+export function isMonday(date: string): boolean {
+  return new Date(`${date}T00:00:00Z`).getUTCDay() === 1;
+}
+
 const dayFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   weekday: "short",

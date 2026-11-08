@@ -15,6 +15,7 @@
   import { dateRange, moment } from "./dates";
   import { activeScouts, docsOf, tally } from "./events";
   import type { Live, WithId } from "./live";
+  import { fullName } from "./scouts";
 
   let {
     api,
@@ -195,7 +196,7 @@
         {@const last = doc?.history.at(-1)}
         <li>
           <ScoutLink scout={s} />
-          <div role="radiogroup" aria-label="{s.firstName} {s.lastName}">
+          <div role="radiogroup" aria-label={fullName(s)}>
             {#each choices as c (c.label)}
               <label>
                 <input

@@ -27,10 +27,9 @@ func (h Handlers) LeaderCheckIn(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrScoutNotFound), errors.Is(err, ErrNoMeeting):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "leader check-in failed", "err", err, "meetingId", date)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "leader check-in failed", err, "meetingId", date)
 	default:
-		h.logger().InfoContext(ctx, "checked in",
+		router.Logger(h.Logger).InfoContext(ctx, "checked in",
 			"meetingId", date, "scoutId", req.ScoutID, "attendanceId", res.AttendanceID,
 			"method", contract.AttendanceMethodLeader, "uid", uid, "repeat", res.Repeat)
 		router.WriteJSON(w, http.StatusOK, contract.CheckInResponse{AttendanceID: res.AttendanceID})
@@ -48,8 +47,7 @@ func (h Handlers) RSVPRollbackPreview(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrNoMeeting), errors.Is(err, ErrNoAttendance):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "rsvp rollback preview failed", "err", err, "meetingId", date, "attendanceId", id)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "rsvp rollback preview failed", err, "meetingId", date, "attendanceId", id)
 	default:
 		router.WriteJSON(w, http.StatusOK, contract.RSVPRollbackPreview{Items: items})
 	}
@@ -66,10 +64,9 @@ func (h Handlers) UndoCheckIn(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrNoMeeting), errors.Is(err, ErrNoAttendance):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "undo check-in failed", "err", err, "meetingId", date, "attendanceId", id)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "undo check-in failed", err, "meetingId", date, "attendanceId", id)
 	default:
-		h.logger().InfoContext(ctx, "check-in undone", "meetingId", date, "attendanceId", id, "uid", uid)
+		router.Logger(h.Logger).InfoContext(ctx, "check-in undone", "meetingId", date, "attendanceId", id, "uid", uid)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

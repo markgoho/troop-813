@@ -62,10 +62,9 @@ func (h Handlers) Wake(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrSessionOver):
 		router.WriteError(w, http.StatusConflict, contract.ErrorCodeSessionExpired)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "wake kiosk failed", "err", err)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "wake kiosk failed", err)
 	default:
-		h.logger().InfoContext(ctx, "kiosk woken", "uid", uid)
+		router.Logger(h.Logger).InfoContext(ctx, "kiosk woken", "uid", uid)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

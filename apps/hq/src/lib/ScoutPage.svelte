@@ -9,6 +9,7 @@
   import { dateRange, shortDay } from "./dates";
   import { docsOf, splitEvents } from "./events";
   import type { Live } from "./live";
+  import { fullName } from "./scouts";
 
   let {
     api,
@@ -77,7 +78,7 @@
     <p>This Scout isn't on the Roster.</p>
   {:else}
     {#if scout}
-      <h1>{scout.firstName} {scout.lastName}</h1>
+      <h1>{fullName(scout)}</h1>
     {:else if $scouts.state === "error"}
       <p role="alert">Couldn't load this Scout. Reload to try again.</p>
     {:else}

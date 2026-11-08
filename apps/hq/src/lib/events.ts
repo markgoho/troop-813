@@ -1,6 +1,7 @@
 // What the Events tab and Event page derive from the live docs.
 import type { Event, RSVP, Scout } from "./contract.gen";
 import type { LiveDocs, WithId } from "./live";
+import { byName } from "./scouts";
 
 /** A live collection's docs, or none while loading or after an error. */
 export function docsOf<T>(l: LiveDocs<T>): WithId<T>[] {
@@ -23,13 +24,7 @@ export function splitEvents(events: WithId<Event>[], today: string) {
 
 /** Active Scouts by first, then last name. */
 export function activeScouts(scouts: WithId<Scout>[]): WithId<Scout>[] {
-  return scouts
-    .filter((s) => s.active)
-    .sort(
-      (a, b) =>
-        a.firstName.localeCompare(b.firstName) ||
-        a.lastName.localeCompare(b.lastName),
-    );
+  return scouts.filter((s) => s.active).sort(byName);
 }
 
 export interface Tally {

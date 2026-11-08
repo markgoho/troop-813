@@ -21,13 +21,6 @@ type Handlers struct {
 	Logger *slog.Logger   // nil discards; log IDs, never names
 }
 
-func (h Handlers) logger() *slog.Logger {
-	if h.Logger == nil {
-		return slog.New(slog.DiscardHandler)
-	}
-	return h.Logger
-}
-
 // kioskUID is the Firebase Auth uid a Kiosk session signs in as. One per
 // session, so no two sessions ever share an Auth user.
 func kioskUID(sessionID string) string { return "kiosk-" + sessionID }
@@ -43,8 +36,7 @@ func (h Handlers) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		h.logger().ErrorContext(ctx, "start meeting failed", "err", err)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "start meeting failed", err)
 		return
 	}
 	token, err := h.Auth.CustomTokenWithClaims(ctx, kioskUID(started.SessionID), map[string]any{
@@ -54,11 +46,10 @@ func (h Handlers) Start(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		// The session exists but the tablet can't use it; Start again replaces it.
-		h.logger().ErrorContext(ctx, "mint kiosk token failed", "err", err, "kioskSessionId", started.SessionID)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "mint kiosk token failed", err, "kioskSessionId", started.SessionID)
 		return
 	}
-	h.logger().InfoContext(ctx, "meeting started",
+	router.Logger(h.Logger).InfoContext(ctx, "meeting started",
 		"meetingId", started.MeetingID, "kioskSessionId", started.SessionID, "created", started.Created, "uid", admin)
 	router.WriteJSON(w, http.StatusOK, contract.StartMeetingResponse{
 		MeetingID:      started.MeetingID,
@@ -86,10 +77,9 @@ func (h Handlers) KioskNotFound(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrScoutNotFound), errors.Is(err, ErrScoutInactive), errors.Is(err, ErrNoMeeting):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "mark not found failed", "err", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "mark not found failed", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)
 	default:
-		h.logger().InfoContext(ctx, "marked not found",
+		router.Logger(h.Logger).InfoContext(ctx, "marked not found",
 			"meetingId", k.MeetingID, "scoutId", req.ScoutID, "kioskSessionId", k.SessionID)
 		w.WriteHeader(http.StatusNoContent)
 	}
@@ -117,10 +107,9 @@ func (h Handlers) KioskCheckIn(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrScoutNotFound), errors.Is(err, ErrScoutInactive), errors.Is(err, ErrNoMeeting):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "kiosk check-in failed", "err", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "kiosk check-in failed", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)
 	default:
-		h.logger().InfoContext(ctx, "checked in",
+		router.Logger(h.Logger).InfoContext(ctx, "checked in",
 			"meetingId", k.MeetingID, "scoutId", req.ScoutID, "attendanceId", res.AttendanceID,
 			"method", req.Method, "kioskSessionId", k.SessionID, "repeat", res.Repeat)
 		router.WriteJSON(w, http.StatusOK, contract.CheckInResponse{AttendanceID: res.AttendanceID})

@@ -18,13 +18,6 @@ type Handlers struct {
 	Logger *slog.Logger // nil discards; log IDs, never names
 }
 
-func (h Handlers) logger() *slog.Logger {
-	if h.Logger == nil {
-		return slog.New(slog.DiscardHandler)
-	}
-	return h.Logger
-}
-
 // History is GET /api/scouts/{id}/history: 200 ScoutHistory; 404 not_found.
 func (h Handlers) History(w http.ResponseWriter, r *http.Request) {
 	out, err := History(r.Context(), h.FS, r.PathValue("id"))
@@ -32,8 +25,7 @@ func (h Handlers) History(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrScoutNotFound):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
-		h.logger().ErrorContext(r.Context(), "scout history failed", "err", err)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(r.Context(), h.Logger, w, "scout history failed", err)
 	default:
 		router.WriteJSON(w, http.StatusOK, out)
 	}
@@ -43,8 +35,7 @@ func (h Handlers) History(w http.ResponseWriter, r *http.Request) {
 func (h Handlers) Attendance(w http.ResponseWriter, r *http.Request) {
 	counts, err := Attendances(r.Context(), h.FS)
 	if err != nil {
-		h.logger().ErrorContext(r.Context(), "scout attendance failed", "err", err)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(r.Context(), h.Logger, w, "scout attendance failed", err)
 		return
 	}
 	router.WriteJSON(w, http.StatusOK, contract.ScoutAttendance{Scouts: counts})
@@ -63,7 +54,7 @@ func (h Handlers) Add(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, r, "add scout", err)
 		return
 	}
-	h.logger().InfoContext(r.Context(), "scout added", "scoutId", id)
+	router.Logger(h.Logger).InfoContext(r.Context(), "scout added", "scoutId", id)
 	router.WriteJSON(w, http.StatusCreated, contract.AddScoutResponse{ID: id})
 }
 
@@ -100,7 +91,7 @@ func (h Handlers) done(w http.ResponseWriter, r *http.Request, op string, err er
 		h.fail(w, r, op, err)
 		return
 	}
-	h.logger().InfoContext(r.Context(), op, "scoutId", r.PathValue("id"))
+	router.Logger(h.Logger).InfoContext(r.Context(), op, "scoutId", r.PathValue("id"))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -120,7 +111,6 @@ func (h Handlers) fail(w http.ResponseWriter, r *http.Request, op string, err er
 		}
 		router.WriteJSON(w, http.StatusConflict, body)
 	default:
-		h.logger().ErrorContext(r.Context(), op+" failed", "err", err)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(r.Context(), h.Logger, w, op+" failed", err)
 	}
 }

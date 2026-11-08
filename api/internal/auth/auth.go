@@ -96,10 +96,7 @@ type Authenticator struct {
 
 // New returns an Authenticator. logger may be nil.
 func New(authClient *fbauth.Client, fs *firestore.Client, logger *slog.Logger) *Authenticator {
-	if logger == nil {
-		logger = slog.New(slog.DiscardHandler)
-	}
-	return &Authenticator{auth: authClient, fs: fs, logger: logger}
+	return &Authenticator{auth: authClient, fs: fs, logger: router.Logger(logger)}
 }
 
 // Authenticate implements router.Authenticator.

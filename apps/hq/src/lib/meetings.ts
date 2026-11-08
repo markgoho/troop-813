@@ -1,17 +1,6 @@
 // Pure helpers for the Meetings tab (spec stories 75–80). Dates are plain
 // YYYY-MM-DD New York days, the Meeting IDs.
-import { shortDay } from "./dates";
-
-const DAY_MS = 86_400_000;
-
-function addDays(date: string, days: number): string {
-  const t = Date.parse(`${date}T00:00:00Z`) + days * DAY_MS;
-  return new Date(t).toISOString().slice(0, 10);
-}
-
-function isMonday(date: string): boolean {
-  return new Date(`${date}T00:00:00Z`).getUTCDay() === 1;
-}
+import { addDays, isMonday, shortDay } from "./dates";
 
 /** The latest Monday before `today` that has no Meeting: what "Add a past Meeting" proposes. */
 export function defaultPastDate(today: string, existing: Set<string>): string {

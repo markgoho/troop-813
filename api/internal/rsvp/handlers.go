@@ -20,13 +20,6 @@ type Handlers struct {
 	Logger *slog.Logger // nil discards; log IDs, never names
 }
 
-func (h Handlers) logger() *slog.Logger {
-	if h.Logger == nil {
-		return slog.New(slog.DiscardHandler)
-	}
-	return h.Logger
-}
-
 func validID(id string) bool { return id != "" && !strings.Contains(id, "/") }
 
 // KioskSet is PUT /api/kiosk/rsvps (Kiosk only): 204; 400 bad_request for a
@@ -54,10 +47,9 @@ func (h Handlers) KioskSet(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrEventNotFound), errors.Is(err, ErrNoMeeting):
 		router.WriteError(w, http.StatusNotFound, contract.ErrorCodeNotFound)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "kiosk rsvp failed", "err", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "kiosk rsvp failed", err, "meetingId", k.MeetingID, "kioskSessionId", k.SessionID)
 	default:
-		h.logger().InfoContext(ctx, "rsvp recorded",
+		router.Logger(h.Logger).InfoContext(ctx, "rsvp recorded",
 			"meetingId", k.MeetingID, "eventId", req.EventID, "scoutId", req.ScoutID,
 			"answer", req.Answer, "kioskSessionId", k.SessionID)
 		w.WriteHeader(http.StatusNoContent)

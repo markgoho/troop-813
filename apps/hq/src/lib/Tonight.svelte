@@ -3,13 +3,15 @@
   // Checked in list (newest first, with Undo and an inline confirm) and the
   // Not checked in list (Leader check-in). A phone never starts a Meeting.
   import { resolve } from "$app/paths";
-  import { ApiError, type Api } from "./api";
+  import type { Api } from "./api";
   import type { Attendance, RSVPRollbackItem, Scout } from "./contract.gen";
   import { docsOf } from "./events";
   import { clockTime, localDate } from "./dates";
+  import { guardedActions } from "./guarded.svelte";
   import { asleep, meetingOver } from "./kiosk-flow";
   import type { Live, WithId } from "./live";
   import ScoutLink from "./ScoutLink.svelte";
+  import { byName, fullName } from "./scouts";
   import UndoConfirm, { loadRollback } from "./UndoConfirm.svelte";
 
   let {
@@ -67,11 +69,6 @@
     );
   });
 
-  const fullName = (s: WithId<Scout>) => `${s.firstName} ${s.lastName}`;
-  const byName = (a: WithId<Scout>, b: WithId<Scout>) =>
-    a.firstName.localeCompare(b.firstName) ||
-    a.lastName.localeCompare(b.lastName);
-
   const scoutsById = $derived(
     $scouts.state === "ready"
       ? new Map($scouts.docs.map((s) => [s.id, s]))
@@ -125,24 +122,13 @@
   let confirming = $state<string | null>(null); // attendance id awaiting Yes/Cancel
   // The answers confirming's Undo rolls back; null when the preview failed.
   let rollback = $state<RSVPRollbackItem[] | null>(null);
-  let busy = $state(false);
-  let message = $state<string | null>(null);
+  const guard = guardedActions();
+  const busy = $derived(guard.busy);
+  const message = $derived(guard.message);
 
+  /** Runs a guarded call; a success closes the inline confirm. */
   async function run(failure: string, action: () => Promise<unknown>) {
-    if (busy) return;
-    busy = true;
-    message = null;
-    try {
-      await action();
-      confirming = null;
-    } catch (err) {
-      message =
-        err instanceof ApiError && err.status === 404
-          ? `${failure} It may already have changed.`
-          : failure;
-    } finally {
-      busy = false;
-    }
+    if (await guard.run(failure, action)) confirming = null;
   }
 
   const wake = () =>
@@ -153,12 +139,11 @@
     );
   /** Previews the RSVP rollback, then shows the inline confirm. */
   async function askUndo(a: WithId<Attendance>) {
-    if (busy) return;
-    busy = true;
-    message = null;
-    rollback = await loadRollback(api, meetingId, a.id);
-    busy = false;
-    confirming = a.id;
+    // loadRollback never throws: a failed preview is null.
+    const ok = await guard.run("", async () => {
+      rollback = await loadRollback(api, meetingId, a.id);
+    });
+    if (ok) confirming = a.id;
   }
   const undo = (a: WithId<Attendance>) =>
     run(`Couldn't undo ${nameOf(a.scoutId)}'s check-in. Try again.`, () =>

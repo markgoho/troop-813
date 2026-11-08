@@ -28,10 +28,9 @@ func (h Handlers) CreatePast(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrMeetingExists):
 		router.WriteError(w, http.StatusConflict, contract.ErrorCodeMeetingExists)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "create past meeting failed", "err", err, "meetingId", req.Date)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "create past meeting failed", err, "meetingId", req.Date)
 	default:
-		h.logger().InfoContext(ctx, "past meeting created", "meetingId", req.Date, "uid", uid)
+		router.Logger(h.Logger).InfoContext(ctx, "past meeting created", "meetingId", req.Date, "uid", uid)
 		router.WriteJSON(w, http.StatusCreated, contract.PastMeetingCreated{ID: req.Date})
 	}
 }
@@ -49,10 +48,9 @@ func (h Handlers) DeleteMeeting(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrHasAttendance):
 		router.WriteError(w, http.StatusConflict, contract.ErrorCodeInUse)
 	case err != nil:
-		h.logger().ErrorContext(ctx, "delete meeting failed", "err", err, "meetingId", date)
-		router.WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
+		router.InternalError(ctx, h.Logger, w, "delete meeting failed", err, "meetingId", date)
 	default:
-		h.logger().InfoContext(ctx, "meeting deleted", "meetingId", date, "uid", uid)
+		router.Logger(h.Logger).InfoContext(ctx, "meeting deleted", "meetingId", date, "uid", uid)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

@@ -2,8 +2,9 @@
 // behind store interfaces, so screens re-render on every change and tests
 // pass a writable store instead. The real one is firebaseLive() in firebase.ts.
 //
-// Add one method per live view (Events, today's Meeting, RSVPs…), each
-// returning a Readable of the generic shapes below.
+// Each method on Live is one live view (a Meeting, the Roster, Events, RSVPs…)
+// and returns a Readable of LiveDoc or LiveDocs below. A new view adds a method
+// here, to firebaseLive() and to the fake in testing/fakeLive.ts.
 import type { Readable } from "svelte/store";
 import type {
   Attendance,

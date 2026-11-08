@@ -8,6 +8,7 @@
   import type { AttendanceCount, Scout } from "./contract.gen";
   import type { Live, WithId } from "./live";
   import ScoutLink from "./ScoutLink.svelte";
+  import { byName, fullName } from "./scouts";
 
   let { api, live }: { api: Api; live: Live } = $props();
 
@@ -43,10 +44,6 @@
   // Scouts the server refused to delete (Attendance newer than the loaded counts).
   let refused = $state<string[]>([]);
 
-  const byName = (a: WithId<Scout>, b: WithId<Scout>) =>
-    a.firstName.localeCompare(b.firstName) ||
-    a.lastName.localeCompare(b.lastName);
-
   const sorted = $derived(
     $scouts.state === "ready" ? [...$scouts.docs].sort(byName) : [],
   );
@@ -61,9 +58,6 @@
     withRsvps.has(id) ||
     counts[id]?.hasAttendance === true ||
     refused.includes(id);
-
-  const fullName = (s: { firstName: string; lastName: string }) =>
-    `${s.firstName} ${s.lastName}`;
 
   async function add(e: SubmitEvent) {
     e.preventDefault();

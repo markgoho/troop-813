@@ -7,8 +7,10 @@
   import { ApiError, type Api } from "./api";
   import type { RSVPRollbackItem, Scout } from "./contract.gen";
   import { shortDay } from "./dates";
+  import { guardedActions } from "./guarded.svelte";
   import type { Live, WithId } from "./live";
   import ScoutLink from "./ScoutLink.svelte";
+  import { byName, fullName } from "./scouts";
   import UndoConfirm, { loadRollback } from "./UndoConfirm.svelte";
 
   let {
@@ -30,11 +32,6 @@
   // svelte-ignore state_referenced_locally
   const scouts = live.scouts();
 
-  const fullName = (s: WithId<Scout>) => `${s.firstName} ${s.lastName}`;
-  const byName = (a: WithId<Scout>, b: WithId<Scout>) =>
-    a.firstName.localeCompare(b.firstName) ||
-    a.lastName.localeCompare(b.lastName);
-
   const checkedIn = $derived(
     $meeting.state === "ready" && $meeting.doc ? $meeting.doc.checkedIn : {},
   );
@@ -51,34 +48,23 @@
   let deleting = $state(false);
   // The answers confirming's Undo rolls back; null when the preview failed.
   let rollback = $state<RSVPRollbackItem[] | null>(null);
-  let busy = $state(false);
-  let message = $state<string | null>(null);
+  const guard = guardedActions();
+  const busy = $derived(guard.busy);
+  const message = $derived(guard.message);
 
+  /** Runs a guarded call; a success closes the inline confirm. */
   async function run(failure: string, action: () => Promise<unknown>) {
-    if (busy) return false;
-    busy = true;
-    message = null;
-    try {
-      await action();
-      confirming = null;
-      return true;
-    } catch (err) {
-      message =
-        err instanceof ApiError && err.status === 404
-          ? `${failure} It may already have changed.`
-          : failure;
-      return false;
-    } finally {
-      busy = false;
-    }
+    const ok = await guard.run(failure, action);
+    if (ok) confirming = null;
+    return ok;
   }
 
   async function askUndo(s: WithId<Scout>) {
-    busy = true;
-    message = null;
-    rollback = await loadRollback(api, meetingId, checkedIn[s.id] ?? "");
-    busy = false;
-    confirming = s.id;
+    // loadRollback never throws: a failed preview is null.
+    const ok = await guard.run("", async () => {
+      rollback = await loadRollback(api, meetingId, checkedIn[s.id] ?? "");
+    });
+    if (ok) confirming = s.id;
   }
 
   function toggle(e: MouseEvent, s: WithId<Scout>) {
@@ -101,21 +87,16 @@
     );
 
   async function remove() {
-    if (busy) return;
-    busy = true;
-    message = null;
-    try {
-      await api.deleteMeeting(meetingId);
-      onDeleted();
-    } catch (err) {
-      deleting = false;
-      message =
+    const ok = await guard.run(
+      "Couldn't delete the Meeting. Try again.",
+      () => api.deleteMeeting(meetingId),
+      (err) =>
         err instanceof ApiError && err.body?.code === "in_use"
           ? "Someone is present, so this Meeting can't be deleted."
-          : "Couldn't delete the Meeting. Try again.";
-    } finally {
-      busy = false;
-    }
+          : "Couldn't delete the Meeting. Try again.",
+    );
+    if (ok) onDeleted();
+    else deleting = false;
   }
 </script>
 

@@ -7,6 +7,10 @@
   import { ApiError, type Api } from "./api";
   import type { AttendanceCount, Scout } from "./contract.gen";
   import type { Live, WithId } from "./live";
+  import PencilSimple from "phosphor-svelte/lib/PencilSimple";
+  import Trash from "phosphor-svelte/lib/Trash";
+  import UserMinus from "phosphor-svelte/lib/UserMinus";
+  import UserPlus from "phosphor-svelte/lib/UserPlus";
   import ScoutLink from "./ScoutLink.svelte";
   import { byName, fullName } from "./scouts";
 
@@ -240,7 +244,11 @@
         <button
           type="button"
           aria-label="Edit {fullName(s)}"
-          onclick={() => startEdit(s)}>Edit</button
+          class="icon"
+          onclick={() => startEdit(s)}
+          ><PencilSimple weight="thin" aria-hidden="true" /><span class="label"
+            >Edit</span
+          ></button
         >
         <button
           type="button"
@@ -248,7 +256,14 @@
           onclick={() =>
             void run(fullName(s), s.active ? "deactivate" : "reactivate", () =>
               s.active ? api.deactivateScout(s.id) : api.reactivateScout(s.id),
-            )}>{s.active ? "Deactivate" : "Reactivate"}</button
+            )}
+          class="icon"
+          >{#if s.active}<UserMinus
+              weight="thin"
+              aria-hidden="true"
+            />{:else}<UserPlus weight="thin" aria-hidden="true" />{/if}<span
+            class="label">{s.active ? "Deactivate" : "Reactivate"}</span
+          ></button
         >
         {#if confirmingId === s.id}
           <button
@@ -267,8 +282,11 @@
             aria-label="Delete {fullName(s)}"
             disabled={inUse(s.id)}
             aria-describedby={inUse(s.id) ? `reason-${s.id}` : undefined}
-            class="danger"
-            onclick={() => (confirmingId = s.id)}>Delete</button
+            class="danger icon"
+            onclick={() => (confirmingId = s.id)}
+            ><Trash weight="thin" aria-hidden="true" /><span class="label"
+              >Delete</span
+            ></button
           >
         {/if}
       </span>
@@ -296,6 +314,33 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+  }
+  /* Phones: the row's actions are icon buttons (their accessible names come
+     from aria-label); the words return when there is room. */
+  .icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .icon :global(svg) {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+  }
+  @media (max-width: 30rem) {
+    .actions {
+      flex-basis: auto;
+      margin-left: auto;
+      flex-wrap: nowrap;
+    }
+    .icon {
+      min-width: 2.75rem;
+      justify-content: center;
+      padding-inline: 0.5rem;
+    }
+    .icon .label {
+      display: none;
+    }
   }
   /* Rapid entry: first and last name side by side, Add Scout under them. */
   .add {

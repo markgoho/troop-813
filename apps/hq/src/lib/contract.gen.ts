@@ -37,6 +37,9 @@ export const ErrorCodeNotFound = "not_found"; // the thing named in the path doe
 export const ErrorCodeFixedRole = "fixed_role"; // an Admin's role can't be changed from HQ (409)
 export const ErrorCodeInUse = "in_use"; // can't delete: other records point at it (409)
 export const ErrorCodeDuplicateScout = "duplicate_scout"; // an active Scout already has this first + last name (409)
+export const ErrorCodeTooLate = "too_late"; // past 22:00 America/New_York: today's Meeting can't be started (409)
+export const ErrorCodeSessionAsleep = "session_asleep"; // Kiosk session idle 30 min; a Leader can wake it (401)
+export const ErrorCodeSessionExpired = "session_expired"; // Kiosk session past 22:00 or replaced by a newer unlock (401)
 export type ErrorCode =
   | typeof ErrorCodeUnauthenticated
   | typeof ErrorCodeForbidden
@@ -45,7 +48,10 @@ export type ErrorCode =
   | typeof ErrorCodeNotFound
   | typeof ErrorCodeFixedRole
   | typeof ErrorCodeInUse
-  | typeof ErrorCodeDuplicateScout;
+  | typeof ErrorCodeDuplicateScout
+  | typeof ErrorCodeTooLate
+  | typeof ErrorCodeSessionAsleep
+  | typeof ErrorCodeSessionExpired;
 /**
  * ErrorBody is the body of every non-2xx API response.
  */
@@ -187,4 +193,94 @@ export interface AddScoutRequest {
  */
 export interface AddScoutResponse {
   id: string;
+}
+/**
+ * Meeting is the Firestore doc meetings/{YYYY-MM-DD}: one Meeting, keyed by
+ * its local date (ADR 0004). It is also the Kiosk's live state, read through
+ * onSnapshot. There is no status field: a Meeting stops being live at 22:00.
+ * Go always writes the slices and the map (never null), so HQ can iterate them.
+ */
+export interface Meeting {
+  startedAt: Timestamp;
+  startedBy: string; // uid of the Admin who first started it
+  /**
+   * HandoffOrder is every active Scout ID, shuffled once when the Meeting is created.
+   */
+  handoffOrder: string[];
+  /**
+   * NotFound is the Scout IDs the Kiosk couldn't find this Meeting.
+   */
+  notFound: string[];
+  /**
+   * CheckedIn maps scoutId to the attendanceId of their current (not undone) Attendance.
+   */
+  checkedIn: { [key: string]: string };
+}
+/**
+ * AttendanceMethod is how a Scout was checked in.
+ */
+export const AttendanceMethodNameList = "nameList"; // tapped their name on the Kiosk
+export const AttendanceMethodHandoff = "handoff"; // answered Yes when the Kiosk named them
+export const AttendanceMethodLeader = "leader"; // a Leader checked them in
+export type AttendanceMethod =
+  | typeof AttendanceMethodNameList
+  | typeof AttendanceMethodHandoff
+  | typeof AttendanceMethodLeader;
+/**
+ * Attendance is the Firestore doc meetings/{date}/attendance/{id}: the record
+ * that a Scout was present. Undo is a soft delete (ADR 0004).
+ */
+export interface Attendance {
+  scoutId: string;
+  method: AttendanceMethod;
+  at: Timestamp;
+  /**
+   * By is the Leader's uid, or the kioskSessionId for a Kiosk check-in.
+   */
+  by: string;
+  undoneAt?: Timestamp;
+  undoneBy?: string;
+}
+/**
+ * KioskSession is the Firestore doc kioskSessions/{id}: one Kiosk unlock
+ * (ADR 0003). Go checks it on every Kiosk call. It is valid while not
+ * replaced and now < min(22:00 on the Meeting date, lastActivityAt + 30 min).
+ */
+export interface KioskSession {
+  meetingId: string;
+  createdAt: Timestamp;
+  createdBy: string; // the Admin's uid
+  lastActivityAt: Timestamp;
+  /**
+   * Replaced is set when a later Start issues a new session.
+   */
+  replaced: boolean;
+}
+/**
+ * StartMeetingResponse is the 200 body of POST /api/kiosk/start (Admin only):
+ * today's Meeting exists and a new Kiosk session replaced any other.
+ */
+export interface StartMeetingResponse {
+  meetingId: string;
+  kioskSessionId: string;
+  /**
+   * Token is a Firebase custom token (claims role: kiosk, kioskSessionId,
+   * meetingId). The tablet signs in with it, which drops the Admin's session.
+   */
+  token: string;
+}
+/**
+ * KioskCheckInRequest is the body of POST /api/kiosk/check-in (Kiosk only).
+ * The Meeting is the Kiosk session's; method is nameList or handoff.
+ */
+export interface KioskCheckInRequest {
+  scoutId: string;
+  method: AttendanceMethod;
+}
+/**
+ * CheckInResponse is the 200 body of a check-in: the Scout's Attendance,
+ * new or (for a repeat check-in) the existing one.
+ */
+export interface CheckInResponse {
+  attendanceId: string;
 }

@@ -7,21 +7,10 @@ import { ApiError, type Api } from "./api";
 import type { Me } from "./contract.gen";
 import type { Session, SignedInUser } from "./session";
 import { fakeApi as baseFakeApi } from "./testing/fakeApi";
+import { fakeSession } from "./testing/fakeSession";
 
 const NOTICE =
   "Troop 813 uses this to record Scout names, Meeting attendance and Event RSVPs. Leaders only.";
-
-function fakeSession(user: SignedInUser | null): Session {
-  return {
-    onChange(cb) {
-      cb(user);
-      return () => {};
-    },
-    signIn: vi.fn(async () => {}),
-    signOut: vi.fn(async () => {}),
-    idToken: async () => (user ? "token" : null),
-  };
-}
 
 function fakeApi(me: () => Promise<Me>): Api {
   return baseFakeApi({ me });
@@ -33,11 +22,33 @@ const leaderScreens = createRawSnippet(() => ({
 
 const signedIn: SignedInUser = { uid: "u-1" };
 
-function renderGate(session: Session, api: Api) {
-  return render(RoleGate, { session, api, children: leaderScreens });
+function renderGate(session: Session, api: Api, onKiosk = vi.fn()) {
+  return render(RoleGate, { session, api, onKiosk, children: leaderScreens });
 }
 
 describe("RoleGate", () => {
+  test("a Kiosk session is sent to the Kiosk without asking who it is", () => {
+    const onKiosk = vi.fn();
+    const me = vi.fn(async (): Promise<Me> => {
+      throw new Error("not called");
+    });
+    renderGate(
+      fakeSession({
+        uid: "kiosk-s1",
+        kiosk: { sessionId: "s1", meetingId: "2026-11-09" },
+      }),
+      fakeApi(me),
+      onKiosk,
+    );
+
+    expect(onKiosk).toHaveBeenCalledOnce();
+    expect(me).not.toHaveBeenCalled();
+    expect(screen.queryByText("Leader screens")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Sign in with Google" }),
+    ).not.toBeInTheDocument();
+  });
+
   test("signed out: offers Google sign-in with the data notice", async () => {
     const session = fakeSession(null);
     renderGate(

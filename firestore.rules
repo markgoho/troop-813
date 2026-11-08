@@ -21,9 +21,29 @@ service cloud.firestore {
         && get(user).data.role in ['leader', 'admin'];
     }
 
-    // The Roster tab lists scouts live (onSnapshot = list) and opens Scouts (get).
+    // The Meeting Kiosk: signed in with the custom token Go minted at Start
+    // (claims role, kioskSessionId, meetingId) and its session not replaced
+    // by a newer unlock. Go enforces 22:00 and the idle lock on writes; reads
+    // stay open while asleep so a phone's Wake reaches the tablet via onSnapshot.
+    function isKiosk() {
+      let token = request.auth.token;
+      let session = /databases/$(database)/documents/kioskSessions/$(token.get('kioskSessionId', '-'));
+      return request.auth != null
+        && token.get('role', '') == 'kiosk'
+        && exists(session)
+        && get(session).data.replaced == false
+        && get(session).data.meetingId == token.get('meetingId', '');
+    }
+
+    // The Kiosk's live state: its own Meeting doc only.
+    match /meetings/{meetingId} {
+      allow get: if isKiosk() && request.auth.token.meetingId == meetingId;
+    }
+
+    // The Roster tab lists scouts live (onSnapshot = list) and opens Scouts
+    // (get); the Kiosk lists them for its name list.
     match /scouts/{scoutId} {
-      allow read: if isLeader();
+      allow read: if isLeader() || isKiosk();
     }
 
     // The Events tab and Event page list Events and every RSVP live.

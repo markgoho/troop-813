@@ -40,6 +40,20 @@ type Caller interface {
 // 500, so the app doesn't treat an outage as being signed out.
 var ErrUnauthenticated = errors.New("router: no valid credential")
 
+// UnauthenticatedError is an ErrUnauthenticated that tells the client why, with
+// a more specific code than "unauthenticated" (e.g. a Kiosk session asleep).
+type UnauthenticatedError struct {
+	Code   contract.ErrorCode
+	Reason string
+}
+
+func (e *UnauthenticatedError) Error() string {
+	return fmt.Sprintf("%v: %s (%s)", ErrUnauthenticated, e.Reason, e.Code)
+}
+
+// Is makes errors.Is(err, ErrUnauthenticated) true.
+func (e *UnauthenticatedError) Is(target error) bool { return target == ErrUnauthenticated }
+
 // Authenticator turns a request into a Caller, or an error: ErrUnauthenticated
 // (wrapped or not) for a missing or invalid credential, anything else for a
 // failure to resolve one.
@@ -98,7 +112,11 @@ func (r *Router) Gated(pattern string, accepts []Accept, h http.HandlerFunc) {
 		caller, err := r.auth.Authenticate(req)
 		switch {
 		case errors.Is(err, ErrUnauthenticated):
-			WriteError(w, http.StatusUnauthorized, contract.ErrorCodeUnauthenticated)
+			code := contract.ErrorCodeUnauthenticated
+			if ue, ok := errors.AsType[*UnauthenticatedError](err); ok {
+				code = ue.Code
+			}
+			WriteError(w, http.StatusUnauthorized, code)
 			return
 		case err != nil:
 			WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)

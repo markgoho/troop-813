@@ -27,6 +27,13 @@ resource "google_cloud_run_v2_service" "api" {
         value = local.project
       }
 
+      env {
+        # Signs Kiosk custom tokens via IAM signBlob as itself (iam.tf
+        # api_runtime_sign_self), without a metadata lookup.
+        name  = "FIREBASE_SERVICE_ACCOUNT_ID"
+        value = google_service_account.api_runtime.email
+      }
+
       resources {
         cpu_idle          = true # request-based billing
         startup_cpu_boost = true

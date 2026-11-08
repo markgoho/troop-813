@@ -6,10 +6,14 @@
 //   - Leader{UID, IsAdmin}: users/{uid}.role is leader or admin.
 //   - Parent{UID}: signed in with any other role, or signing in for the first
 //     time (users/{uid} is then created with role parent).
+//   - Kiosk{SessionID, MeetingID}: a Kiosk custom-token sign-in whose
+//     kioskSessions doc is still valid (see Authenticator.kiosk).
 //   - rejected (router.ErrUnauthenticated): no token, an invalid one, or a
-//     Kiosk token (the Kiosk caller arrives with Start Meeting).
+//     Kiosk session that is replaced, past 22:00 (session_expired) or idle
+//     30 min (session_asleep).
 //
-// The role is read on every call, so a role change applies to the next request.
+// The role or session is read on every call, so a role change or a new Kiosk
+// unlock applies to the next request.
 package auth
 
 import (
@@ -18,6 +22,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	fbauth "firebase.google.com/go/v4/auth"
@@ -47,6 +52,25 @@ type Parent struct {
 
 // Is implements router.Caller.
 func (Parent) Is(a router.Accept) bool { return a == router.Parent }
+
+// Kiosk is the Meeting Kiosk tablet, signed in with the custom token Start
+// Meeting issued. It may act only on MeetingID.
+type Kiosk struct {
+	SessionID string
+	MeetingID string
+}
+
+// Is implements router.Caller.
+func (Kiosk) Is(a router.Accept) bool { return a == router.Kiosk }
+
+// KioskRole is the role claim in a Kiosk custom token (with kioskSessionId and meetingId).
+const KioskRole = "kiosk"
+
+// KioskSessions is the kioskSessions collection.
+const KioskSessions = "kioskSessions"
+
+// KioskIdle is how long a Kiosk session lives without a Kiosk write (or a Wake).
+const KioskIdle = 30 * time.Minute
 
 // UID returns the uid of a Leader or Parent caller, or "" for any other.
 func UID(c router.Caller) string {
@@ -90,8 +114,8 @@ func (a *Authenticator) Authenticate(r *http.Request) (router.Caller, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", router.ErrUnauthenticated, err)
 	}
-	if role, _ := tok.Claims["role"].(string); role == "kiosk" {
-		return nil, fmt.Errorf("%w: kiosk tokens are not accepted yet", router.ErrUnauthenticated)
+	if role, _ := tok.Claims["role"].(string); role == KioskRole {
+		return a.kiosk(ctx, tok)
 	}
 	role, err := a.role(ctx, tok)
 	if err != nil {
@@ -108,6 +132,45 @@ func (a *Authenticator) Authenticate(r *http.Request) (router.Caller, error) {
 		// An unknown role gets the least access.
 		return Parent{UID: tok.UID}, nil
 	}
+}
+
+// kiosk resolves a Kiosk token to its session, if the session is still valid:
+// not replaced, for the token's Meeting, and now < min(22:00 on the Meeting
+// date, lastActivityAt + KioskIdle). A Kiosk never gets a users doc.
+func (a *Authenticator) kiosk(ctx context.Context, tok *fbauth.Token) (router.Caller, error) {
+	sessionID, _ := tok.Claims["kioskSessionId"].(string)
+	meetingID, _ := tok.Claims["meetingId"].(string)
+	if sessionID == "" || meetingID == "" {
+		return nil, fmt.Errorf("%w: kiosk token without session or meeting", router.ErrUnauthenticated)
+	}
+	snap, err := a.fs.Collection(KioskSessions).Doc(sessionID).Get(ctx)
+	if status.Code(err) == codes.NotFound {
+		return nil, fmt.Errorf("%w: no kioskSessions/%s", router.ErrUnauthenticated, sessionID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("auth: read kioskSessions/%s: %w", sessionID, err)
+	}
+	var s contract.KioskSession
+	if err := snap.DataTo(&s); err != nil {
+		return nil, fmt.Errorf("auth: decode kioskSessions/%s: %w", sessionID, err)
+	}
+	if s.MeetingID != meetingID {
+		return nil, fmt.Errorf("%w: kioskSessions/%s is not for %s", router.ErrUnauthenticated, sessionID, meetingID)
+	}
+	ends, err := clock.MeetingEnds(s.MeetingID)
+	if err != nil {
+		return nil, fmt.Errorf("auth: kioskSessions/%s: %w", sessionID, err)
+	}
+	now := clock.Now(ctx)
+	switch {
+	case s.Replaced:
+		return nil, &router.UnauthenticatedError{Code: contract.ErrorCodeSessionExpired, Reason: "kiosk session replaced"}
+	case !now.Before(ends):
+		return nil, &router.UnauthenticatedError{Code: contract.ErrorCodeSessionExpired, Reason: "kiosk session past 22:00"}
+	case !now.Before(s.LastActivityAt.Add(KioskIdle)):
+		return nil, &router.UnauthenticatedError{Code: contract.ErrorCodeSessionAsleep, Reason: "kiosk session idle"}
+	}
+	return Kiosk{SessionID: sessionID, MeetingID: s.MeetingID}, nil
 }
 
 // role reads users/{uid}.role, creating the doc as a Parent on first sign-in.

@@ -140,8 +140,9 @@ func TestChangingAMissingEventIsNotFound(t *testing.T) {
 		{http.MethodDelete, "/api/events/nope", nil},
 		{http.MethodPut, "/api/events/nope/rsvps/s1", contract.SetRSVP{Answer: answer(contract.RSVPAnswerGoing)}},
 	} {
+		// Not parallel: Delete's transaction locks events/nope, and the emulator
+		// aborts a concurrent plain Update of it after ~2 s (500, not 404).
 		t.Run(c.method+" "+c.path, func(t *testing.T) {
-			t.Parallel()
 			status, code := call(t, env, c.method, c.path, leader, c.body, nil)
 			if status != http.StatusNotFound || code != contract.ErrorCodeNotFound {
 				t.Fatalf("= %d %q, want 404 notFound", status, code)

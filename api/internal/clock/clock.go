@@ -43,6 +43,17 @@ func LocalDate(t time.Time) string {
 	return t.In(NY).Format(time.DateOnly)
 }
 
+// MeetingEnds is 22:00 America/New_York on a Meeting's date (its ID,
+// YYYY-MM-DD). From then on the Meeting can't be started and its Kiosk
+// sessions are over (ADR 0003).
+func MeetingEnds(meetingID string) (time.Time, error) {
+	d, err := time.ParseInLocation(time.DateOnly, meetingID, NY)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Date(d.Year(), d.Month(), d.Day(), 22, 0, 0, 0, NY), nil
+}
+
 type contextKey struct{}
 
 // Into returns ctx carrying now, for Now to read back.

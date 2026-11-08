@@ -159,6 +159,14 @@ func (e *Env) IDToken(t testing.TB, uid string, claims map[string]any) string {
 	if err != nil {
 		t.Fatalf("testenv: custom token: %v", err)
 	}
+	return e.SignInWithCustomToken(t, custom)
+}
+
+// SignInWithCustomToken exchanges a custom token (e.g. the one Start Meeting
+// returns) for an ID token, as the tablet does.
+func (e *Env) SignInWithCustomToken(t testing.TB, custom string) string {
+	t.Helper()
+	ctx := context.Background()
 	reqBody, err := json.Marshal(map[string]any{"token": custom, "returnSecureToken": true, "targetProjectId": e.ProjectID})
 	if err != nil {
 		t.Fatalf("testenv: marshal: %v", err)

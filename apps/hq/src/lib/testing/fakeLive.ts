@@ -2,23 +2,36 @@
 // snapshots into. Add each new Live method here once.
 import { writable, type Writable } from "svelte/store";
 import { Timestamp } from "firebase/firestore";
-import type { Event, RSVP, Scout } from "../contract.gen";
-import type { Live, LiveDocs, WithId } from "../live";
+import type { Event, Meeting, RSVP, Scout } from "../contract.gen";
+import type { Live, LiveDoc, LiveDocs, WithId } from "../live";
 
 export interface FakeLive extends Live {
+  /** One store per Meeting ID, created on first use by the test or the screen. */
+  meetingStore(id: string): Writable<LiveDoc<Meeting>>;
   scoutsStore: Writable<LiveDocs<Scout>>;
   eventsStore: Writable<LiveDocs<Event>>;
   rsvpsStore: Writable<LiveDocs<RSVP>>;
 }
 
 export function fakeLive(): FakeLive {
+  const meetings = new Map<string, Writable<LiveDoc<Meeting>>>();
+  const meetingStore = (id: string) => {
+    let s = meetings.get(id);
+    if (!s) {
+      s = writable<LiveDoc<Meeting>>({ state: "loading" });
+      meetings.set(id, s);
+    }
+    return s;
+  };
   const scoutsStore = writable<LiveDocs<Scout>>({ state: "loading" });
   const eventsStore = writable<LiveDocs<Event>>({ state: "loading" });
   const rsvpsStore = writable<LiveDocs<RSVP>>({ state: "loading" });
   return {
+    meetingStore,
     scoutsStore,
     eventsStore,
     rsvpsStore,
+    meeting: meetingStore,
     scouts: () => scoutsStore,
     events: () => eventsStore,
     rsvps: () => rsvpsStore,
@@ -28,6 +41,25 @@ export function fakeLive(): FakeLive {
 /** A loaded snapshot of docs, for store.set(ready([...])). */
 export function ready<T>(docs: WithId<T>[]): LiveDocs<T> {
   return { state: "ready", docs };
+}
+
+/** A Meeting doc snapshot, for meetingStore(id).set(meeting(id, {...})). */
+export function meeting(
+  id: string,
+  fields: Partial<Meeting> = {},
+): LiveDoc<Meeting> {
+  return {
+    state: "ready",
+    doc: {
+      id,
+      startedAt: Timestamp.fromDate(new Date(`${id}T23:00:00Z`)),
+      startedBy: "u-admin",
+      handoffOrder: [],
+      notFound: [],
+      checkedIn: {},
+      ...fields,
+    },
+  };
 }
 
 /** A Scout doc for tests. */

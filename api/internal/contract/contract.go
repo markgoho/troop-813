@@ -30,6 +30,9 @@ const (
 	ErrorCodeFixedRole       ErrorCode = "fixed_role"      // an Admin's role can't be changed from HQ (409)
 	ErrorCodeInUse           ErrorCode = "in_use"          // can't delete: other records point at it (409)
 	ErrorCodeDuplicateScout  ErrorCode = "duplicate_scout" // an active Scout already has this first + last name (409)
+	ErrorCodeTooLate         ErrorCode = "too_late"        // past 22:00 America/New_York: today's Meeting can't be started (409)
+	ErrorCodeSessionAsleep   ErrorCode = "session_asleep"  // Kiosk session idle 30 min; a Leader can wake it (401)
+	ErrorCodeSessionExpired  ErrorCode = "session_expired" // Kiosk session past 22:00 or replaced by a newer unlock (401)
 )
 
 // ErrorBody is the body of every non-2xx API response.
@@ -161,4 +164,75 @@ type AddScoutRequest struct {
 // AddScoutResponse is the 201 body of POST /api/scouts.
 type AddScoutResponse struct {
 	ID string `json:"id"`
+}
+
+// Meeting is the Firestore doc meetings/{YYYY-MM-DD}: one Meeting, keyed by
+// its local date (ADR 0004). It is also the Kiosk's live state, read through
+// onSnapshot. There is no status field: a Meeting stops being live at 22:00.
+// Go always writes the slices and the map (never null), so HQ can iterate them.
+type Meeting struct {
+	StartedAt time.Time `json:"startedAt" firestore:"startedAt"`
+	StartedBy string    `json:"startedBy" firestore:"startedBy"` // uid of the Admin who first started it
+	// HandoffOrder is every active Scout ID, shuffled once when the Meeting is created.
+	HandoffOrder []string `json:"handoffOrder" firestore:"handoffOrder"`
+	// NotFound is the Scout IDs the Kiosk couldn't find this Meeting.
+	NotFound []string `json:"notFound" firestore:"notFound"`
+	// CheckedIn maps scoutId to the attendanceId of their current (not undone) Attendance.
+	CheckedIn map[string]string `json:"checkedIn" firestore:"checkedIn"`
+}
+
+// AttendanceMethod is how a Scout was checked in.
+type AttendanceMethod string
+
+const (
+	AttendanceMethodNameList AttendanceMethod = "nameList" // tapped their name on the Kiosk
+	AttendanceMethodHandoff  AttendanceMethod = "handoff"  // answered Yes when the Kiosk named them
+	AttendanceMethodLeader   AttendanceMethod = "leader"   // a Leader checked them in
+)
+
+// Attendance is the Firestore doc meetings/{date}/attendance/{id}: the record
+// that a Scout was present. Undo is a soft delete (ADR 0004).
+type Attendance struct {
+	ScoutID string           `json:"scoutId" firestore:"scoutId"`
+	Method  AttendanceMethod `json:"method" firestore:"method"`
+	At      time.Time        `json:"at" firestore:"at"`
+	// By is the Leader's uid, or the kioskSessionId for a Kiosk check-in.
+	By       string     `json:"by" firestore:"by"`
+	UndoneAt *time.Time `json:"undoneAt,omitempty" firestore:"undoneAt,omitempty"`
+	UndoneBy string     `json:"undoneBy,omitempty" firestore:"undoneBy,omitempty"`
+}
+
+// KioskSession is the Firestore doc kioskSessions/{id}: one Kiosk unlock
+// (ADR 0003). Go checks it on every Kiosk call. It is valid while not
+// replaced and now < min(22:00 on the Meeting date, lastActivityAt + 30 min).
+type KioskSession struct {
+	MeetingID      string    `json:"meetingId" firestore:"meetingId"`
+	CreatedAt      time.Time `json:"createdAt" firestore:"createdAt"`
+	CreatedBy      string    `json:"createdBy" firestore:"createdBy"` // the Admin's uid
+	LastActivityAt time.Time `json:"lastActivityAt" firestore:"lastActivityAt"`
+	// Replaced is set when a later Start issues a new session.
+	Replaced bool `json:"replaced" firestore:"replaced"`
+}
+
+// StartMeetingResponse is the 200 body of POST /api/kiosk/start (Admin only):
+// today's Meeting exists and a new Kiosk session replaced any other.
+type StartMeetingResponse struct {
+	MeetingID      string `json:"meetingId"`
+	KioskSessionID string `json:"kioskSessionId"`
+	// Token is a Firebase custom token (claims role: kiosk, kioskSessionId,
+	// meetingId). The tablet signs in with it, which drops the Admin's session.
+	Token string `json:"token"`
+}
+
+// KioskCheckInRequest is the body of POST /api/kiosk/check-in (Kiosk only).
+// The Meeting is the Kiosk session's; method is nameList or handoff.
+type KioskCheckInRequest struct {
+	ScoutID string           `json:"scoutId"`
+	Method  AttendanceMethod `json:"method"`
+}
+
+// CheckInResponse is the 200 body of a check-in: the Scout's Attendance,
+// new or (for a repeat check-in) the existing one.
+type CheckInResponse struct {
+	AttendanceID string `json:"attendanceId"`
 }

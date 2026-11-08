@@ -1,7 +1,8 @@
 <script lang="ts">
   // Sends each person where they belong (spec story 86): signed out → sign-in,
-  // Parent → waiting page, Leader or Admin → the Leader screens (children).
-  // The role comes from Go (GET /api/me) on every load, never from the client.
+  // Kiosk token → onKiosk (/kiosk), Parent → waiting page, Leader or Admin →
+  // the Leader screens (children). The role comes from Go (GET /api/me) on
+  // every load, never from the client.
   import type { Snippet } from "svelte";
   import type { Api } from "./api";
   import type { Me } from "./contract.gen";
@@ -11,8 +12,15 @@
   let {
     session,
     api,
+    onKiosk,
     children,
-  }: { session: Session; api: Api; children: Snippet<[Me]> } = $props();
+  }: {
+    session: Session;
+    api: Api;
+    /** Called when the tablet's Kiosk session lands here; the layout navigates to /kiosk. */
+    onKiosk: () => void;
+    children: Snippet<[Me]>;
+  } = $props();
 
   // undefined until the session reports in (Firebase restores it asynchronously).
   let user = $state<SignedInUser | null | undefined>(undefined);
@@ -22,7 +30,13 @@
     }),
   );
 
-  const me = $derived(user ? api.me() : null);
+  const kiosk = $derived(user?.kiosk !== undefined);
+  $effect(() => {
+    if (kiosk) onKiosk();
+  });
+
+  // A Kiosk token never asks /api/me (it would be refused: Kiosk isn't a Leader).
+  const me = $derived(user && !user.kiosk ? api.me() : null);
 </script>
 
 {#snippet notice()}
@@ -36,7 +50,7 @@
   <button type="button" onclick={() => void session.signOut()}>Sign out</button>
 {/snippet}
 
-{#if user === undefined}
+{#if user === undefined || kiosk}
   <p>Loading…</p>
 {:else if me === null}
   <main>

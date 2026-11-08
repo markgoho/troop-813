@@ -1,7 +1,9 @@
 // Command api is the Troop 813 HQ API: the only writer to Firestore.
 //
 // Env: PORT (Cloud Run sets it; `bun run dev` passes this worktree's API port),
-// GOOGLE_CLOUD_PROJECT or GCLOUD_PROJECT. FIRESTORE_EMULATOR_HOST and
+// GOOGLE_CLOUD_PROJECT or GCLOUD_PROJECT, and optionally
+// FIREBASE_SERVICE_ACCOUNT_ID (the SA that signs Kiosk custom tokens; Terraform
+// sets it to api-runtime). FIRESTORE_EMULATOR_HOST and
 // FIREBASE_AUTH_EMULATOR_HOST point the SDKs at the emulators in local dev.
 package main
 
@@ -46,7 +48,14 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	defer func() { _ = fs.Close() }()
-	app, err := firebase.NewApp(ctx, &firebase.Config{ProjectID: projectID})
+	// Kiosk custom tokens are signed with IAM signBlob as this service account
+	// (Cloud Run has no key file; the runtime SA holds tokenCreator on itself).
+	// Unset, the SDK asks the metadata server for the runtime SA. Against the
+	// Auth emulator the SDK ignores it and emits unsigned tokens.
+	app, err := firebase.NewApp(ctx, &firebase.Config{
+		ProjectID:        projectID,
+		ServiceAccountID: os.Getenv("FIREBASE_SERVICE_ACCOUNT_ID"),
+	})
 	if err != nil {
 		return err
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/markgoho/troop-813/api/internal/clock"
 	"github.com/markgoho/troop-813/api/internal/contract"
 	"github.com/markgoho/troop-813/api/internal/events"
+	"github.com/markgoho/troop-813/api/internal/meeting"
 	"github.com/markgoho/troop-813/api/internal/roster"
 	"github.com/markgoho/troop-813/api/internal/router"
 )
@@ -56,6 +57,9 @@ func Routes(d Deps) *router.Router {
 	r.Gated("PUT /api/events/{id}/rsvps/{scoutId}", leader, ev.SetRSVP)
 	ros := roster.Handlers{FS: d.Firestore, Logger: d.Logger}
 	r.Gated("POST /api/scouts", []router.Accept{router.Leader}, ros.Add)
+	mtg := meeting.Handlers{FS: d.Firestore, Auth: d.Auth, Logger: d.Logger}
+	r.Gated("POST /api/kiosk/start", []router.Accept{router.Admin}, mtg.Start)
+	r.Gated("POST /api/kiosk/check-in", []router.Accept{router.Kiosk}, mtg.KioskCheckIn)
 	return r
 }
 

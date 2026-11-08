@@ -68,6 +68,77 @@ beforeAll(async () => {
     await setDoc(doc(db, "meetings/2026-11-09"), { startedBy: "u-admin" });
     await setDoc(doc(db, "events/e1"), { name: "Fall Campout" });
     await setDoc(doc(db, "rsvps/e1_s1"), { eventId: "e1", scoutId: "s1" });
+    await setDoc(doc(db, "meetings/2026-11-02"), { startedBy: "u-admin" });
+    await setDoc(doc(db, "meetings/2026-11-09/attendance/a1"), {
+      scoutId: "s1",
+    });
+    await setDoc(doc(db, "kioskSessions/session-1"), {
+      meetingId: "2026-11-09",
+      replaced: false,
+    });
+    await setDoc(doc(db, "kioskSessions/session-old"), {
+      meetingId: "2026-11-09",
+      replaced: true,
+    });
+  });
+});
+
+/** A Kiosk identity: the claims Go puts in the custom token at Start. */
+function kiosk(sessionId = "session-1", meetingId = "2026-11-09") {
+  return env
+    .authenticatedContext(`kiosk-${sessionId}`, {
+      role: "kiosk",
+      kioskSessionId: sessionId,
+      meetingId,
+    })
+    .firestore();
+}
+
+describe("the Kiosk reads its Meeting and the Roster", () => {
+  test("it can get its own Meeting doc and list scouts (onSnapshot)", async () => {
+    const db = kiosk();
+    await expectAllowed(getDoc(doc(db, "meetings/2026-11-09")));
+    await expectAllowed(getDoc(doc(db, "scouts/s1")));
+    await expectAllowed(getDocs(collection(db, "scouts")));
+  });
+
+  test("it can't read another Meeting, or list Meetings", async () => {
+    const db = kiosk();
+    await expectDenied(getDoc(doc(db, "meetings/2026-11-02")));
+    await expectDenied(getDocs(collection(db, "meetings")));
+  });
+
+  test("it reads nothing else", async () => {
+    const db = kiosk();
+    await expectDenied(getDoc(doc(db, "meetings/2026-11-09/attendance/a1")));
+    await expectDenied(
+      getDocs(collection(db, "meetings/2026-11-09/attendance")),
+    );
+    await expectDenied(getDoc(doc(db, "events/e1")));
+    await expectDenied(getDocs(collection(db, "events")));
+    await expectDenied(getDoc(doc(db, "rsvps/e1_s1")));
+    await expectDenied(getDocs(collection(db, "rsvps")));
+    await expectDenied(getDoc(doc(db, "users/u-admin")));
+    await expectDenied(getDoc(doc(db, "kioskSessions/session-1")));
+  });
+
+  test("a replaced or unknown session reads nothing", async () => {
+    for (const db of [kiosk("session-old"), kiosk("no-such-session")]) {
+      await expectDenied(getDoc(doc(db, "meetings/2026-11-09")));
+      await expectDenied(getDocs(collection(db, "scouts")));
+    }
+  });
+
+  test("claims for another Meeting than the session's read nothing", async () => {
+    const db = kiosk("session-1", "2026-11-02");
+    await expectDenied(getDoc(doc(db, "meetings/2026-11-02")));
+    await expectDenied(getDoc(doc(db, "meetings/2026-11-09")));
+  });
+
+  test("a Google user with a kiosk-looking uid but no claims reads nothing", async () => {
+    const db = env.authenticatedContext("kiosk-session-1").firestore();
+    await expectDenied(getDoc(doc(db, "meetings/2026-11-09")));
+    await expectDenied(getDocs(collection(db, "scouts")));
   });
 });
 

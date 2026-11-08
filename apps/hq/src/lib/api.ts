@@ -3,14 +3,17 @@
 import type {
   AddScoutRequest,
   AddScoutResponse,
+  CheckInResponse,
   ErrorBody,
   EventCreated,
   EventInput,
   Health,
+  KioskCheckInRequest,
   Me,
   RSVPAnswer,
   SetRole,
   SetRSVP,
+  StartMeetingResponse,
   UserList,
 } from "./contract.gen";
 
@@ -37,6 +40,16 @@ export interface Api {
   ): Promise<void>;
   /** Leader only: adds an active Scout. ApiError 409 duplicate_scout for an active exact match. */
   addScout(scout: AddScoutRequest): Promise<AddScoutResponse>;
+  /**
+   * Admin only: starts (or re-opens) today's Meeting and issues a new Kiosk
+   * session. ApiError 409 too_late from 22:00 New York time.
+   */
+  startMeeting(): Promise<StartMeetingResponse>;
+  /**
+   * Kiosk only: checks a Scout in to the session's Meeting. Repeat check-ins
+   * return the existing attendanceId. ApiError 401 session_asleep / session_expired.
+   */
+  kioskCheckIn(req: KioskCheckInRequest): Promise<CheckInResponse>;
 }
 
 export class ApiError extends Error {
@@ -124,6 +137,20 @@ export function httpApi(
     addScout: async (scout) => {
       const res = await send(fetchFn, token, "POST", "/api/scouts", scout);
       return (await res.json()) as AddScoutResponse;
+    },
+    startMeeting: async () => {
+      const res = await send(fetchFn, token, "POST", "/api/kiosk/start");
+      return (await res.json()) as StartMeetingResponse;
+    },
+    kioskCheckIn: async (req) => {
+      const res = await send(
+        fetchFn,
+        token,
+        "POST",
+        "/api/kiosk/check-in",
+        req,
+      );
+      return (await res.json()) as CheckInResponse;
     },
   };
 }

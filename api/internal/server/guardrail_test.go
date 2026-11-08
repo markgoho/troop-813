@@ -21,13 +21,15 @@ func (noAuth) Authenticate(*http.Request) (router.Caller, error) {
 
 var wildcard = regexp.MustCompile(`\{[^}]+\}`)
 
-// Every Gated route rejects anonymous callers with 401, and Parents with 403
-// unless it accepts Parents. Later tickets extend this for Kiosk tokens on
-// Leader routes (spec story 42).
+// Every Gated route rejects anonymous callers with 401, and Parents, Leaders
+// and the Kiosk with 403 unless it accepts them. So a Kiosk token is refused
+// on every Leader route (spec story 42), and a Leader can't act as the Kiosk.
 func TestEveryGatedRouteRejectsCallersItDoesNotAccept(t *testing.T) {
 	t.Parallel()
 	env := testenv.Setup(t)
 	parent := env.RoleToken(t, "u-parent", contract.RoleParent)
+	leader := env.RoleToken(t, "u-leader", contract.RoleLeader)
+	kiosk, _ := unlockKiosk(t, env) // a live session, so a refusal is 403, not 401
 
 	routes := server.Routes(server.Deps{Authenticator: noAuth{}}).Routes()
 	for _, rt := range routes {
@@ -42,9 +44,19 @@ func TestEveryGatedRouteRejectsCallersItDoesNotAccept(t *testing.T) {
 			if got := status(t, env, method, path, ""); got != http.StatusUnauthorized {
 				t.Errorf("anonymous: status %d, want 401", got)
 			}
-			if !slices.Contains(rt.Accepts, router.Parent) {
-				if got := status(t, env, method, path, parent); got != http.StatusForbidden {
-					t.Errorf("parent: status %d, want 403", got)
+			for name, c := range map[string]struct {
+				token  string
+				accept router.Accept
+			}{
+				"parent": {parent, router.Parent},
+				"leader": {leader, router.Leader},
+				"kiosk":  {kiosk, router.Kiosk},
+			} {
+				if slices.Contains(rt.Accepts, c.accept) {
+					continue
+				}
+				if got := status(t, env, method, path, c.token); got != http.StatusForbidden {
+					t.Errorf("%s: status %d, want 403", name, got)
 				}
 			}
 		})

@@ -18,6 +18,8 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     deleteEvent: unexpected("deleteEvent"),
     setRsvp: unexpected("setRsvp"),
     addScout: unexpected("addScout"),
+    startMeeting: unexpected("startMeeting"),
+    kioskCheckIn: unexpected("kioskCheckIn"),
     ...overrides,
   };
 }

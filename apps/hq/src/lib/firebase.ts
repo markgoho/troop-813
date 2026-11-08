@@ -15,7 +15,9 @@ import {
   GoogleAuthProvider,
   connectAuthEmulator,
   getAuth,
+  type User,
   onAuthStateChanged,
+  signInWithCustomToken,
   signInWithRedirect,
   signOut,
 } from "firebase/auth";
@@ -23,13 +25,14 @@ import {
   type Firestore,
   collection,
   connectFirestoreEmulator,
+  doc,
   getFirestore,
   onSnapshot,
 } from "firebase/firestore";
 import { type Readable, readable } from "svelte/store";
-import type { Event, RSVP, Scout } from "./contract.gen";
-import type { Live, LiveDocs } from "./live";
-import type { Session } from "./session";
+import type { Event, Meeting, RSVP, Scout } from "./contract.gen";
+import type { Live, LiveDoc, LiveDocs } from "./live";
+import type { Session, SignedInUser } from "./session";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
@@ -87,22 +90,76 @@ export function liveCollection<T>(path: string): Readable<LiveDocs<T>> {
   );
 }
 
+/**
+ * One doc as a store, through onSnapshot (same lifetime as liveCollection).
+ * A doc that doesn't exist (yet) is ready with doc: null.
+ */
+export function liveDoc<T>(path: string): Readable<LiveDoc<T>> {
+  return readable<LiveDoc<T>>({ state: "loading" }, (set) =>
+    onSnapshot(
+      doc(firestore(), path),
+      (snap) =>
+        set({
+          state: "ready",
+          doc: snap.exists() ? { ...(snap.data() as T), id: snap.id } : null,
+        }),
+      (error) => set({ state: "error", error }),
+    ),
+  );
+}
+
 /** The real live source. */
 export function firebaseLive(): Live {
   return {
+    meeting: (id) => liveDoc<Meeting>(`meetings/${id}`),
     scouts: () => liveCollection<Scout>("scouts"),
     events: () => liveCollection<Event>("events"),
     rsvps: () => liveCollection<RSVP>("rsvps"),
   };
 }
 
-/** The real Session: Google sign-in by redirect. */
+/** Reads the Kiosk claims (role: kiosk) off the user's ID token, if any. */
+async function signedInUser(u: User): Promise<SignedInUser> {
+  const { claims } = await u.getIdTokenResult();
+  if (
+    claims.role === "kiosk" &&
+    typeof claims.kioskSessionId === "string" &&
+    typeof claims.meetingId === "string"
+  ) {
+    return {
+      uid: u.uid,
+      kiosk: { sessionId: claims.kioskSessionId, meetingId: claims.meetingId },
+    };
+  }
+  return { uid: u.uid };
+}
+
+/** The real Session: Google sign-in by redirect, or a Kiosk custom token. */
 export function firebaseSession(): Session {
   const a = firebaseAuth();
   return {
-    onChange: (cb) =>
-      onAuthStateChanged(a, (u) => cb(u ? { uid: u.uid } : null)),
+    onChange: (cb) => {
+      // Claims resolve asynchronously; only the latest auth change may report.
+      let latest = 0;
+      return onAuthStateChanged(a, (u) => {
+        const seq = ++latest;
+        if (!u) {
+          cb(null);
+          return;
+        }
+        signedInUser(u).then(
+          (user) => seq === latest && cb(user),
+          // Claims unreadable (e.g. offline token refresh): report the bare
+          // uid. Screens then ask the API, which fails visibly; never treat
+          // it as signed out, which would offer Google sign-in on the Kiosk.
+          () => seq === latest && cb({ uid: u.uid }),
+        );
+      });
+    },
     signIn: () => signInWithRedirect(a, new GoogleAuthProvider()),
+    signInWithToken: async (token) => {
+      await signInWithCustomToken(a, token);
+    },
     signOut: () => signOut(a),
     idToken: async () => (a.currentUser ? a.currentUser.getIdToken() : null),
   };

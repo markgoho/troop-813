@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 380" role="img">
   <title>Troop 813</title>
-  <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <g id="rings">
-      <circle cx="190" cy="190" r="175.5"/>
-      <circle cx="190" cy="190" r="159.8"/>
+  <g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+    <g id="rings" stroke-width="2.2">
+      <circle cx="190" cy="190" r="177"/>
+      <circle cx="190" cy="190" r="156"/>
     </g>
     <g id="mountains">
       <path d="M77 210L119.6 133.6L171.5 229.5"/>
@@ -55,7 +55,7 @@
       <path d="M215 259.5Q246 254 271 241"/>
       <path d="M302 231.5L336 228"/>
     </g>
-    <g id="lettering">
+    <g id="lettering" stroke-width="2.8">
       <path transform="translate(93 280.2) rotate(21.6)" d="M-8.5-22H8.5M0-22V0"/>
       <path transform="translate(117.9 289.6) rotate(16.3)" d="M-6 0V-22H0.5A5.8 5.8 0 0 1 0.5-10.4H-6M1.5-10.4L6.5 0"/>
       <path transform="translate(148.6 295.3) rotate(10.1)" d="M0-22.3A10.4 11.3 0 1 1 0 0.3A10.4 11.3 0 1 1 0-22.3Z"/>

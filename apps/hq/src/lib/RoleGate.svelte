@@ -57,7 +57,7 @@
   <p class="status">Loading…</p>
 {:else if me === null}
   <main class="gate">
-    <Logo size="7.5rem" line={1.25} />
+    <Logo size="10rem" />
     <h1>Troop 813 HQ</h1>
     <button type="button" class="primary" onclick={() => void session.signIn()}>
       Sign in with Google
@@ -72,7 +72,7 @@
       {@render children(caller)}
     {:else}
       <main class="gate">
-        <Logo size="7.5rem" line={1.25} />
+        <Logo size="10rem" />
         <h1>Troop 813 HQ</h1>
         <p>You're signed in. To use HQ, ask the Admin for access.</p>
         {@render signOut()}

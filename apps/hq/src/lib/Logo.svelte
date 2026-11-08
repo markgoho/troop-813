@@ -1,29 +1,21 @@
 <script lang="ts">
-  // The troop logo (troop-813-logo.svg, beside this file), inlined so it takes the
-  // surrounding text colour (currentColor) in both themes, and drawn with a
-  // fixed on-screen line width so the monoline art stays crisp at any size.
-  // Decorative: the text beside it names the troop.
+  // The troop logo (troop-813-logo.svg, beside this file), inlined so it takes
+  // the surrounding text colour (currentColor) in both themes. Its fine
+  // detail (trees, stars, lettering) needs room: use it at 10rem or larger,
+  // never as a small icon. Decorative: the text beside it names the troop.
   import svg from "./troop-813-logo.svg?raw";
 
   let {
-    size = "2rem",
-    line = 1,
+    size = "12rem",
     class: cls = "",
   }: {
-    /** Rendered width and height (CSS length). */
+    /** Rendered width and height (CSS length); 10rem or more. */
     size?: string;
-    /** Line width in CSS pixels, whatever the size. */
-    line?: number;
     class?: string;
   } = $props();
 </script>
 
-<span
-  class="logo {cls}"
-  style:--size={size}
-  style:--line="{line}px"
-  aria-hidden="true"
->
+<span class="logo {cls}" style:--size={size} aria-hidden="true">
   <!-- eslint-disable-next-line svelte/no-at-html-tags -- our own static asset -->
   {@html svg}
 </span>
@@ -39,11 +31,5 @@
     display: block;
     width: 100%;
     height: 100%;
-  }
-  .logo :global(svg *) {
-    vector-effect: non-scaling-stroke;
-  }
-  .logo :global(svg > g) {
-    stroke-width: var(--line);
   }
 </style>

@@ -2,7 +2,6 @@
   // Wraps every Leader screen: the tab bar, and the caller in context (getCaller).
   import type { Snippet } from "svelte";
   import LeaderTabs from "./LeaderTabs.svelte";
-  import Logo from "./Logo.svelte";
   import type { Me } from "./contract.gen";
   import { provideCaller } from "./hq";
   import "./leader.css";
@@ -16,7 +15,6 @@
 
 <div class="leader">
   <header class="bar">
-    <Logo />
     <span>Troop 813 HQ</span>
   </header>
   <LeaderTabs role={me.role} />

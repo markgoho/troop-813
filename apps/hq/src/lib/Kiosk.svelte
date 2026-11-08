@@ -86,7 +86,6 @@
 
 <div class="kiosk">
   <header class="bar">
-    <Logo size="2.25rem" />
     <span>Troop 813 · Meeting</span>
   </header>
   <main class="stage">
@@ -94,7 +93,7 @@
       <p class="status">Loading…</p>
     {:else if user === null}
       <div class="lock">
-        <Logo size="9rem" line={1.25} />
+        <Logo size="12rem" />
         <h1>Troop 813 Meeting Kiosk</h1>
         <p class="sub">The Admin unlocks the Kiosk to start today's Meeting.</p>
         <button
@@ -120,7 +119,7 @@
         <p class="status">Loading…</p>
       {:then caller}
         <div class="lock">
-          <Logo size="9rem" line={1.25} />
+          <Logo size="12rem" />
           <h1>Troop 813 Meeting Kiosk</h1>
           {#if caller.role === "admin"}
             <button

@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "troop-813"
+  },
+  "targets": {
+    "troop-813": {
+      "hosting": {
+        "hq": ["troop-813-hq"]
+      }
+    }
+  }
+}

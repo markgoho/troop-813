@@ -1,0 +1,65 @@
+name: Checks
+description: >-
+  Every root check, run before any deploy (api.yml, web.yml): typecheck, lint,
+  format, the tygo drift check, then all tests (Go, HQ, Firestore rules) under
+  the Firebase emulators. Same commands as local dev (CLAUDE.md).
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: api/go.mod
+        cache-dependency-path: api/go.sum
+
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: 1.4.4
+
+    # The Firestore emulator is a Java program.
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: "21"
+
+    - name: Cache Firebase emulator jars
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/firebase/emulators
+        key: firebase-emulators-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
+    # Put golangci-lint on PATH; `bun run lint` runs it.
+    - uses: golangci/golangci-lint-action@v9
+      with:
+        version: v2.14.0
+        install-only: true
+
+    - name: Install
+      shell: bash
+      run: bun install --frozen-lockfile
+
+    - name: Typecheck
+      shell: bash
+      run: bun run check
+
+    - name: Lint
+      shell: bash
+      run: bun run lint
+
+    - name: Format
+      shell: bash
+      run: bun fmt --check .
+
+    - name: Generated types match the Go structs (tygo drift)
+      shell: bash
+      run: |
+        bun run gen
+        if [[ -n "$(git status --porcelain)" ]]; then
+          git status --porcelain
+          git diff
+          echo "::error::bun run gen changed files. Run it locally and commit the output (ADR 0002)."
+          exit 1
+        fi
+
+    - name: Test
+      shell: bash
+      run: bun run test

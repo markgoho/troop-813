@@ -72,6 +72,7 @@ func Routes(d Deps) *router.Router {
 	r.Gated("DELETE /api/meetings/{date}", leader, mtg.DeleteMeeting)
 	r.Gated("GET /api/leaders", leader, acc.Leaders)
 	r.Gated("POST /api/kiosk/not-found", []router.Accept{router.Kiosk}, mtg.KioskNotFound)
+	r.Gated("POST /api/kiosk/wake", leader, mtg.Wake)
 	return r
 }
 

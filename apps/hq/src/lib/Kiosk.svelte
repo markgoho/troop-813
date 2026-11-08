@@ -5,14 +5,14 @@
   //
   //   signed out             → the Admin's Google sign-in (unlock)
   //   Google sign-in         → Admin: "Start today's Meeting"; anyone else: refused
-  //   Kiosk token for today  → the name list (KioskNameList)
+  //   Kiosk token for today  → the name list, or "Kiosk asleep" (KioskSession)
   //   Kiosk token, other day → dropped (signed out), back to unlock
   //
   // The Google sign-in is offered only while no Kiosk session for today is
   // live: a Scout holding the tablet must never get the Admin's account chooser.
   import { ApiError, type Api } from "./api";
   import { localDate } from "./dates";
-  import KioskNameList from "./KioskNameList.svelte";
+  import KioskSession from "./KioskSession.svelte";
   import type { Live } from "./live";
   import type { Session, SignedInUser } from "./session";
   import { holdScreenAwake } from "./wakeLock";
@@ -32,9 +32,21 @@
     }),
   );
 
-  // A Kiosk session from an earlier date ended at 22:00 that night.
+  // The tablet's clock, ticked once a second: a time-based expiry fires no
+  // onSnapshot, so sleep (KioskSession) and the date check below run on this.
+  // svelte-ignore state_referenced_locally
+  let at = $state(now());
+  $effect(() => {
+    const timer = setInterval(() => {
+      at = now();
+    }, 1000);
+    return () => clearInterval(timer);
+  });
+
+  // A Kiosk session from an earlier date ended at 22:00 that night, even on a
+  // tablet left open past midnight.
   const stale = $derived(
-    user?.kiosk !== undefined && user.kiosk.meetingId !== localDate(now()),
+    user?.kiosk !== undefined && user.kiosk.meetingId !== localDate(at),
   );
   $effect(() => {
     if (stale) void session.signOut();
@@ -80,10 +92,11 @@
     </button>
   {:else if user.kiosk}
     {#key user.kiosk.sessionId}
-      <KioskNameList
+      <KioskSession
         {api}
         {live}
         kiosk={user.kiosk}
+        {at}
         onExpired={() => void session.signOut()}
       />
     {/key}

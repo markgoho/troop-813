@@ -88,6 +88,12 @@ export interface Api {
    * Meeting, still able to check in. ApiError 401 session_asleep / session_expired.
    */
   kioskNotFound(req: KioskNotFoundRequest): Promise<void>;
+  /**
+   * Leader only: restarts the live Kiosk's 30 idle minutes, so an asleep tablet
+   * resumes by itself. ApiError 404 with no live session, 409 session_expired
+   * from 22:00.
+   */
+  wakeKiosk(): Promise<void>;
 }
 
 export class ApiError extends Error {
@@ -240,6 +246,9 @@ export function httpApi(
     leaders: () => getJSON<LeaderList>(fetchFn, token, "/api/leaders"),
     kioskNotFound: async (req) => {
       await send(fetchFn, token, "POST", "/api/kiosk/not-found", req);
+    },
+    wakeKiosk: async () => {
+      await send(fetchFn, token, "POST", "/api/kiosk/wake");
     },
   };
 }

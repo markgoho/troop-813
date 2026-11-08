@@ -119,7 +119,13 @@ describe("the Kiosk reads its Meeting and the Roster", () => {
     await expectDenied(getDoc(doc(db, "rsvps/e1_s1")));
     await expectDenied(getDocs(collection(db, "rsvps")));
     await expectDenied(getDoc(doc(db, "users/u-admin")));
-    await expectDenied(getDoc(doc(db, "kioskSessions/session-1")));
+  });
+
+  test("it can get its own session (to sleep and wake), no other, no list", async () => {
+    const db = kiosk();
+    await expectAllowed(getDoc(doc(db, "kioskSessions/session-1")));
+    await expectDenied(getDoc(doc(db, "kioskSessions/session-old")));
+    await expectDenied(getDocs(collection(db, "kioskSessions")));
   });
 
   test("a replaced or unknown session reads nothing", async () => {
@@ -206,6 +212,16 @@ describe("Leaders read Meetings and their attendance", () => {
   }
 });
 
+describe("Leaders read Kiosk sessions", () => {
+  for (const uid of ["u-leader", "u-admin"]) {
+    test(`${uid} can get and list kioskSessions`, async () => {
+      const db = env.authenticatedContext(uid).firestore();
+      await expectAllowed(getDoc(doc(db, "kioskSessions/session-1")));
+      await expectAllowed(getDocs(collection(db, "kioskSessions")));
+    });
+  }
+});
+
 describe("Parents and anonymous users read nothing else", () => {
   const identities = {
     anonymous: () => env.unauthenticatedContext(),
@@ -227,6 +243,8 @@ describe("Parents and anonymous users read nothing else", () => {
       await expectDenied(getDocs(collection(db, "events")));
       await expectDenied(getDoc(doc(db, "rsvps/e1_s1")));
       await expectDenied(getDocs(collection(db, "rsvps")));
+      await expectDenied(getDoc(doc(db, "kioskSessions/session-1")));
+      await expectDenied(getDocs(collection(db, "kioskSessions")));
     });
   }
 });
@@ -253,6 +271,9 @@ describe("writes are denied for every identity", () => {
       await expectDenied(setDoc(doc(db, "scouts/s1"), { firstName: "Avery" }));
       await expectDenied(setDoc(doc(db, "events/e1"), { cancelled: true }));
       await expectDenied(setDoc(doc(db, "rsvps/e1_s1"), { answer: "going" }));
+      await expectDenied(
+        setDoc(doc(db, "kioskSessions/session-1"), { lastActivityAt: 1 }),
+      );
       // Not even their own users doc: only Go sets roles.
       await expectDenied(
         setDoc(doc(db, "users/u-parent"), { role: "admin" }, { merge: true }),

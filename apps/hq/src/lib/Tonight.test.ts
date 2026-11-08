@@ -1,12 +1,13 @@
 import { render, screen, waitFor, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import Tonight from "./Tonight.svelte";
 import { ApiError } from "./api";
 import { fakeApi } from "./testing/fakeApi";
 import {
   attendanceDoc,
   fakeLive,
+  kioskSession,
   meeting,
   ready,
   scout,
@@ -23,7 +24,10 @@ const roster = [
   scout("s4", "Juniper", "Marsh", false),
 ];
 
-function setup(overrides: Parameters<typeof fakeApi>[0] = {}) {
+function setup(
+  overrides: Parameters<typeof fakeApi>[0] = {},
+  clock: () => Date = now,
+) {
   const api = fakeApi({
     leaders: async () => ({
       leaders: [{ uid: "u-leader", displayName: "Lee Leader" }],
@@ -32,7 +36,7 @@ function setup(overrides: Parameters<typeof fakeApi>[0] = {}) {
   });
   const live = fakeLive();
   live.scoutsStore.set(ready(roster));
-  render(Tonight, { api, live, now });
+  render(Tonight, { api, live, now: clock });
   return { api, live };
 }
 
@@ -252,5 +256,115 @@ describe("Tonight", () => {
         "Avery Quill 7:15 PM Leader: Lee Leader Undo",
       ]),
     );
+  });
+});
+
+describe("Tonight Kiosk status", () => {
+  const MIN = 60_000;
+  // The Tonight tab's clock is 19:30 EST; sessions are keyed by Meeting ID there.
+  const session = (
+    live: ReturnType<typeof fakeLive>,
+    lastActivityAt: string,
+  ) => {
+    live.meetingStore(TODAY).set(meeting(TODAY));
+    live.attendanceStore(TODAY).set(ready([]));
+    live
+      .kioskSessionStore(TODAY)
+      .set(kioskSession("sess-1", TODAY, lastActivityAt));
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("awake: shows when the Kiosk last did anything", async () => {
+    const { live } = setup();
+    session(live, "2026-11-10T00:12:00Z"); // 19:12
+
+    expect(await screen.findByText("Kiosk awake")).toBeInTheDocument();
+    expect(screen.getByText(/last activity 7:12 PM/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wake Kiosk" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("asleep after 30 idle minutes: one Wake Kiosk button", async () => {
+    const wakeKiosk = vi.fn(async () => {});
+    const { live } = setup({ wakeKiosk });
+    session(live, "2026-11-10T00:00:00Z"); // 19:00, 30 minutes before now
+
+    expect(await screen.findByText("Kiosk asleep")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Wake Kiosk" }));
+
+    expect(wakeKiosk).toHaveBeenCalledOnce();
+  });
+
+  test("goes awake by itself when the Wake lands in the session doc", async () => {
+    const { live } = setup({ wakeKiosk: async () => {} });
+    session(live, "2026-11-10T00:00:00Z");
+    await screen.findByText("Kiosk asleep");
+
+    live
+      .kioskSessionStore(TODAY)
+      .set(kioskSession("sess-1", TODAY, "2026-11-10T00:30:00Z"));
+
+    expect(await screen.findByText("Kiosk awake")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wake Kiosk" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("falls asleep on the timer while the tab is open", async () => {
+    vi.useFakeTimers();
+    let at = now();
+    const { live } = setup({}, () => at);
+    session(live, "2026-11-10T00:05:00Z"); // 19:05; now is 19:30
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText("Kiosk awake")).toBeInTheDocument();
+
+    at = new Date(at.getTime() + 5 * MIN);
+    await vi.advanceTimersByTimeAsync(5 * MIN);
+
+    expect(screen.getByText("Kiosk asleep")).toBeInTheDocument();
+  });
+
+  test("a failed Wake says so", async () => {
+    const { live } = setup({
+      wakeKiosk: async () => {
+        throw new ApiError(500, { code: "internal" });
+      },
+    });
+    session(live, "2026-11-10T00:00:00Z");
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Wake Kiosk" }),
+    );
+
+    expect(
+      await screen.findByText("Couldn't wake the Kiosk. Try again."),
+    ).toBeInTheDocument();
+  });
+
+  test("past 22:00 the Kiosk is done for the night: no Wake button", async () => {
+    const late = () => new Date("2026-11-10T03:01:00Z"); // 22:01 EST
+    const { live } = setup({}, late);
+    session(live, "2026-11-10T02:58:00Z"); // 21:58, fresh
+
+    expect(
+      await screen.findByText("Kiosk closed for the night"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wake Kiosk" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("with no live session there is no status", async () => {
+    const { live } = setup();
+    live.meetingStore(TODAY).set(meeting(TODAY));
+    live.attendanceStore(TODAY).set(ready([]));
+    live.kioskSessionStore(TODAY).set({ state: "ready", doc: null });
+
+    await screen.findByText("0 checked in");
+    expect(screen.queryByText(/Kiosk (awake|asleep)/)).not.toBeInTheDocument();
   });
 });

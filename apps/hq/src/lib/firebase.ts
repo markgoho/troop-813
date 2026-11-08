@@ -28,9 +28,18 @@ import {
   doc,
   getFirestore,
   onSnapshot,
+  query,
+  where,
 } from "firebase/firestore";
 import { type Readable, readable } from "svelte/store";
-import type { Attendance, Event, Meeting, RSVP, Scout } from "./contract.gen";
+import type {
+  Attendance,
+  Event,
+  KioskSession,
+  Meeting,
+  RSVP,
+  Scout,
+} from "./contract.gen";
 import type { Live, LiveDoc, LiveDocs } from "./live";
 import type { Session, SignedInUser } from "./session";
 
@@ -108,12 +117,40 @@ export function liveDoc<T>(path: string): Readable<LiveDoc<T>> {
   );
 }
 
+/**
+ * The live (not replaced) Kiosk session of a Meeting, as a doc store: a query
+ * with two equality filters (no composite index), at most one match.
+ */
+function liveCurrentKioskSession(
+  meetingId: string,
+): Readable<LiveDoc<KioskSession>> {
+  return readable<LiveDoc<KioskSession>>({ state: "loading" }, (set) =>
+    onSnapshot(
+      query(
+        collection(firestore(), "kioskSessions"),
+        where("meetingId", "==", meetingId),
+        where("replaced", "==", false),
+      ),
+      (snap) => {
+        const d = snap.docs[0];
+        set({
+          state: "ready",
+          doc: d ? { ...(d.data() as KioskSession), id: d.id } : null,
+        });
+      },
+      (error) => set({ state: "error", error }),
+    ),
+  );
+}
+
 /** The real live source. */
 export function firebaseLive(): Live {
   return {
     meeting: (id) => liveDoc<Meeting>(`meetings/${id}`),
     meetings: () => liveCollection<Meeting>("meetings"),
     attendance: (id) => liveCollection<Attendance>(`meetings/${id}/attendance`),
+    kioskSession: (id) => liveDoc<KioskSession>(`kioskSessions/${id}`),
+    currentKioskSession: liveCurrentKioskSession,
     scouts: () => liveCollection<Scout>("scouts"),
     events: () => liveCollection<Event>("events"),
     rsvps: () => liveCollection<RSVP>("rsvps"),

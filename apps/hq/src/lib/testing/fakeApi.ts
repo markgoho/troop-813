@@ -32,6 +32,7 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     deleteMeeting: unexpected("deleteMeeting"),
     leaders: unexpected("leaders"),
     kioskNotFound: unexpected("kioskNotFound"),
+    wakeKiosk: unexpected("wakeKiosk"),
     ...overrides,
   };
 }

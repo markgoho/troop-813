@@ -46,6 +46,14 @@ service cloud.firestore {
       }
     }
 
+    // Kiosk status: the tablet watches its own session (lastActivityAt) to
+    // sleep and wake, a Leader's Tonight tab watches any. Reads only; Go
+    // writes lastActivityAt (every Kiosk write, and Wake).
+    match /kioskSessions/{sessionId} {
+      allow get: if isKiosk() && request.auth.token.kioskSessionId == sessionId;
+      allow read: if isLeader();
+    }
+
     // The Roster tab lists scouts live (onSnapshot = list) and opens Scouts
     // (get); the Kiosk lists them for its name list.
     match /scouts/{scoutId} {

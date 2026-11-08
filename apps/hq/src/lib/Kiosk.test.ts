@@ -1,13 +1,19 @@
 import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { tick } from "svelte";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import Kiosk from "./Kiosk.svelte";
 import { ApiError } from "./api";
 import type { Me } from "./contract.gen";
 import type { SignedInUser } from "./session";
 import { fakeApi } from "./testing/fakeApi";
-import { fakeLive, meeting, ready, scout } from "./testing/fakeLive";
+import {
+  fakeLive,
+  kioskSession,
+  meeting,
+  ready,
+  scout,
+} from "./testing/fakeLive";
 import { fakeSession } from "./testing/fakeSession";
 
 // Monday 2026-11-09, 19:05 in New York.
@@ -30,12 +36,13 @@ const roster = [
 function setup(
   user: SignedInUser | null,
   apiOverrides: Parameters<typeof fakeApi>[0] = {},
+  clock: () => Date = now,
 ) {
   const session = fakeSession(user, { "kiosk-token": kioskUser });
   const live = fakeLive();
   live.scoutsStore.set(ready(roster));
   const api = fakeApi(apiOverrides);
-  render(Kiosk, { session, api, live, now });
+  render(Kiosk, { session, api, live, now: clock });
   return { session, live, api };
 }
 
@@ -387,7 +394,7 @@ describe("Kiosk session", () => {
     ).toBeInTheDocument();
   });
 
-  test("a check-in on an asleep session says to ask a Leader", async () => {
+  test("a check-in on an asleep session shows the asleep screen", async () => {
     const { session, live } = setup(kioskUser, {
       kioskCheckIn: async () => {
         throw new ApiError(401, { code: "session_asleep" });
@@ -427,5 +434,129 @@ describe("Kiosk session", () => {
     expect(
       screen.getByRole("button", { name: "Yes, I'm Rowan" }),
     ).toBeEnabled();
+  });
+});
+
+describe("Kiosk sleep", () => {
+  const MIN = 60_000;
+  const ASLEEP = "Kiosk asleep, ask a Leader";
+  // The session's last activity: 19:05 EST on TODAY (the `now` above).
+  const LAST = "2026-11-10T00:05:00Z";
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A Kiosk on a clock the test moves; the timer ticks in fake time. */
+  function sleepSetup(lastActivityAt = LAST) {
+    vi.useFakeTimers();
+    let at = now();
+    const ctx = setup(kioskUser, {}, () => at);
+    ctx.live.meetingStore(TODAY).set(meeting(TODAY));
+    ctx.live
+      .kioskSessionStore("sess-1")
+      .set(kioskSession("sess-1", TODAY, lastActivityAt));
+    return {
+      ...ctx,
+      /** Moves the clock forward and lets the Kiosk's timer notice. */
+      async advance(ms: number) {
+        at = new Date(at.getTime() + ms);
+        await vi.advanceTimersByTimeAsync(ms);
+      },
+    };
+  }
+
+  test("awake at 29 minutes idle, asleep at 30, with no tap", async () => {
+    const { advance } = sleepSetup();
+    await tick();
+
+    await advance(29 * MIN);
+    expect(screen.queryByText(ASLEEP)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rowan" })).toBeInTheDocument();
+
+    await advance(MIN);
+    expect(screen.getByText(ASLEEP)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Rowan" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("a Wake (the session's lastActivityAt moves) brings the name list back by itself", async () => {
+    const { advance, live } = sleepSetup();
+    await tick();
+    await advance(31 * MIN);
+    expect(screen.getByText(ASLEEP)).toBeInTheDocument();
+
+    live
+      .kioskSessionStore("sess-1")
+      .set(kioskSession("sess-1", TODAY, "2026-11-10T00:36:00Z"));
+    await tick();
+
+    expect(screen.queryByText(ASLEEP)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rowan" })).toBeInTheDocument();
+  });
+
+  test("a Kiosk that woke up mid-confirm picks up where it was", async () => {
+    const { advance, live } = sleepSetup();
+    await tick();
+    await userEvent
+      .setup({ advanceTimers: vi.advanceTimersByTime })
+      .click(screen.getByRole("button", { name: "Rowan" }));
+    await advance(31 * MIN);
+    expect(screen.getByText(ASLEEP)).toBeInTheDocument();
+
+    live
+      .kioskSessionStore("sess-1")
+      .set(kioskSession("sess-1", TODAY, "2026-11-10T00:36:00Z"));
+    await tick();
+
+    expect(
+      screen.getByRole("heading", { name: "Are you Rowan?" }),
+    ).toBeInTheDocument();
+  });
+
+  test("past 22:00 the Kiosk is asleep however fresh its last write", async () => {
+    // Active at 21:55 EST; 22:00 is five minutes later.
+    const { advance } = sleepSetup("2026-11-10T02:55:00Z");
+    await tick();
+    // Move the clock from 19:05 to 21:59.
+    await advance(174 * MIN);
+    expect(screen.queryByText(ASLEEP)).not.toBeInTheDocument();
+
+    await advance(MIN);
+    expect(screen.getByText(ASLEEP)).toBeInTheDocument();
+  });
+
+  test("the server saying asleep shows the screen, until a Wake changes lastActivityAt", async () => {
+    vi.useFakeTimers();
+    const kioskCheckIn = vi.fn(async () => {
+      throw new ApiError(401, { code: "session_asleep" });
+    });
+    const { live, session } = setup(kioskUser, { kioskCheckIn });
+    live.meetingStore(TODAY).set(meeting(TODAY));
+    // The tablet's clock thinks it is awake (skew), the server does not.
+    live.kioskSessionStore("sess-1").set(kioskSession("sess-1", TODAY, LAST));
+    await tick();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    await user.click(screen.getByRole("button", { name: "Rowan" }));
+    await user.click(screen.getByRole("button", { name: "Yes, I'm Rowan" }));
+    expect(screen.getByText(ASLEEP)).toBeInTheDocument();
+    expect(session.signOut).not.toHaveBeenCalled();
+
+    live
+      .kioskSessionStore("sess-1")
+      .set(kioskSession("sess-1", TODAY, "2026-11-10T00:10:00Z"));
+    await tick();
+    expect(screen.queryByText(ASLEEP)).not.toBeInTheDocument();
+  });
+
+  test("a tablet left open past midnight drops back to the unlock screen on its own", async () => {
+    const { advance, session } = sleepSetup();
+    await tick();
+
+    await advance(5 * 60 * MIN); // 00:05 the next day
+
+    expect(session.signOut).toHaveBeenCalled();
   });
 });

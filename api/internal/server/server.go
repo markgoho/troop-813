@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/firestore"
 	fbauth "firebase.google.com/go/v4/auth"
 
+	"github.com/markgoho/troop-813/api/internal/access"
 	"github.com/markgoho/troop-813/api/internal/auth"
 	"github.com/markgoho/troop-813/api/internal/clock"
 	"github.com/markgoho/troop-813/api/internal/contract"
@@ -40,6 +41,9 @@ func Routes(d Deps) *router.Router {
 	r := router.New(authn)
 	r.Open("GET /api/health", "liveness probe and the HQ smoke check; reveals only today's date", health)
 	r.Gated("GET /api/me", []router.Accept{router.Leader, router.Parent}, me)
+	acc := access.Handlers{FS: d.Firestore}
+	r.Gated("GET /api/users", []router.Accept{router.Admin}, acc.List)
+	r.Gated("PUT /api/users/{uid}/role", []router.Accept{router.Admin}, acc.SetRole)
 	return r
 }
 

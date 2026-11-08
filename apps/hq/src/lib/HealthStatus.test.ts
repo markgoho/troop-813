@@ -2,9 +2,10 @@ import { render, screen } from "@testing-library/svelte";
 import { describe, expect, test } from "vitest";
 import HealthStatus from "./HealthStatus.svelte";
 import type { Api } from "./api";
+import { fakeApi as baseFakeApi } from "./testing/fakeApi";
 
 function fakeApi(health: Api["health"]): Api {
-  return { health, me: async () => ({ uid: "u-1", role: "leader" }) };
+  return baseFakeApi({ health });
 }
 
 describe("HealthStatus", () => {

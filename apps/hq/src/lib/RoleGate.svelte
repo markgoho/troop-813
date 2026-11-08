@@ -4,13 +4,15 @@
   // The role comes from Go (GET /api/me) on every load, never from the client.
   import type { Snippet } from "svelte";
   import type { Api } from "./api";
+  import type { Me } from "./contract.gen";
   import type { Session, SignedInUser } from "./session";
 
+  // children gets the caller (uid, role) so Leader screens can tell the Admin apart.
   let {
     session,
     api,
     children,
-  }: { session: Session; api: Api; children: Snippet } = $props();
+  }: { session: Session; api: Api; children: Snippet<[Me]> } = $props();
 
   // undefined until the session reports in (Firebase restores it asynchronously).
   let user = $state<SignedInUser | null | undefined>(undefined);
@@ -47,9 +49,9 @@
 {:else}
   {#await me}
     <p>Loading…</p>
-  {:then { role }}
-    {#if role === "leader" || role === "admin"}
-      {@render children()}
+  {:then caller}
+    {#if caller.role === "leader" || caller.role === "admin"}
+      {@render children(caller)}
     {:else}
       <main>
         <h1>Troop 813 HQ</h1>

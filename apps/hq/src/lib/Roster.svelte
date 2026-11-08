@@ -40,7 +40,7 @@
   let editFirst = $state("");
   let editLast = $state("");
   let confirmingId = $state<string | null>(null);
-  // Scouts the server refused to delete (Attendance this page can't see).
+  // Scouts the server refused to delete (Attendance newer than the loaded counts).
   let refused = $state<string[]>([]);
 
   const byName = (a: WithId<Scout>, b: WithId<Scout>) =>
@@ -55,7 +55,12 @@
   const withRsvps = $derived(
     new Set($rsvps.state === "ready" ? $rsvps.docs.map((r) => r.scoutId) : []),
   );
-  const inUse = (id: string) => withRsvps.has(id) || refused.includes(id);
+  // Attendance comes from Go (undone records count too, as the server's in_use
+  // rule does); `refused` catches a check-in that landed after counts loaded.
+  const inUse = (id: string) =>
+    withRsvps.has(id) ||
+    counts[id]?.hasAttendance === true ||
+    refused.includes(id);
 
   const fullName = (s: { firstName: string; lastName: string }) =>
     `${s.firstName} ${s.lastName}`;

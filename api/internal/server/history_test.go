@@ -206,10 +206,41 @@ func TestAttendanceCountsForTheRoster(t *testing.T) {
 	}
 
 	want := map[string]contract.AttendanceCount{
-		avery: {Present: 2, Total: 3},
-		rowan: {Present: 1, Total: 1},
+		avery: {Present: 2, Total: 3, HasAttendance: true},
+		rowan: {Present: 1, Total: 1, HasAttendance: true},
 	}
 	if !reflect.DeepEqual(got.Scouts, want) {
 		t.Fatalf("counts = %+v, want %+v", got.Scouts, want)
+	}
+}
+
+// The Roster disables Delete up front from hasAttendance, so it must match
+// the server's in_use rule: any Attendance record, undone ones included.
+func TestAttendanceCountsFlagAScoutWhoseOnlyAttendanceWasUndone(t *testing.T) {
+	t.Parallel()
+	env := testenv.Setup(t)
+	leader := env.RoleToken(t, "u-leader", contract.RoleLeader)
+	undone := historyScout(t, env, "Avery", "2026-10-05")
+	never := historyScout(t, env, "Rowan", "2026-10-05")
+	historyMeeting(t, env, "2026-10-05")
+	historyAttendance(t, env, "2026-10-05", undone, true)
+
+	var got contract.ScoutAttendance
+	if status := getJSON(t, env, "/api/scouts/attendance", leader, &got); status != http.StatusOK {
+		t.Fatalf("status %d", status)
+	}
+
+	if c := got.Scouts[undone]; !c.HasAttendance || c.Present != 0 {
+		t.Errorf("undone-only Scout = %+v, want hasAttendance with 0 present", c)
+	}
+	if c := got.Scouts[never]; c.HasAttendance {
+		t.Errorf("Scout with no Attendance = %+v, want hasAttendance false", c)
+	}
+	// And the server agrees: Delete is refused for the first, allowed for the second.
+	if status, body := scoutCall(t, env, http.MethodDelete, "/api/scouts/"+undone, leader, nil); status != http.StatusConflict || body.Code != contract.ErrorCodeInUse {
+		t.Errorf("delete of undone-only Scout = %d %q, want 409 in_use", status, body.Code)
+	}
+	if status, _ := scoutCall(t, env, http.MethodDelete, "/api/scouts/"+never, leader, nil); status != http.StatusNoContent {
+		t.Errorf("delete of Scout with no Attendance = %d, want 204", status)
 	}
 }

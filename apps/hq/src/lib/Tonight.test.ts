@@ -379,9 +379,11 @@ describe("Tonight Kiosk status", () => {
   const session = (
     live: ReturnType<typeof fakeLive>,
     lastActivityAt: string,
+    checkedIn: Record<string, string> = {},
+    attendance = [] as ReturnType<typeof attendanceDoc>[],
   ) => {
-    live.meetingStore(TODAY).set(meeting(TODAY));
-    live.attendanceStore(TODAY).set(ready([]));
+    live.meetingStore(TODAY).set(meeting(TODAY, { checkedIn }));
+    live.attendanceStore(TODAY).set(ready(attendance));
     live
       .kioskSessionStore(TODAY)
       .set(kioskSession("sess-1", TODAY, lastActivityAt));
@@ -391,15 +393,37 @@ describe("Tonight Kiosk status", () => {
     vi.useRealTimers();
   });
 
-  test("awake: shows when the Kiosk last did anything", async () => {
+  test("awake: shows the latest check-in time, not the session's activity time", async () => {
     const { live } = setup();
-    session(live, "2026-11-10T00:12:00Z"); // 19:12
+    // The session was last active at 7:25 (e.g. a not-found mark); the latest check-in was 7:12.
+    session(live, "2026-11-10T00:25:00Z", { s1: "a1", s2: "a2" }, [
+      attendanceDoc("a1", "s1", "nameList", "2026-11-10T00:05:00Z"),
+      attendanceDoc("a2", "s2", "handoff", "2026-11-10T00:12:00Z"),
+      // Undone (and no longer in checkedIn): doesn't count.
+      attendanceDoc(
+        "a3",
+        "s3",
+        "handoff",
+        "2026-11-10T00:20:00Z",
+        "kiosk-sess-1",
+        "2026-11-10T00:21:00Z",
+      ),
+    ]);
 
     expect(await screen.findByText("Kiosk awake")).toBeInTheDocument();
-    expect(screen.getByText(/last activity 7:12 PM/)).toBeInTheDocument();
+    expect(screen.getByText(/last check-in 7:12 PM/)).toBeInTheDocument();
+    expect(screen.queryByText(/last activity/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Wake Kiosk" }),
     ).not.toBeInTheDocument();
+  });
+
+  test("awake with nobody checked in yet", async () => {
+    const { live } = setup();
+    session(live, "2026-11-10T00:12:00Z");
+
+    expect(await screen.findByText("Kiosk awake")).toBeInTheDocument();
+    expect(screen.getByText(/no check-ins yet/)).toBeInTheDocument();
   });
 
   test("asleep after 30 idle minutes: one Wake Kiosk button", async () => {

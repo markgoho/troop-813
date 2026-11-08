@@ -230,10 +230,14 @@ export interface ScoutHistory {
 }
 /**
  * AttendanceCount is a Scout's X of Y, by the same rule as ScoutHistory.
+ * HasAttendance is true when the Scout has any Attendance record at all,
+ * undone ones included: the same test that makes Delete a 409 in_use, so the
+ * Roster can disable Delete up front.
  */
 export interface AttendanceCount {
   present: number /* int */;
   total: number /* int */;
+  hasAttendance: boolean;
 }
 /**
  * ScoutAttendance is the 200 body of GET /api/scouts/attendance: every

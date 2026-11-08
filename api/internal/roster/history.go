@@ -37,7 +37,7 @@ func History(ctx context.Context, fs *firestore.Client, scoutID string) (contrac
 	if err := snap.DataTo(&s); err != nil {
 		return contract.ScoutHistory{}, fmt.Errorf("roster: decode scouts/%s: %w", scoutID, err)
 	}
-	present, err := presentDates(ctx, fs.CollectionGroup(attendance).Where("scoutId", "==", scoutID))
+	present, _, err := presentDates(ctx, fs.CollectionGroup(attendance).Where("scoutId", "==", scoutID))
 	if err != nil {
 		return contract.ScoutHistory{}, err
 	}
@@ -54,7 +54,7 @@ func Attendances(ctx context.Context, fs *firestore.Client) (map[string]contract
 	if err != nil {
 		return nil, fmt.Errorf("roster: read scouts: %w", err)
 	}
-	present, err := presentDates(ctx, fs.CollectionGroup(attendance).Query)
+	present, recorded, err := presentDates(ctx, fs.CollectionGroup(attendance).Query)
 	if err != nil {
 		return nil, err
 	}
@@ -69,29 +69,32 @@ func Attendances(ctx context.Context, fs *firestore.Client) (map[string]contract
 			return nil, fmt.Errorf("roster: decode scouts/%s: %w", snap.Ref.ID, err)
 		}
 		h := buildHistory(clock.LocalDate(s.CreatedAt), present[snap.Ref.ID], all)
-		out[snap.Ref.ID] = contract.AttendanceCount{Present: h.Present, Total: h.Total}
+		out[snap.Ref.ID] = contract.AttendanceCount{Present: h.Present, Total: h.Total, HasAttendance: recorded[snap.Ref.ID]}
 	}
 	return out, nil
 }
 
 // presentDates maps Scout ID to the set of Meeting dates with a non-undone
-// Attendance, over the given collection-group query.
-func presentDates(ctx context.Context, q firestore.Query) (map[string]map[string]bool, error) {
+// Attendance, over the given collection-group query. recorded is the Scouts
+// with any Attendance record, undone ones included (what blocks a Delete).
+func presentDates(ctx context.Context, q firestore.Query) (map[string]map[string]bool, map[string]bool, error) {
 	it := q.Documents(ctx)
 	defer it.Stop()
 	out := map[string]map[string]bool{}
+	recorded := map[string]bool{}
 	for {
 		snap, err := it.Next()
 		if errors.Is(err, iterator.Done) {
-			return out, nil
+			return out, recorded, nil
 		}
 		if err != nil {
-			return nil, fmt.Errorf("roster: read attendance: %w", err)
+			return nil, nil, fmt.Errorf("roster: read attendance: %w", err)
 		}
 		var a contract.Attendance
 		if err := snap.DataTo(&a); err != nil {
-			return nil, fmt.Errorf("roster: decode %s: %w", snap.Ref.Path, err)
+			return nil, nil, fmt.Errorf("roster: decode %s: %w", snap.Ref.Path, err)
 		}
+		recorded[a.ScoutID] = true
 		if a.UndoneAt != nil {
 			continue
 		}

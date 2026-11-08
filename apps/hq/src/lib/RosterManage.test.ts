@@ -149,6 +149,29 @@ describe("Delete", () => {
     expect(del).toHaveAccessibleDescription(IN_USE);
   });
 
+  test("is disabled up front, with the reason, while the Scout has Attendance (undone included)", async () => {
+    // hasAttendance counts undone records too, like the server's in_use rule.
+    const scoutAttendance = vi.fn(async () => ({
+      scouts: { s1: { present: 0, total: 2, hasAttendance: true } },
+    }));
+    setup({ scoutAttendance });
+
+    await vi.waitFor(() => expect(button("Delete Avery Quill")).toBeDisabled());
+    expect(button("Delete Avery Quill")).toHaveAccessibleDescription(IN_USE);
+    // The inactive Scout has none, so stays deletable.
+    expect(button("Delete Rowan Pike")).toBeEnabled();
+  });
+
+  test("stays enabled for a Scout with neither Attendance nor RSVPs", async () => {
+    const scoutAttendance = vi.fn(async () => ({
+      scouts: { s1: { present: 0, total: 0, hasAttendance: false } },
+    }));
+    setup({ scoutAttendance });
+
+    await vi.waitFor(() => expect(scoutAttendance).toHaveBeenCalled());
+    expect(button("Delete Avery Quill")).toBeEnabled();
+  });
+
   test("deletes a Scout with no history after a confirm", async () => {
     const deleteScout = vi.fn(async () => {});
     setup({ deleteScout }, [rsvpFor("s1")], true);

@@ -156,9 +156,9 @@ describe("Roster list", () => {
   test("each Active Scout shows Present X of Y; Inactive Scouts don't", async () => {
     const scoutAttendance = vi.fn(async () => ({
       scouts: {
-        s1: { present: 2, total: 3 },
-        s2: { present: 0, total: 0 },
-        s3: { present: 1, total: 1 },
+        s1: { present: 2, total: 3, hasAttendance: true },
+        s2: { present: 0, total: 0, hasAttendance: false },
+        s3: { present: 1, total: 1, hasAttendance: true },
       },
     }));
     const live = fakeLive();

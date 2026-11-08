@@ -43,7 +43,7 @@
     return () => clearInterval(timer);
   });
 
-  // The Kiosk header: awake (with its last activity), asleep (Wake), or over
+  // The Kiosk header: awake (with the latest check-in), asleep (Wake), or over
   // for the night. null while loading or when no Kiosk session is live.
   const kiosk = $derived.by(() => {
     if ($kioskSession.state !== "ready" || !$kioskSession.doc) return null;
@@ -51,7 +51,7 @@
     if (meetingOver(meetingId, at)) return { state: "over" } as const;
     return asleep({ meetingId, lastActivityAt }, at)
       ? ({ state: "asleep" } as const)
-      : ({ state: "awake", lastActivityAt } as const);
+      : ({ state: "awake" } as const);
   });
 
   // Leader uid → name, for "Leader: <name>". Unknown → just "Leader".
@@ -89,6 +89,8 @@
           .sort((a, b) => b.at.toMillis() - a.at.toMillis())
       : [],
   );
+  // The newest non-undone check-in, any method; null while nobody is in.
+  const lastCheckIn = $derived(present[0]?.at.toDate() ?? null);
   const notYet = $derived(
     [...scoutsById.values()]
       .filter((s) => s.active && !(s.id in checkedIn))
@@ -179,7 +181,9 @@
       <p class="kiosk-status">
         {#if kiosk.state === "awake"}
           <strong>Kiosk awake</strong>
-          · last activity {clockTime(kiosk.lastActivityAt)}
+          · {lastCheckIn
+            ? `last check-in ${clockTime(lastCheckIn)}`
+            : "no check-ins yet"}
         {:else if kiosk.state === "asleep"}
           <strong>Kiosk asleep</strong>
           <button type="button" disabled={busy} onclick={wake}>

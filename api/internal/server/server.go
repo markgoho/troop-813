@@ -7,8 +7,9 @@ import (
 	"net/http"
 
 	"cloud.google.com/go/firestore"
-	"firebase.google.com/go/v4/auth"
+	fbauth "firebase.google.com/go/v4/auth"
 
+	"github.com/markgoho/troop-813/api/internal/auth"
 	"github.com/markgoho/troop-813/api/internal/clock"
 	"github.com/markgoho/troop-813/api/internal/contract"
 	"github.com/markgoho/troop-813/api/internal/router"
@@ -16,10 +17,12 @@ import (
 
 // Deps is everything a handler may use. Tests leave unused fields zero.
 type Deps struct {
-	Now           clock.Clock // nil means clock.Real
-	Firestore     *firestore.Client
-	Auth          *auth.Client
-	Logger        *slog.Logger // log IDs, never Scout names
+	Now       clock.Clock // nil means clock.Real
+	Firestore *firestore.Client
+	Auth      *fbauth.Client
+	Logger    *slog.Logger // log IDs, never Scout names
+	// Authenticator resolves callers for Gated routes. Nil means auth.New
+	// over Auth and Firestore; tests may swap in another.
 	Authenticator router.Authenticator
 }
 
@@ -30,9 +33,28 @@ func New(d Deps) http.Handler {
 
 // Routes mounts every route. Every route says who may call it (see router).
 func Routes(d Deps) *router.Router {
-	r := router.New(d.Authenticator)
+	authn := d.Authenticator
+	if authn == nil {
+		authn = auth.New(d.Auth, d.Firestore, d.Logger)
+	}
+	r := router.New(authn)
 	r.Open("GET /api/health", "liveness probe and the HQ smoke check; reveals only today's date", health)
+	r.Gated("GET /api/me", []router.Accept{router.Leader, router.Parent}, me)
 	return r
+}
+
+// me says who the caller is, so HQ can route them. Calling it is also what
+// creates users/{uid} at first sign-in (auth does that for any Gated route).
+func me(w http.ResponseWriter, r *http.Request) {
+	c := router.CallerFrom(r.Context())
+	role := contract.RoleParent
+	if l, ok := c.(auth.Leader); ok {
+		role = contract.RoleLeader
+		if l.IsAdmin {
+			role = contract.RoleAdmin
+		}
+	}
+	router.WriteJSON(w, http.StatusOK, contract.Me{UID: auth.UID(c), Role: role})
 }
 
 func health(w http.ResponseWriter, r *http.Request) {

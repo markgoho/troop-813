@@ -30,8 +30,11 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/markgoho/troop-813/api/internal/clock"
+	"github.com/markgoho/troop-813/api/internal/contract"
 	"github.com/markgoho/troop-813/api/internal/server"
 )
 
@@ -183,6 +186,52 @@ func (e *Env) IDToken(t testing.TB, uid string, claims map[string]any) string {
 		t.Fatalf("testenv: signInWithCustomToken: no idToken in %s", raw)
 	}
 	return out.IDToken
+}
+
+// GoogleToken creates an Auth user with an email and display name, as a
+// Google sign-in would, and returns its ID token. No users/{uid} doc is
+// written: the first API call with the token is the user's first sign-in.
+func (e *Env) GoogleToken(t testing.TB, uid, email, displayName string) string {
+	t.Helper()
+	user := (&auth.UserToCreate{}).UID(uid).Email(email).DisplayName(displayName)
+	if _, err := e.Auth.CreateUser(context.Background(), user); err != nil {
+		t.Fatalf("testenv: create user %s: %v", uid, err)
+	}
+	return e.IDToken(t, uid, nil)
+}
+
+// RoleToken writes users/{uid} with role (as if uid had signed in before)
+// and returns an ID token for uid. Use it for Leader, Admin and Parent callers.
+func (e *Env) RoleToken(t testing.TB, uid string, role contract.Role) string {
+	t.Helper()
+	e.SetRole(t, uid, role)
+	return e.IDToken(t, uid, nil)
+}
+
+// SetRole writes users/{uid}, replacing any existing doc, with role.
+func (e *Env) SetRole(t testing.TB, uid string, role contract.Role) {
+	t.Helper()
+	doc := contract.User{Email: uid + "@example.com", DisplayName: uid, Role: role, CreatedAt: DefaultNow}
+	if _, err := e.Firestore.Collection("users").Doc(uid).Set(context.Background(), doc); err != nil {
+		t.Fatalf("testenv: set users/%s: %v", uid, err)
+	}
+}
+
+// User reads users/{uid}; ok is false if it doesn't exist.
+func (e *Env) User(t testing.TB, uid string) (contract.User, bool) {
+	t.Helper()
+	snap, err := e.Firestore.Collection("users").Doc(uid).Get(context.Background())
+	if status.Code(err) == codes.NotFound {
+		return contract.User{}, false
+	}
+	if err != nil {
+		t.Fatalf("testenv: get users/%s: %v", uid, err)
+	}
+	var u contract.User
+	if err := snap.DataTo(&u); err != nil {
+		t.Fatalf("testenv: decode users/%s: %v", uid, err)
+	}
+	return u, true
 }
 
 // FakeClock is a settable clock, safe for concurrent use.

@@ -8,6 +8,8 @@
 // tags, since the browser reads the raw doc.
 package contract
 
+import "time"
+
 // Health is the body of GET /api/health.
 type Health struct {
 	Status string `json:"status"`
@@ -22,9 +24,36 @@ type ErrorCode string
 const (
 	ErrorCodeUnauthenticated ErrorCode = "unauthenticated" // no valid credential (401)
 	ErrorCodeForbidden       ErrorCode = "forbidden"       // valid credential, caller not accepted (403)
+	ErrorCodeInternal        ErrorCode = "internal"        // server-side failure, e.g. Firestore unreachable (500)
 )
 
 // ErrorBody is the body of every non-2xx API response.
 type ErrorBody struct {
 	Code ErrorCode `json:"code"`
+}
+
+// Role is a signed-in person's access level, stored in users/{uid}.role.
+// Everyone starts as a Parent; the Admin promotes Leaders; only the bootstrap
+// script sets admin (ADR 0003).
+type Role string
+
+const (
+	RoleParent Role = "parent"
+	RoleLeader Role = "leader"
+	RoleAdmin  Role = "admin"
+)
+
+// User is the Firestore doc users/{uid}, created at first sign-in.
+// Its owner can read it (firestore.rules); only Go writes it.
+type User struct {
+	Email       string    `json:"email" firestore:"email"`
+	DisplayName string    `json:"displayName" firestore:"displayName"`
+	Role        Role      `json:"role" firestore:"role"`
+	CreatedAt   time.Time `json:"createdAt" firestore:"createdAt"`
+}
+
+// Me is the body of GET /api/me: who the caller is, so HQ can route them.
+type Me struct {
+	UID  string `json:"uid"`
+	Role Role   `json:"role"`
 }

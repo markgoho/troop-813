@@ -35,6 +35,16 @@ Bun, Go (version in `api/go.mod`), Java 21+ (Firestore emulator), `golangci-lint
 
 Note: because the root has a `fmt` script, a bare `bun fmt …` at the root runs that script (`scripts/fmt.ts`), not Bun's formatter directly. The script honours `--check` and paths, so `bun fmt --check .` still works.
 
+## Making the Admin
+
+Everyone who signs in starts as a Parent. `admin` is set only by `bun run bootstrap-admin <email>`, for a user who has signed in to HQ once. By default it targets this checkout's emulators (have `bun run dev` running); add `--prod` for the real `troop-813` project (needs `gcloud auth application-default login`).
+
+In `bun run dev`, "Sign in with Google" opens the Auth emulator's fake Google page: add an account with a fictional email, then bootstrap it.
+
+## HQ Firebase config
+
+HQ reads its Firebase web config at build time: `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_PROJECT_ID` (the web deploy sets troop-813's; `bun run dev` sets demo values plus `VITE_FIREBASE_AUTH_EMULATOR_URL` and `VITE_FIRESTORE_EMULATOR_HOST`). `authDomain` is always the page's own host, so sign-in redirects through Hosting's `/__/auth/handler` on the same site.
+
 ## Ports, port offset and project ID
 
 All local ports sit in one block of 10 starting at 21000: Firestore, Firestore websocket, Auth, hub, logging, Emulator UI, API, HQ (in that order, so offset 0 is 21000–21007). To run several checkouts at once (e.g. git worktrees), give each its own offset:

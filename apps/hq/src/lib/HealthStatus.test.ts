@@ -4,7 +4,7 @@ import HealthStatus from "./HealthStatus.svelte";
 import type { Api } from "./api";
 
 function fakeApi(health: Api["health"]): Api {
-  return { health };
+  return { health, me: async () => ({ uid: "u-1", role: "leader" }) };
 }
 
 describe("HealthStatus", () => {

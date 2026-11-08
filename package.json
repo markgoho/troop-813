@@ -16,7 +16,8 @@
     "test": "bun test ./scripts && bun scripts/emulators.ts exec 'bun run test:emulated'",
     "test:emulated": "go -C api test -count=1 ./... && bun run --filter '*' test",
     "test:go": "bun scripts/emulators.ts exec 'go -C api test -count=1 ./...'",
-    "emulators": "bun scripts/emulators.ts start"
+    "emulators": "bun scripts/emulators.ts start",
+    "bootstrap-admin": "bun scripts/bootstrap-admin.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

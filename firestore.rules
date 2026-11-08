@@ -1,11 +1,16 @@
 rules_version = '2';
 
 // Deny-all baseline. Go (Admin SDK) is the only writer and bypasses rules.
-// Later tickets open only the reads the Kiosk and Leader screens need (ADR 0001).
+// Each match below opens only a read the Kiosk or Leader screens need (ADR 0001).
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
       allow read, write: if false;
+    }
+
+    // A signed-in person can read their own users doc (role etc.), nobody else's.
+    match /users/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
     }
   }
 }

@@ -47,6 +47,10 @@ _Avoid_: Registration, sign-up
 
 ## Meeting Kiosk
 
+**HQ**:
+The troop's sign-in app. It holds the Meeting Kiosk and the Leader screens, and later the Parent screens.
+_Avoid_: Portal, the app, the kiosk app
+
 **Meeting Kiosk**:
 The shared-tablet screen a Leader unlocks at a Meeting so Scouts can record Attendance and RSVP in turn.
 _Avoid_: Attendance page, check-in app

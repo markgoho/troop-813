@@ -1,0 +1,57 @@
+# The only place `terraform apply` runs (ADR 0005). A failed apply is fixed
+# forward with another commit; nobody applies by hand.
+name: terraform
+
+on:
+  push:
+    branches: [trunk]
+    paths:
+      - terraform/**
+      - .github/workflows/terraform.yml
+  workflow_dispatch: {}
+
+# Queue, never cancel: an apply is never cut off halfway (it would leave the
+# state lock held).
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+
+      - name: Format
+        run: terraform fmt -check -diff
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: troop-813
+          workload_identity_provider: projects/1003933813667/locations/global/workloadIdentityPools/github/providers/github
+          service_account: terraform@troop-813.iam.gserviceaccount.com
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Apply
+        run: terraform apply -input=false tfplan

@@ -3,13 +3,16 @@
   // (/kiosk, a later ticket) lives outside it with its own credential.
   import type { Snippet } from "svelte";
   import RoleGate from "#lib/RoleGate.svelte";
+  import LeaderShell from "#lib/LeaderShell.svelte";
   import { provideHq } from "#lib/hq.ts";
 
-  let { children }: { children: Snippet } = $props();
+  let { children: page }: { children: Snippet } = $props();
 
   const { session, api } = provideHq();
 </script>
 
 <RoleGate {session} {api}>
-  {@render children()}
+  {#snippet children(me)}
+    <LeaderShell {me}>{@render page()}</LeaderShell>
+  {/snippet}
 </RoleGate>

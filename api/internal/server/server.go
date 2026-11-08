@@ -9,9 +9,11 @@ import (
 	"cloud.google.com/go/firestore"
 	fbauth "firebase.google.com/go/v4/auth"
 
+	"github.com/markgoho/troop-813/api/internal/access"
 	"github.com/markgoho/troop-813/api/internal/auth"
 	"github.com/markgoho/troop-813/api/internal/clock"
 	"github.com/markgoho/troop-813/api/internal/contract"
+	"github.com/markgoho/troop-813/api/internal/roster"
 	"github.com/markgoho/troop-813/api/internal/router"
 )
 
@@ -40,7 +42,11 @@ func Routes(d Deps) *router.Router {
 	r := router.New(authn)
 	r.Open("GET /api/health", "liveness probe and the HQ smoke check; reveals only today's date", health)
 	r.Gated("GET /api/me", []router.Accept{router.Leader, router.Parent}, me)
-	r.Gated("POST /api/scouts", []router.Accept{router.Leader}, addScout(d.Firestore, logger(d)))
+	acc := access.Handlers{FS: d.Firestore}
+	r.Gated("GET /api/users", []router.Accept{router.Admin}, acc.List)
+	r.Gated("PUT /api/users/{uid}/role", []router.Accept{router.Admin}, acc.SetRole)
+	ros := roster.Handlers{FS: d.Firestore, Logger: d.Logger}
+	r.Gated("POST /api/scouts", []router.Accept{router.Leader}, ros.Add)
 	return r
 }
 
@@ -56,14 +62,6 @@ func me(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	router.WriteJSON(w, http.StatusOK, contract.Me{UID: auth.UID(c), Role: role})
-}
-
-// logger is d.Logger, or a discarding one when unset (tests that only walk routes).
-func logger(d Deps) *slog.Logger {
-	if d.Logger == nil {
-		return slog.New(slog.DiscardHandler)
-	}
-	return d.Logger
 }
 
 func health(w http.ResponseWriter, r *http.Request) {

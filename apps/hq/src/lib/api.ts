@@ -1,11 +1,15 @@
 // Typed client for the Go API. Components take an Api so tests can pass a fake.
 // Body types come from contract.gen.ts (generated from Go, ADR 0002): never hand-write them.
-import type { ErrorBody, Health, Me } from "./contract.gen";
+import type { ErrorBody, Health, Me, SetRole, UserList } from "./contract.gen";
 
 export interface Api {
   health(): Promise<Health>;
   /** Who the caller is. The first call after a first sign-in creates their users doc. */
   me(): Promise<Me>;
+  /** Admin only: everyone who has signed in, newest first. */
+  users(): Promise<UserList>;
+  /** Admin only: Parent↔Leader. Applies on that person's next request. */
+  setRole(uid: string, role: "parent" | "leader"): Promise<void>;
 }
 
 export class ApiError extends Error {
@@ -20,19 +24,35 @@ export class ApiError extends Error {
 /** Returns the current ID token, or null when signed out (then requests go without one). */
 export type TokenSource = () => Promise<string | null>;
 
+async function send(
+  fetchFn: typeof fetch,
+  token: TokenSource,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<Response> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const t = await token();
+  if (t) headers.Authorization = `Bearer ${t}`;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetchFn(path, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as ErrorBody | null;
+    throw new ApiError(res.status, err);
+  }
+  return res;
+}
+
 async function getJSON<T>(
   fetchFn: typeof fetch,
   token: TokenSource,
   path: string,
 ): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
-  const t = await token();
-  if (t) headers.Authorization = `Bearer ${t}`;
-  const res = await fetchFn(path, { headers });
-  if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as ErrorBody | null;
-    throw new ApiError(res.status, body);
-  }
+  const res = await send(fetchFn, token, "GET", path);
   return (await res.json()) as T;
 }
 
@@ -44,5 +64,16 @@ export function httpApi(
   return {
     health: () => getJSON<Health>(fetchFn, token, "/api/health"),
     me: () => getJSON<Me>(fetchFn, token, "/api/me"),
+    users: () => getJSON<UserList>(fetchFn, token, "/api/users"),
+    setRole: async (uid, role) => {
+      const body: SetRole = { role };
+      await send(
+        fetchFn,
+        token,
+        "PUT",
+        `/api/users/${encodeURIComponent(uid)}/role`,
+        body,
+      );
+    },
   };
 }

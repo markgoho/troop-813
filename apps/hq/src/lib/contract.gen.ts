@@ -32,10 +32,16 @@ export interface Health {
 export const ErrorCodeUnauthenticated = "unauthenticated"; // no valid credential (401)
 export const ErrorCodeForbidden = "forbidden"; // valid credential, caller not accepted (403)
 export const ErrorCodeInternal = "internal"; // server-side failure, e.g. Firestore unreachable (500)
+export const ErrorCodeBadRequest = "bad_request"; // malformed or disallowed request body (400)
+export const ErrorCodeNotFound = "not_found"; // the thing named in the path doesn't exist (404)
+export const ErrorCodeFixedRole = "fixed_role"; // an Admin's role can't be changed from HQ (409)
 export type ErrorCode =
   | typeof ErrorCodeUnauthenticated
   | typeof ErrorCodeForbidden
-  | typeof ErrorCodeInternal;
+  | typeof ErrorCodeInternal
+  | typeof ErrorCodeBadRequest
+  | typeof ErrorCodeNotFound
+  | typeof ErrorCodeFixedRole;
 /**
  * ErrorBody is the body of every non-2xx API response.
  */
@@ -66,5 +72,29 @@ export interface User {
  */
 export interface Me {
   uid: string;
+  role: Role;
+}
+/**
+ * UserSummary is one row of the Access tab.
+ */
+export interface UserSummary {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: Role;
+  createdAt: string; // RFC 3339, first sign-in
+}
+/**
+ * UserList is the body of GET /api/users (Admin only): everyone who has
+ * signed in, newest first.
+ */
+export interface UserList {
+  users: UserSummary[];
+}
+/**
+ * SetRole is the body of PUT /api/users/{uid}/role (Admin only). Role is
+ * parent or leader; admin is never set from HQ.
+ */
+export interface SetRole {
   role: Role;
 }

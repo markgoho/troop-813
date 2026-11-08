@@ -1,0 +1,92 @@
+# HQ and Firestore config: checks, then build HQ and deploy Hosting content,
+# rules and indexes with the pinned Firebase CLI (ADR 0005).
+name: web
+
+on:
+  push:
+    branches: [trunk]
+    paths:
+      - apps/**
+      - scripts/**
+      - package.json
+      - bun.lock
+      - tsconfig.json
+      - firebase.json
+      - .firebaserc
+      - firestore.rules
+      - firestore.indexes.json
+      - .github/actions/checks/**
+      - .github/workflows/web.yml
+  workflow_dispatch: {}
+
+# Queue, never cancel: a deploy is never cut off halfway (ADR 0005).
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  ORIGIN: https://troop-813-hq.web.app
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/checks
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: troop-813
+          workload_identity_provider: projects/1003933813667/locations/global/workloadIdentityPools/github/providers/github
+          service_account: deploy@troop-813.iam.gserviceaccount.com
+
+      # The `HQ` web app is Terraform's (terraform/hosting.tf). Its config is
+      # public; it's read here rather than committed so Terraform stays the
+      # source. firebase is always the root devDependency, never a bunx.
+      - name: Firebase web config for the HQ build
+        run: |
+          fb=node_modules/.bin/firebase
+          app_id=$($fb apps:list WEB --project troop-813 --json | jq -r '.result[] | select(.displayName == "HQ") | .appId')
+          if [[ -z "$app_id" ]]; then
+            echo "::error::no Firebase web app named HQ (terraform/hosting.tf)"
+            exit 1
+          fi
+          cfg=$($fb apps:sdkconfig WEB "$app_id" --project troop-813 --json)
+          {
+            echo "VITE_FIREBASE_API_KEY=$(jq -r .result.sdkConfig.apiKey <<<"$cfg")"
+            echo "VITE_FIREBASE_APP_ID=$(jq -r .result.sdkConfig.appId <<<"$cfg")"
+            echo "VITE_FIREBASE_PROJECT_ID=$(jq -r .result.sdkConfig.projectId <<<"$cfg")"
+          } >> "$GITHUB_ENV"
+
+      - name: Build HQ
+        run: bun run build
+
+      - name: Deploy Hosting, rules and indexes
+        run: >-
+          node_modules/.bin/firebase deploy
+          --project troop-813
+          --only hosting:hq,firestore:rules,firestore:indexes
+          --non-interactive
+
+      - name: Smoke test the site and the /api rewrite
+        run: |
+          check() {
+            reason="/ did not serve HQ with its manifest"
+            curl -fsS "$ORIGIN/" | grep -q 'manifest.webmanifest' || return 1
+            reason="/manifest.webmanifest missing"
+            curl -fsS "$ORIGIN/manifest.webmanifest" | jq -e '.short_name == "813 HQ"' >/dev/null || return 1
+            reason="/api/health did not reach Cloud Run through the rewrite"
+            [[ "$(curl -fsS "$ORIGIN/api/health" | jq -r .status)" == "ok" ]] || return 1
+          }
+          for attempt in $(seq 1 15); do
+            if check; then echo "smoke ok (attempt $attempt)"; exit 0; fi
+            sleep 4
+          done
+          echo "::error::$reason"
+          exit 1

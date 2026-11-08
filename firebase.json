@@ -1,4 +1,34 @@
 {
+  "hosting": [
+    {
+      "target": "hq",
+      "public": "apps/hq/build",
+      "ignore": ["**/.*"],
+      "rewrites": [
+        {
+          "source": "/api/**",
+          "run": { "serviceId": "api", "region": "us-east1" }
+        },
+        { "source": "/_app/**", "destination": "/_app/missing" },
+        { "source": "**", "destination": "/200.html" }
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        },
+        {
+          "source": "/_app/immutable/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "firestore": {
     "database": "(default)",
     "rules": "firestore.rules",

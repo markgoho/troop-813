@@ -77,7 +77,7 @@ func TestAnExactDuplicateOfAnActiveScoutIsBlocked(t *testing.T) {
 			t.Parallel()
 			status, _, code := addScout(t, env, leader, req)
 			if status != http.StatusConflict || code != contract.ErrorCodeDuplicateScout {
-				t.Fatalf("POST %+v = %d %q, want 409 duplicateScout", req, status, code)
+				t.Fatalf("POST %+v = %d %q, want 409 duplicate_scout", req, status, code)
 			}
 		})
 	}
@@ -127,8 +127,8 @@ func TestAddScoutNeedsBothNames(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			status, _, code := addScout(t, env, leader, body)
-			if status != http.StatusBadRequest || code != contract.ErrorCodeInvalidRequest {
-				t.Fatalf("POST %v = %d %q, want 400 invalidRequest", body, status, code)
+			if status != http.StatusBadRequest || code != contract.ErrorCodeBadRequest {
+				t.Fatalf("POST %v = %d %q, want 400 bad_request", body, status, code)
 			}
 		})
 	}

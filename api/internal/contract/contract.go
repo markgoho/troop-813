@@ -25,8 +25,10 @@ const (
 	ErrorCodeUnauthenticated ErrorCode = "unauthenticated" // no valid credential (401)
 	ErrorCodeForbidden       ErrorCode = "forbidden"       // valid credential, caller not accepted (403)
 	ErrorCodeInternal        ErrorCode = "internal"        // server-side failure, e.g. Firestore unreachable (500)
-	ErrorCodeInvalidRequest  ErrorCode = "invalidRequest"  // malformed body or a required field empty (400)
-	ErrorCodeDuplicateScout  ErrorCode = "duplicateScout"  // an active Scout already has this first + last name (409)
+	ErrorCodeBadRequest      ErrorCode = "bad_request"     // malformed or disallowed request body (400)
+	ErrorCodeNotFound        ErrorCode = "not_found"       // the thing named in the path doesn't exist (404)
+	ErrorCodeFixedRole       ErrorCode = "fixed_role"      // an Admin's role can't be changed from HQ (409)
+	ErrorCodeDuplicateScout  ErrorCode = "duplicate_scout" // an active Scout already has this first + last name (409)
 )
 
 // ErrorBody is the body of every non-2xx API response.
@@ -58,6 +60,27 @@ type User struct {
 type Me struct {
 	UID  string `json:"uid"`
 	Role Role   `json:"role"`
+}
+
+// UserSummary is one row of the Access tab.
+type UserSummary struct {
+	UID         string `json:"uid"`
+	Email       string `json:"email"`
+	DisplayName string `json:"displayName"`
+	Role        Role   `json:"role"`
+	CreatedAt   string `json:"createdAt"` // RFC 3339, first sign-in
+}
+
+// UserList is the body of GET /api/users (Admin only): everyone who has
+// signed in, newest first.
+type UserList struct {
+	Users []UserSummary `json:"users"`
+}
+
+// SetRole is the body of PUT /api/users/{uid}/role (Admin only). Role is
+// parent or leader; admin is never set from HQ.
+type SetRole struct {
+	Role Role `json:"role"`
 }
 
 // Scout is the Firestore doc scouts/{id}: one Scout on the Roster. Leaders

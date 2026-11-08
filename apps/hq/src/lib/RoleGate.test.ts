@@ -6,6 +6,7 @@ import RoleGate from "./RoleGate.svelte";
 import { ApiError, type Api } from "./api";
 import type { Me } from "./contract.gen";
 import type { Session, SignedInUser } from "./session";
+import { fakeApi as baseFakeApi } from "./testing/fakeApi";
 
 const NOTICE =
   "Troop 813 uses this to record Scout names, Meeting attendance and Event RSVPs. Leaders only.";
@@ -23,10 +24,7 @@ function fakeSession(user: SignedInUser | null): Session {
 }
 
 function fakeApi(me: () => Promise<Me>): Api {
-  return {
-    health: async () => ({ status: "ok", today: "2026-11-09" }),
-    me,
-  };
+  return baseFakeApi({ me });
 }
 
 const leaderScreens = createRawSnippet(() => ({

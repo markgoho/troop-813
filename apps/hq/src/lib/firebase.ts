@@ -30,7 +30,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { type Readable, readable } from "svelte/store";
-import type { Event, Meeting, RSVP, Scout } from "./contract.gen";
+import type { Attendance, Event, Meeting, RSVP, Scout } from "./contract.gen";
 import type { Live, LiveDoc, LiveDocs } from "./live";
 import type { Session, SignedInUser } from "./session";
 
@@ -112,6 +112,7 @@ export function liveDoc<T>(path: string): Readable<LiveDoc<T>> {
 export function firebaseLive(): Live {
   return {
     meeting: (id) => liveDoc<Meeting>(`meetings/${id}`),
+    attendance: (id) => liveCollection<Attendance>(`meetings/${id}/attendance`),
     scouts: () => liveCollection<Scout>("scouts"),
     events: () => liveCollection<Event>("events"),
     rsvps: () => liveCollection<RSVP>("rsvps"),

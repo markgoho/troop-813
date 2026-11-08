@@ -231,6 +231,24 @@ type KioskCheckInRequest struct {
 	Method  AttendanceMethod `json:"method"`
 }
 
+// LeaderCheckInRequest is the body of POST /api/meetings/{date}/check-ins
+// (Leader): check a Scout in with method leader.
+type LeaderCheckInRequest struct {
+	ScoutID string `json:"scoutId"`
+}
+
+// LeaderSummary is one Leader's uid and name, so the Tonight tab can say
+// which Leader checked a Scout in. No email.
+type LeaderSummary struct {
+	UID         string `json:"uid"`
+	DisplayName string `json:"displayName"`
+}
+
+// LeaderList is the body of GET /api/leaders (any Leader): every Leader and the Admin.
+type LeaderList struct {
+	Leaders []LeaderSummary `json:"leaders"`
+}
+
 // CheckInResponse is the 200 body of a check-in: the Scout's Attendance,
 // new or (for a repeat check-in) the existing one.
 type CheckInResponse struct {

@@ -60,6 +60,9 @@ func Routes(d Deps) *router.Router {
 	mtg := meeting.Handlers{FS: d.Firestore, Auth: d.Auth, Logger: d.Logger}
 	r.Gated("POST /api/kiosk/start", []router.Accept{router.Admin}, mtg.Start)
 	r.Gated("POST /api/kiosk/check-in", []router.Accept{router.Kiosk}, mtg.KioskCheckIn)
+	r.Gated("POST /api/meetings/{date}/check-ins", leader, mtg.LeaderCheckIn)
+	r.Gated("POST /api/meetings/{date}/attendance/{id}/undo", leader, mtg.UndoCheckIn)
+	r.Gated("GET /api/leaders", leader, acc.Leaders)
 	return r
 }
 

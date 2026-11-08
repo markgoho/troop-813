@@ -278,6 +278,27 @@ export interface KioskCheckInRequest {
   method: AttendanceMethod;
 }
 /**
+ * LeaderCheckInRequest is the body of POST /api/meetings/{date}/check-ins
+ * (Leader): check a Scout in with method leader.
+ */
+export interface LeaderCheckInRequest {
+  scoutId: string;
+}
+/**
+ * LeaderSummary is one Leader's uid and name, so the Tonight tab can say
+ * which Leader checked a Scout in. No email.
+ */
+export interface LeaderSummary {
+  uid: string;
+  displayName: string;
+}
+/**
+ * LeaderList is the body of GET /api/leaders (any Leader): every Leader and the Admin.
+ */
+export interface LeaderList {
+  leaders: LeaderSummary[];
+}
+/**
  * CheckInResponse is the 200 body of a check-in: the Scout's Attendance,
  * new or (for a repeat check-in) the existing one.
  */

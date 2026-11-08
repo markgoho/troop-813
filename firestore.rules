@@ -35,9 +35,13 @@ service cloud.firestore {
         && get(session).data.meetingId == token.get('meetingId', '');
     }
 
-    // The Kiosk's live state: its own Meeting doc only.
+    // The Kiosk's live state: its own Meeting doc only. A Leader's Tonight
+    // tab gets any Meeting doc and its attendance (never the Kiosk).
     match /meetings/{meetingId} {
-      allow get: if isKiosk() && request.auth.token.meetingId == meetingId;
+      allow get: if (isKiosk() && request.auth.token.meetingId == meetingId) || isLeader();
+      match /attendance/{attendanceId} {
+        allow read: if isLeader();
+      }
     }
 
     // The Roster tab lists scouts live (onSnapshot = list) and opens Scouts

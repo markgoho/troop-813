@@ -2,12 +2,14 @@
 // snapshots into. Add each new Live method here once.
 import { writable, type Writable } from "svelte/store";
 import { Timestamp } from "firebase/firestore";
-import type { Event, Meeting, RSVP, Scout } from "../contract.gen";
+import type { Attendance, Event, Meeting, RSVP, Scout } from "../contract.gen";
 import type { Live, LiveDoc, LiveDocs, WithId } from "../live";
 
 export interface FakeLive extends Live {
   /** One store per Meeting ID, created on first use by the test or the screen. */
   meetingStore(id: string): Writable<LiveDoc<Meeting>>;
+  /** One store per Meeting ID, like meetingStore. */
+  attendanceStore(meetingId: string): Writable<LiveDocs<Attendance>>;
   scoutsStore: Writable<LiveDocs<Scout>>;
   eventsStore: Writable<LiveDocs<Event>>;
   rsvpsStore: Writable<LiveDocs<RSVP>>;
@@ -23,11 +25,22 @@ export function fakeLive(): FakeLive {
     }
     return s;
   };
+  const attendances = new Map<string, Writable<LiveDocs<Attendance>>>();
+  const attendanceStore = (id: string) => {
+    let s = attendances.get(id);
+    if (!s) {
+      s = writable<LiveDocs<Attendance>>({ state: "loading" });
+      attendances.set(id, s);
+    }
+    return s;
+  };
   const scoutsStore = writable<LiveDocs<Scout>>({ state: "loading" });
   const eventsStore = writable<LiveDocs<Event>>({ state: "loading" });
   const rsvpsStore = writable<LiveDocs<RSVP>>({ state: "loading" });
   return {
     meetingStore,
+    attendanceStore,
+    attendance: attendanceStore,
     scoutsStore,
     eventsStore,
     rsvpsStore,
@@ -59,6 +72,28 @@ export function meeting(
       checkedIn: {},
       ...fields,
     },
+  };
+}
+
+/** An Attendance doc for tests; `at` is an ISO instant. */
+export function attendanceDoc(
+  id: string,
+  scoutId: string,
+  method: Attendance["method"],
+  at: string,
+  by = "kiosk-sess-1",
+  undoneAt?: string,
+): WithId<Attendance> {
+  return {
+    id,
+    scoutId,
+    method,
+    at: Timestamp.fromDate(new Date(at)),
+    by,
+    ...(undoneAt && {
+      undoneAt: Timestamp.fromDate(new Date(undoneAt)),
+      undoneBy: "u-leader",
+    }),
   };
 }
 

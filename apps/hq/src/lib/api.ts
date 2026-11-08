@@ -9,6 +9,8 @@ import type {
   EventInput,
   Health,
   KioskCheckInRequest,
+  LeaderCheckInRequest,
+  LeaderList,
   Me,
   RSVPAnswer,
   SetRole,
@@ -50,6 +52,12 @@ export interface Api {
    * return the existing attendanceId. ApiError 401 session_asleep / session_expired.
    */
   kioskCheckIn(req: KioskCheckInRequest): Promise<CheckInResponse>;
+  /** Leader only: checks a Scout in to a Meeting (method leader). A repeat returns the existing id. */
+  leaderCheckIn(meetingId: string, scoutId: string): Promise<CheckInResponse>;
+  /** Leader only: soft-deletes a check-in; the Scout can check in again. Idempotent. */
+  undoCheckIn(meetingId: string, attendanceId: string): Promise<void>;
+  /** Leader only: every Leader and the Admin by uid and name (no emails). */
+  leaders(): Promise<LeaderList>;
 }
 
 export class ApiError extends Error {
@@ -152,7 +160,31 @@ export function httpApi(
       );
       return (await res.json()) as CheckInResponse;
     },
+    leaderCheckIn: async (meetingId, scoutId) => {
+      const body: LeaderCheckInRequest = { scoutId };
+      const res = await send(
+        fetchFn,
+        token,
+        "POST",
+        `${meetingPath(meetingId)}/check-ins`,
+        body,
+      );
+      return (await res.json()) as CheckInResponse;
+    },
+    undoCheckIn: async (meetingId, attendanceId) => {
+      await send(
+        fetchFn,
+        token,
+        "POST",
+        `${meetingPath(meetingId)}/attendance/${encodeURIComponent(attendanceId)}/undo`,
+      );
+    },
+    leaders: () => getJSON<LeaderList>(fetchFn, token, "/api/leaders"),
   };
+}
+
+function meetingPath(id: string): string {
+  return `/api/meetings/${encodeURIComponent(id)}`;
 }
 
 function eventPath(id: string): string {

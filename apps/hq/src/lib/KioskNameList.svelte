@@ -202,7 +202,9 @@
   {@const entry = confirming}
   <h1 class="hero">
     <span class="lead">Are you</span>
-    <span class="bigname">{entry.label}?</span>
+    <span class="bigname" style:--len={entry.label.length + 1}
+      >{entry.label}?</span
+    >
   </h1>
   <div class="choices">
     <button
@@ -222,7 +224,7 @@
   {@const entry = offered}
   <h1 class="hero">
     <span class="lead">Pass the tablet to</span>
-    <span class="bigname">{entry.label}</span>
+    <span class="bigname" style:--len={entry.label.length}>{entry.label}</span>
   </h1>
   <p class="ask">Are you {entry.label}?</p>
   <div class="choices handoff">
@@ -282,11 +284,29 @@
     letter-spacing: 0;
     color: var(--muted);
   }
+  /* The Handoff's hero: as big as the stage allows, and shrunk to fit so a
+     long name (--len characters) stays on one line instead of breaking. */
   .bigname {
-    font-size: clamp(4.5rem, 11vw, 7.5rem);
+    font-size: clamp(
+      3rem,
+      min(18cqi, 22vh, 11rem, calc(190cqi / var(--len, 8))),
+      11rem
+    );
     line-height: 0.95;
     color: var(--accent);
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .bigname {
+      animation: arrive 420ms var(--ease) both;
+    }
+  }
+  /* Starts visible: a short rise into place, never a fade from nothing. */
+  @keyframes arrive {
+    from {
+      transform: translateY(0.12em);
+      opacity: 0.6;
+    }
   }
   .ask {
     font-size: 1.75rem;
@@ -306,6 +326,13 @@
       flex-basis: auto;
     }
   }
+  /* The name list may use more of a landscape tablet than the one-question
+     screens, so ~30 Scouts fit without scrolling. */
+  .listhead,
+  .names {
+    align-self: center;
+    width: min(76rem, 100vw - 3rem);
+  }
   .listhead {
     display: flex;
     flex-wrap: wrap;
@@ -317,12 +344,12 @@
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-    gap: 0.875rem;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.75rem;
   }
   .names button {
     width: 100%;
-    min-height: 4.5rem;
+    min-height: 4rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;

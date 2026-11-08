@@ -86,7 +86,7 @@
 <div class="kiosk">
   <header class="bar">
     <img src="/brand/troop-813-logo.png" alt="" class="logo" />
-    <span>Troop 813</span>
+    <span>Troop 813 · Meeting</span>
   </header>
   <main class="stage">
     {#if user === undefined || stale}
@@ -181,6 +181,8 @@
     filter: var(--logo-filter);
   }
   .stage {
+    /* Screens size their hero name from the stage's width (cqi). */
+    container-type: inline-size;
     width: 100%;
     max-width: 60rem;
     margin: 0 auto;
@@ -237,8 +239,10 @@
   :global(:where(.kiosk) button:not(:disabled):hover) {
     border-color: var(--accent);
   }
-  :global(:where(.kiosk) button:not(:disabled):active) {
-    transform: scale(0.98);
+  @media (prefers-reduced-motion: no-preference) {
+    :global(:where(.kiosk) button:not(:disabled):active) {
+      transform: scale(0.98);
+    }
   }
   :global(:where(.kiosk) button:disabled) {
     opacity: 0.55;

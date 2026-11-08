@@ -4,5 +4,11 @@ packages:
     output_path: "../apps/hq/src/lib/contract.gen.ts"
     # String consts of a named type become a TS union (type ErrorCode = "a" | "b").
     enum_style: union
+    # time.Time is only for Firestore doc fields: the browser reads them through
+    # the Firebase SDK, which yields Timestamp objects. API bodies (JSON) carry no
+    # time.Time; give them an RFC 3339 string field instead.
+    type_mappings:
+      time.Time: "Timestamp"
     frontmatter: |
       // Source: api/internal/contract. Regenerate with `bun run gen`.
+      import type { Timestamp } from "firebase/firestore";

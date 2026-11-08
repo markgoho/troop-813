@@ -98,10 +98,20 @@ start("api", [apiBinary], `${repoRoot}api`, {
 });
 await waitForPort("api", ports.api);
 
+// HQ's Firebase client config (see apps/hq/src/lib/firebase.ts): demo values
+// plus the emulator addresses, so sign-in uses the Auth emulator's fake Google.
 start(
   "hq",
   [`${repoRoot}apps/hq/node_modules/.bin/vite`, "dev"],
   `${repoRoot}apps/hq`,
+  {
+    ...baseEnv,
+    VITE_FIREBASE_API_KEY: "demo-api-key",
+    VITE_FIREBASE_APP_ID: "demo-app-id",
+    VITE_FIREBASE_PROJECT_ID: stack.projectId,
+    VITE_FIREBASE_AUTH_EMULATOR_URL: `http://127.0.0.1:${ports.auth}`,
+    VITE_FIRESTORE_EMULATOR_HOST: `127.0.0.1:${ports.firestore}`,
+  },
 );
 await waitForPort("hq", ports.hq);
 

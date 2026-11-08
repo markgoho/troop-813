@@ -10,6 +10,7 @@ package router
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -33,8 +34,15 @@ type Caller interface {
 	Is(a Accept) bool
 }
 
-// Authenticator turns a request into a Caller, or an error if the request
-// carries no valid credential.
+// ErrUnauthenticated is what an Authenticator returns (or wraps) when the
+// request carries no valid credential. Gated answers it with 401; any other
+// error means the caller couldn't be resolved (e.g. Firestore down) and gets
+// 500, so the app doesn't treat an outage as being signed out.
+var ErrUnauthenticated = errors.New("router: no valid credential")
+
+// Authenticator turns a request into a Caller, or an error: ErrUnauthenticated
+// (wrapped or not) for a missing or invalid credential, anything else for a
+// failure to resolve one.
 type Authenticator interface {
 	Authenticate(r *http.Request) (Caller, error)
 }
@@ -74,7 +82,8 @@ func (r *Router) Open(pattern, reason string, h http.HandlerFunc) {
 }
 
 // Gated mounts a route only the accepted callers may call. Others get 401 (no
-// valid credential) or 403 (valid, but not accepted). The handler reads the
+// valid credential), 403 (valid, but not accepted) or 500 (caller couldn't be
+// resolved). The handler reads the
 // caller with CallerFrom.
 func (r *Router) Gated(pattern string, accepts []Accept, h http.HandlerFunc) {
 	mustHaveMethod(pattern)
@@ -87,8 +96,12 @@ func (r *Router) Gated(pattern string, accepts []Accept, h http.HandlerFunc) {
 	r.routes = append(r.routes, Route{Pattern: pattern, Accepts: append([]Accept(nil), accepts...)})
 	r.mux.HandleFunc(pattern, func(w http.ResponseWriter, req *http.Request) {
 		caller, err := r.auth.Authenticate(req)
-		if err != nil {
+		switch {
+		case errors.Is(err, ErrUnauthenticated):
 			WriteError(w, http.StatusUnauthorized, contract.ErrorCodeUnauthenticated)
+			return
+		case err != nil:
+			WriteError(w, http.StatusInternalServerError, contract.ErrorCodeInternal)
 			return
 		}
 		for _, a := range accepts {

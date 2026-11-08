@@ -62,6 +62,22 @@ describe("Hosting", () => {
       `"${"$"}{google_firebase_hosting_site.hq.site_id}.web.app"`,
     );
   });
+
+  test("web.yml builds HQ with the Firebase web config of Terraform's HQ app", async () => {
+    const all = await tf();
+    expect(all).toMatch(/display_name\s+= "HQ"/);
+    const source = await text(".github/workflows/web.yml");
+    expect(source).toContain(`select(.displayName == "HQ")`);
+    // Every VITE_FIREBASE_* the client reads (apps/hq/src/lib/firebase.ts),
+    // except the emulator-only ones.
+    const client = await text("apps/hq/src/lib/firebase.ts");
+    const vars = new Set(
+      [...client.matchAll(/env\.(VITE_FIREBASE_\w+)/g)].map((m) => m[1]),
+    );
+    vars.delete("VITE_FIREBASE_AUTH_EMULATOR_URL");
+    expect(vars.size).toBeGreaterThan(0);
+    for (const v of vars) expect(source).toContain(`${v}=`);
+  });
 });
 
 describe("Cloud Run", () => {

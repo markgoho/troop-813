@@ -15,6 +15,14 @@ resource "google_project_iam_member" "api_runtime_firestore" {
   member  = google_service_account.api_runtime.member
 }
 
+# Read Auth users (internal/auth falls back to GetUser for a first sign-in's
+# email/name).
+resource "google_project_iam_member" "api_runtime_auth" {
+  project = local.project
+  role    = "roles/firebaseauth.viewer"
+  member  = google_service_account.api_runtime.member
+}
+
 # signBlob on itself: the Admin SDK signs Kiosk custom tokens through IAM with
 # ADC, so no key file exists (ADR 0003, issue #10).
 resource "google_service_account_iam_member" "api_runtime_sign_self" {

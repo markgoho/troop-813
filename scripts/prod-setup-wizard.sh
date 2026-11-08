@@ -231,7 +231,7 @@ run_workflow() {
   done
 }
 
-TOTAL_STAGES=9
+TOTAL_STAGES=10
 
 banner "Troop 813 HQ: prod setup"
 
@@ -354,6 +354,22 @@ fi
 open_url "$ORIGIN"
 step "On the Pixel Tablet / your phone in Chrome: menu → Install app (or Add to Home screen)."
 step "The installed app is '813 HQ' and opens fullscreen."
+pause "Done? Press Enter."
+
+# ─────────────────────────────────────────────────────────────────────────
+stage "Make yourself the Admin"
+say "Everyone starts as a Parent; only bootstrap-admin sets admin (ADR 0003)."
+open_url "$ORIGIN"
+step "Sign in with Google on $ORIGIN once (you'll land on the waiting page)."
+ask ADMIN_EMAIL "Your Google email:"
+write_env ADMIN_EMAIL "$ADMIN_EMAIL"
+note "Uses your gcloud Application Default Credentials (gcloud auth application-default login)."
+if confirm "Run 'bun run bootstrap-admin $ADMIN_EMAIL --prod' now?"; then
+  bun run bootstrap-admin "$ADMIN_EMAIL" --prod || SKIPPED+=("bun run bootstrap-admin $ADMIN_EMAIL --prod")
+else
+  SKIPPED+=("bun run bootstrap-admin $ADMIN_EMAIL --prod")
+fi
+step "Reload $ORIGIN: you should see Tonight instead of the waiting page."
 pause "Done? Press Enter."
 
 finish

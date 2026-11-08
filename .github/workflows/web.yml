@@ -39,9 +39,6 @@ jobs:
 
       - uses: ./.github/actions/checks
 
-      - name: Build HQ
-        run: bun run build
-
       - name: Authenticate to Google Cloud (WIF)
         uses: google-github-actions/auth@v3
         with:
@@ -49,7 +46,27 @@ jobs:
           workload_identity_provider: projects/1003933813667/locations/global/workloadIdentityPools/github/providers/github
           service_account: deploy@troop-813.iam.gserviceaccount.com
 
-      # The root devDependency, never a registry-resolved bunx.
+      # The `HQ` web app is Terraform's (terraform/hosting.tf). Its config is
+      # public; it's read here rather than committed so Terraform stays the
+      # source. firebase is always the root devDependency, never a bunx.
+      - name: Firebase web config for the HQ build
+        run: |
+          fb=node_modules/.bin/firebase
+          app_id=$($fb apps:list WEB --project troop-813 --json | jq -r '.result[] | select(.displayName == "HQ") | .appId')
+          if [[ -z "$app_id" ]]; then
+            echo "::error::no Firebase web app named HQ (terraform/hosting.tf)"
+            exit 1
+          fi
+          cfg=$($fb apps:sdkconfig WEB "$app_id" --project troop-813 --json)
+          {
+            echo "VITE_FIREBASE_API_KEY=$(jq -r .result.sdkConfig.apiKey <<<"$cfg")"
+            echo "VITE_FIREBASE_APP_ID=$(jq -r .result.sdkConfig.appId <<<"$cfg")"
+            echo "VITE_FIREBASE_PROJECT_ID=$(jq -r .result.sdkConfig.projectId <<<"$cfg")"
+          } >> "$GITHUB_ENV"
+
+      - name: Build HQ
+        run: bun run build
+
       - name: Deploy Hosting, rules and indexes
         run: >-
           node_modules/.bin/firebase deploy

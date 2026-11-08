@@ -27,6 +27,8 @@ concurrency:
 env:
   ORIGIN: https://troop-813-hq.web.app
 
+# Deploy steps run only when the repo variable DEPLOY_ENABLED is "true" (set
+# once prod is bootstrapped). Until then checks still run, and trunk stays green.
 jobs:
   web:
     runs-on: ubuntu-latest
@@ -40,6 +42,7 @@ jobs:
       - uses: ./.github/actions/checks
 
       - name: Authenticate to Google Cloud (WIF)
+        if: vars.DEPLOY_ENABLED == 'true'
         uses: google-github-actions/auth@v3
         with:
           project_id: troop-813
@@ -50,6 +53,7 @@ jobs:
       # public; it's read here rather than committed so Terraform stays the
       # source. firebase is always the root devDependency, never a bunx.
       - name: Firebase web config for the HQ build
+        if: vars.DEPLOY_ENABLED == 'true'
         run: |
           fb=node_modules/.bin/firebase
           app_id=$($fb apps:list WEB --project troop-813 --json | jq -r '.result[] | select(.displayName == "HQ") | .appId')
@@ -65,9 +69,11 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Build HQ
+        if: vars.DEPLOY_ENABLED == 'true'
         run: bun run build
 
       - name: Deploy Hosting, rules and indexes
+        if: vars.DEPLOY_ENABLED == 'true'
         run: >-
           node_modules/.bin/firebase deploy
           --project troop-813
@@ -75,6 +81,7 @@ jobs:
           --non-interactive
 
       - name: Smoke test the site and the /api rewrite
+        if: vars.DEPLOY_ENABLED == 'true'
         run: |
           check() {
             reason="/ did not serve HQ with its manifest"

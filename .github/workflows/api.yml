@@ -22,6 +22,8 @@ env:
   REGION: us-east1
   IMAGE: us-east1-docker.pkg.dev/troop-813/api/api:${{ github.sha }}
 
+# Deploy steps run only when the repo variable DEPLOY_ENABLED is "true" (set
+# once prod is bootstrapped). Until then checks still run, and trunk stays green.
 jobs:
   api:
     runs-on: ubuntu-latest
@@ -35,6 +37,7 @@ jobs:
       - uses: ./.github/actions/checks
 
       - name: Authenticate to Google Cloud (WIF)
+        if: vars.DEPLOY_ENABLED == 'true'
         id: auth
         uses: google-github-actions/auth@v3
         with:
@@ -44,14 +47,17 @@ jobs:
           token_format: access_token
 
       - uses: docker/login-action@v4
+        if: vars.DEPLOY_ENABLED == 'true'
         with:
           registry: us-east1-docker.pkg.dev
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
 
       - uses: docker/setup-buildx-action@v4
+        if: vars.DEPLOY_ENABLED == 'true'
 
       - name: Build and push
+        if: vars.DEPLOY_ENABLED == 'true'
         uses: docker/build-push-action@v7
         with:
           context: api
@@ -61,6 +67,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy to Cloud Run
+        if: vars.DEPLOY_ENABLED == 'true'
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v3
         with:
@@ -70,6 +77,7 @@ jobs:
           image: ${{ env.IMAGE }}
 
       - name: Smoke test /api/health
+        if: vars.DEPLOY_ENABLED == 'true'
         env:
           URL: ${{ steps.deploy.outputs.url }}/api/health
         run: |

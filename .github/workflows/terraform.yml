@@ -16,6 +16,8 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+# Deploy steps run only when the repo variable DEPLOY_ENABLED is "true" (set
+# once prod is bootstrapped). Until then checks still run, and trunk stays green.
 jobs:
   terraform:
     runs-on: ubuntu-latest
@@ -38,6 +40,7 @@ jobs:
         run: terraform fmt -check -diff
 
       - name: Authenticate to Google Cloud (WIF)
+        if: vars.DEPLOY_ENABLED == 'true'
         uses: google-github-actions/auth@v3
         with:
           project_id: troop-813
@@ -45,13 +48,17 @@ jobs:
           service_account: terraform@troop-813.iam.gserviceaccount.com
 
       - name: Init
+        if: vars.DEPLOY_ENABLED == 'true'
         run: terraform init -input=false
 
       - name: Validate
+        if: vars.DEPLOY_ENABLED == 'true'
         run: terraform validate
 
       - name: Plan
+        if: vars.DEPLOY_ENABLED == 'true'
         run: terraform plan -input=false -out=tfplan
 
       - name: Apply
+        if: vars.DEPLOY_ENABLED == 'true'
         run: terraform apply -input=false tfplan

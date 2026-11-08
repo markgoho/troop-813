@@ -35,6 +35,7 @@ export const ErrorCodeInternal = "internal"; // server-side failure, e.g. Firest
 export const ErrorCodeBadRequest = "bad_request"; // malformed or disallowed request body (400)
 export const ErrorCodeNotFound = "not_found"; // the thing named in the path doesn't exist (404)
 export const ErrorCodeFixedRole = "fixed_role"; // an Admin's role can't be changed from HQ (409)
+export const ErrorCodeInUse = "in_use"; // can't delete: other records point at it (409)
 export const ErrorCodeDuplicateScout = "duplicate_scout"; // an active Scout already has this first + last name (409)
 export type ErrorCode =
   | typeof ErrorCodeUnauthenticated
@@ -43,6 +44,7 @@ export type ErrorCode =
   | typeof ErrorCodeBadRequest
   | typeof ErrorCodeNotFound
   | typeof ErrorCodeFixedRole
+  | typeof ErrorCodeInUse
   | typeof ErrorCodeDuplicateScout;
 /**
  * ErrorBody is the body of every non-2xx API response.
@@ -75,6 +77,69 @@ export interface User {
 export interface Me {
   uid: string;
   role: Role;
+}
+/**
+ * Event is the Firestore doc events/{id}: a non-Meeting troop activity
+ * Scouts RSVP to. Dates are YYYY-MM-DD with no time; endDate >= startDate.
+ */
+export interface Event {
+  name: string;
+  startDate: string;
+  endDate: string;
+  location?: string;
+  cancelled: boolean;
+}
+/**
+ * EventInput is the body of POST /api/events and PUT /api/events/{id}.
+ * Name is trimmed and required; Location is optional (empty removes it).
+ */
+export interface EventInput {
+  name: string;
+  startDate: string;
+  endDate: string;
+  location?: string;
+}
+/**
+ * EventCreated is the body of a 201 from POST /api/events.
+ */
+export interface EventCreated {
+  id: string;
+}
+/**
+ * RSVPAnswer is a saved RSVP answer. No answer is null, never a third value.
+ */
+export const RSVPAnswerGoing = "going";
+export const RSVPAnswerNotGoing = "notGoing";
+export type RSVPAnswer = typeof RSVPAnswerGoing | typeof RSVPAnswerNotGoing;
+/**
+ * RSVPEntry is one change to an RSVP (ADR 0004). AttendanceID is the Kiosk
+ * check-in the answer was given in, or null for a Leader's change. A null
+ * Answer is a clear: the Kiosk asks the Scout again.
+ */
+export interface RSVPEntry {
+  answer: RSVPAnswer | null;
+  at: Timestamp;
+  by: string; // a Leader's uid or a kioskSessionId
+  attendanceId: string | null;
+}
+/**
+ * RSVP is the Firestore doc rsvps/{eventId}_{scoutId}. Answer always equals
+ * the last History entry's answer (Go keeps them consistent in one
+ * transaction). EventID and ScoutID repeat the doc ID's parts so the Event
+ * page, the Scout page and Undo check-in can query by either.
+ */
+export interface RSVP {
+  eventId: string;
+  scoutId: string;
+  answer: RSVPAnswer | null;
+  history: RSVPEntry[];
+}
+/**
+ * SetRSVP is the body of PUT /api/events/{eventId}/rsvps/{scoutId}, a
+ * Leader setting or (with null) clearing a Scout's RSVP.
+ */
+export interface SetRSVP {
+  answer: RSVPAnswer | null;
 }
 /**
  * UserSummary is one row of the Access tab.

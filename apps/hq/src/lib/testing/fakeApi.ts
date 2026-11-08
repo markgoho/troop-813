@@ -12,6 +12,11 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     me: unexpected("me"),
     users: unexpected("users"),
     setRole: unexpected("setRole"),
+    createEvent: unexpected("createEvent"),
+    updateEvent: unexpected("updateEvent"),
+    setEventCancelled: unexpected("setEventCancelled"),
+    deleteEvent: unexpected("deleteEvent"),
+    setRsvp: unexpected("setRsvp"),
     addScout: unexpected("addScout"),
     ...overrides,
   };

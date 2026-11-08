@@ -1,4 +1,4 @@
-// Command seed loads fictional Scouts into the emulators. Run it through
+// Command seed loads fictional Scouts and Events into the emulators. Run it through
 // `bun run seed` from the repo root (with `bun run dev` running), which points
 // it at this worktree's emulators. It refuses any non-emulator target.
 //
@@ -14,6 +14,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
 
+	"github.com/markgoho/troop-813/api/internal/clock"
 	"github.com/markgoho/troop-813/api/internal/seed"
 )
 
@@ -40,5 +41,9 @@ func run() error {
 		return err
 	}
 	fmt.Printf("seed: added %d Scouts to %s\n", added, project)
+	if err := seed.LoadEvents(ctx, fs, clock.LocalDate(clock.Real())); err != nil {
+		return err
+	}
+	fmt.Printf("seed: loaded fictional Events into %s\n", project)
 	return nil
 }

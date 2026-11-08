@@ -1,4 +1,4 @@
-// `bun run seed`: load fictional Scouts into this worktree's emulators (start
+// `bun run seed`: load fictional Scouts and Events into this worktree's emulators (start
 // them with `bun run dev`). There is no production mode: the Go command
 // refuses anything but an emulator demo- project.
 import { emulatorEnv, loadLocalStack, repoRoot } from "./ports";

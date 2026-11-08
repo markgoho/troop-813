@@ -22,6 +22,10 @@ describe("LeaderTabs", () => {
   test("a Leader who isn't the Admin doesn't", () => {
     render(LeaderTabs, { role: "leader" });
     expect(screen.getByRole("link", { name: "Tonight" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Events" })).toHaveAttribute(
+      "href",
+      "/events",
+    );
     expect(
       screen.queryByRole("link", { name: "Access" }),
     ).not.toBeInTheDocument();

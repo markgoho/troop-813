@@ -1,0 +1,8 @@
+# Run from api/ by `bun run gen` (go generate ./... then bun fmt). Output is committed.
+packages:
+  - path: "github.com/markgoho/troop-813/api/internal/contract"
+    output_path: "../apps/hq/src/lib/contract.gen.ts"
+    # String consts of a named type become a TS union (type ErrorCode = "a" | "b").
+    enum_style: union
+    frontmatter: |
+      // Source: api/internal/contract. Regenerate with `bun run gen`.

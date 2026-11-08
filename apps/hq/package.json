@@ -1,0 +1,38 @@
+{
+  "name": "hq",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepare": "svelte-kit sync || echo ''",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@firebase/rules-unit-testing": "6.0.0",
+    "@sveltejs/adapter-static": "4.0.1",
+    "@sveltejs/kit": "3.1.1",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/svelte": "5.4.2",
+    "@types/node": "^26.6.6",
+    "eslint": "10.14.0",
+    "eslint-plugin-svelte": "3.24.1",
+    "firebase": "13.2.0",
+    "globals": "17.14.0",
+    "jsdom": "31.0.0",
+    "svelte": "5.57.3",
+    "svelte-check": "4.7.8",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  }
+}

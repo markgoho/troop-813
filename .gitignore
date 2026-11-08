@@ -32,3 +32,13 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# local stack (scripts/ports.ts, scripts/emulators.ts, scripts/dev.ts)
+.port-offset
+.firebase.local-*.json
+.dev/
+*-debug.log
+
+# SvelteKit
+.svelte-kit
+build

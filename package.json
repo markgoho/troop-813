@@ -1,15 +1,25 @@
 {
   "name": "troop-813",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "typecheck": "bun check"
+    "dev": "bun scripts/dev.ts",
+    "check": "tsc -p . && bun run --filter '*' check && go -C api vet ./...",
+    "lint": "bun run --filter '*' lint && cd api && golangci-lint run ./...",
+    "fmt": "bun scripts/fmt.ts",
+    "gen": "go -C api generate ./... && bun scripts/fmt.ts apps/hq/src/lib/contract.gen.ts",
+    "test": "bun test ./scripts && bun scripts/emulators.ts exec 'bun run test:emulated'",
+    "test:emulated": "go -C api test -count=1 ./... && bun run --filter '*' test",
+    "test:go": "bun scripts/emulators.ts exec 'go -C api test -count=1 ./...'",
+    "emulators": "bun scripts/emulators.ts start"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^7"
+    "@types/bun": "latest",
+    "firebase-tools": "15.35.0",
+    "typescript": "6.0.3"
   }
 }

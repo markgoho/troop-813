@@ -1,0 +1,29 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - exhaustive
+    - gosec
+    - forbidigo
+    - noctx
+  settings:
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: '^time\.Now$'
+          msg: "read time through clock.Now(ctx) or an injected clock.Clock (api/internal/clock)"
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [forbidigo]
+      # testenv is test-only harness code that lives outside _test.go so packages can share it.
+      - path: internal/testenv/
+        linters: [forbidigo, gosec]
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: false

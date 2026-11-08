@@ -1,0 +1,10 @@
+{
+  "extends": "$app/tsconfig",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "allowImportingTsExtensions": true,
+    "types": ["$app/types", "node", "@testing-library/jest-dom/vitest"]
+  },
+  "include": ["src", "rules", "*"],
+  "exclude": ["src/service-worker"]
+}

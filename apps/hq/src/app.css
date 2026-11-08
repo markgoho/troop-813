@@ -35,8 +35,6 @@
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body:
     "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
-  /* The troop logo is black line art; dark themes invert it. */
-  --logo-filter: none;
   --radius: 12px;
   --radius-sm: 8px;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -64,7 +62,6 @@
     --bad: oklch(73.9% 0.125 26.5);
     --bad-soft: oklch(28.7% 0.042 24.6);
     --focus: oklch(80% 0.075 355);
-    --logo-filter: invert(1);
   }
 }
 

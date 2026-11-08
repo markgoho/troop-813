@@ -48,7 +48,7 @@ Capture happens in the room, by the Scouts themselves: the tablet passes Scout t
 ## Evidence on Hand
 
 - Real Scout names are youth data: never put them in designs, fixtures or screenshots. Use `bun run seed` fictional data.
-- Logo: `static/brand/troop-813-logo.png`, 380×380 transparent PNG, black line art. Extracted from a fundraiser flyer (user-approved), so it's low-res with slightly uneven ring weight: fine up to ~190px rendered, not for large display. A vector original would replace it. Recolour with CSS (e.g. invert/mask) rather than editing the art. No photography, testimonials or other assets exist; don't fabricate them.
+- Logo: `static/brand/troop-813-logo.svg`, a clean monoline vector redrawn from the flyer (user-requested, 2026-11-08), drawn in `currentColor`. Use it through `src/lib/Logo.svelte`, which inlines it and keeps a fixed on-screen line width. A troop-supplied original vector would still be the authority if one turns up. No photography, testimonials or other assets exist; don't fabricate them.
 
 ## Product Principles
 

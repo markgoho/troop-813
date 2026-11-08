@@ -5,6 +5,7 @@
   // every load, never from the client.
   import type { Snippet } from "svelte";
   import type { Api } from "./api";
+  import Logo from "./Logo.svelte";
   import type { Me } from "./contract.gen";
   import type { Session, SignedInUser } from "./session";
 
@@ -56,7 +57,7 @@
   <p class="status">Loading…</p>
 {:else if me === null}
   <main class="gate">
-    <img src="/brand/troop-813-logo.png" alt="" class="crest" />
+    <Logo size="7.5rem" line={1.25} />
     <h1>Troop 813 HQ</h1>
     <button type="button" class="primary" onclick={() => void session.signIn()}>
       Sign in with Google
@@ -71,7 +72,7 @@
       {@render children(caller)}
     {:else}
       <main class="gate">
-        <img src="/brand/troop-813-logo.png" alt="" class="crest" />
+        <Logo size="7.5rem" line={1.25} />
         <h1>Troop 813 HQ</h1>
         <p>You're signed in. To use HQ, ask the Admin for access.</p>
         {@render signOut()}
@@ -99,11 +100,6 @@
     justify-content: center;
     gap: 1rem;
     text-align: center;
-  }
-  .crest {
-    width: 7.5rem;
-    height: 7.5rem;
-    filter: var(--logo-filter);
   }
   h1 {
     font-size: 2.5rem;

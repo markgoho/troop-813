@@ -24,11 +24,6 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-:where(.leader) > .bar img {
-  width: 2rem;
-  height: 2rem;
-  filter: var(--logo-filter);
-}
 :where(.leader) nav[aria-label="Leader tabs"] {
   position: fixed;
   inset-inline: 0;

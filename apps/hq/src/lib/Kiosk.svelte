@@ -13,6 +13,7 @@
   import { ApiError, type Api } from "./api";
   import { localDate } from "./dates";
   import KioskSession from "./KioskSession.svelte";
+  import Logo from "./Logo.svelte";
   import type { Live } from "./live";
   import type { Session, SignedInUser } from "./session";
   import { holdScreenAwake } from "./wakeLock";
@@ -85,7 +86,7 @@
 
 <div class="kiosk">
   <header class="bar">
-    <img src="/brand/troop-813-logo.png" alt="" class="logo" />
+    <Logo size="2.25rem" />
     <span>Troop 813 · Meeting</span>
   </header>
   <main class="stage">
@@ -93,7 +94,7 @@
       <p class="status">Loading…</p>
     {:else if user === null}
       <div class="lock">
-        <img src="/brand/troop-813-logo.png" alt="" class="crest" />
+        <Logo size="9rem" line={1.25} />
         <h1>Troop 813 Meeting Kiosk</h1>
         <p class="sub">The Admin unlocks the Kiosk to start today's Meeting.</p>
         <button
@@ -119,7 +120,7 @@
         <p class="status">Loading…</p>
       {:then caller}
         <div class="lock">
-          <img src="/brand/troop-813-logo.png" alt="" class="crest" />
+          <Logo size="9rem" line={1.25} />
           <h1>Troop 813 Meeting Kiosk</h1>
           {#if caller.role === "admin"}
             <button
@@ -167,18 +168,6 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
-  }
-  .logo {
-    width: 2.25rem;
-    height: 2.25rem;
-  }
-  .crest {
-    width: 9rem;
-    height: 9rem;
-  }
-  .logo,
-  .crest {
-    filter: var(--logo-filter);
   }
   .stage {
     /* Screens size their hero name from the stage's width (cqi). */

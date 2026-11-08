@@ -205,7 +205,7 @@ components:
 
 Troop 813 HQ is a light, plain working tool in troop burgundy. The Kiosk asks one question per screen and makes the person's name the hero, set in burgundy condensed capitals large enough to read at arm's length on a shared tablet. The Leader screens carry the same world at phone density: a text-only shell bar, a tab bar, lists drawn as one bordered card with a row per item, soft status pills, and large condensed counts.
 
-Everything sits on a near-white, faintly rose-tinted ground with white surfaces and hairline borders. There is no decoration beyond the troop's monoline logo badge, shown large on the lock, sign-in and waiting screens only. Colour carries meaning: burgundy marks the brand, the current choice and the main action; green, amber and red appear only as state. Both surfaces ship light and dark themes from the same tokens.
+Everything sits on a near-white, faintly rose-tinted ground with white surfaces and hairline borders. There is no decoration beyond the troop's monoline logo badge, shown large on the lock, sign-in and waiting screens only. Icons are functional, not decorative: thin-weight Phosphor line icons, whose fine stroke echoes the logo's monoline drawing, label the Leader tabs and Roster row actions. Colour carries meaning: burgundy marks the brand, the current choice and the main action; green, amber and red appear only as state. Both surfaces ship light and dark themes from the same tokens.
 
 The world was pinned by the user from the prototypes (`prototype/kiosk-flow`, `prototype/leader-screens`), with troop burgundy replacing the prototype's green. It refuses two things: the visitor-kiosk grid of identical cards as the main Kiosk experience, and the admin-dashboard look (sidebars, tables, KPI tiles) on the Leader screens.
 
@@ -213,6 +213,7 @@ The world was pinned by the user from the prototypes (`prototype/kiosk-flow`, `p
 
 - Condensed display (Barlow Condensed) over a legibility-first body (Atkinson Hyperlegible).
 - One burgundy accent; green only for success and Going.
+- Thin Phosphor line icons on Leader navigation and row actions, always paired with a text name.
 - Flat: white cards on a tinted ground, 1px or 2px outlines, no drop shadows.
 - Two densities from one token set: Kiosk at a 1.25rem base with 4rem targets, Leader at 1rem with 2.75rem targets.
 - Light and dark themes; in dark mode the accent splits into light-rose text and deep-burgundy fills.
@@ -228,9 +229,9 @@ One deep troop burgundy against warm-neutral greys with a faint rose cast, plus 
 - **Rose Wash** (`accent-soft`): the background of the Leader's informational banner (for example the Kiosk status banner on Tonight).
 - **PWA chrome:** the web manifest's `theme_color` and `background_color` and the `theme-color` meta tag stay in hex (`#5e0a36`), the sRGB equivalent of Troop Burgundy, because those fields need hex. Everything in CSS is oklch.
 
-### Tertiary (state)
+### Tertiary
 
-- **Going Green** (`ok`, `ok-soft`): success and Going only. The drawn check mark on a checked-in name, the Going answer chip on the Kiosk summary, the `ok` pill, the Going count, the checked Going segment.
+- **Going Green** (`ok`, `ok-soft`): state colour for success and Going only. The drawn check mark on a checked-in name, the Going answer chip on the Kiosk summary, the `ok` pill, the Going count, the checked Going segment.
 - **Last-Chance Amber** (`warn`, `warn-soft`): the Kiosk's last-chance reminder, the `warn` pill and the warning banner.
 - **Problem Red** (`bad`, `bad-soft`): alerts, danger buttons, inline delete/undo confirms, the Not going answer, count and checked segment.
 
@@ -339,7 +340,17 @@ Large, outlined and plain; the main action is filled.
 ### Navigation
 
 - **Shell bar:** text only, no logo: the uppercase condensed troop name in muted grey ("Troop 813 HQ" on Leader screens, a `--surface` strip with a hairline under it; "Troop 813 · Meeting" on the Kiosk, without the surface fill).
-- **Tab bar (Leader):** Tonight / Meetings / Events / Roster (plus Access for the Admin), bold 0.875rem muted labels in 3.5rem-tall cells. The current tab turns burgundy with the inset 3px bar. Fixed to the bottom on phones; at 48rem it moves to the top under the shell bar, centred, 0.9375rem labels in 3rem cells.
+- **Tab bar (Leader):** Tonight / Meetings / Events / Roster (plus Access for the Admin), each an icon over a bold 0.875rem muted label in a 3.5rem-tall cell. The current tab (icon and label, which follow the text colour) turns burgundy with the inset 3px bar, and its icon switches from `thin` to `duotone` (a soft 20% fill under the line). Fixed to the bottom on phones; at 48rem it moves to the top under the shell bar, centred, with the icon beside a 0.9375rem label in 3rem cells.
+
+### Icons
+
+Thin line icons from Phosphor (`phosphor-svelte` 3.1.1), weight `thin` (`duotone` only for the current tab's icon), imported one per file from `phosphor-svelte/lib/<Name>`. They draw in `currentColor`, so they follow the control's text colour (burgundy on the current tab, red on a danger button).
+
+- **Tab bar:** Campfire (Tonight), CalendarCheck (Meetings), Tent (Events), UsersThree (Roster), Key (Access). 1.75rem over the label on phones; beside the label at 48rem and up.
+- **Roster row actions:** PencilSimple (Edit), UserMinus / UserPlus (Deactivate / Reactivate), Trash (Delete), at 1.5rem beside the label with a 0.375rem gap. Delete appears only while the Scout has no Attendance or RSVPs (a typo entry); there is no disabled Delete and no reason text. Under 30rem the labels hide, the buttons become icon-only (at least 2.75rem wide, named by their `aria-label`, e.g. "Edit <Scout>"), and every row takes one shape: name over "Present x of y" on the left, the icons on the right.
+- **Accessibility:** every icon is `aria-hidden="true"`; the control's visible text or `aria-label` names it.
+
+**The Thin Icons Need Room Rule.** Use icons at 1.5rem or larger; the thin weight goes faint below that at 1x. An icon never stands alone without an accessible name, and the logo is never an icon.
 
 ### Hero Name (signature, Kiosk)
 
@@ -355,7 +366,7 @@ A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; 
 
 ### Shared Vocabulary And Specificity
 
-**The Zero-Specificity Rule.** Shared styles carry no weight so a screen's own styles always win. The base element rules in `app.css` (headings, paragraphs, form controls, buttons, links, `:focus-visible`) sit inside `:where()`. The Kiosk's shared vocabulary in `Kiosk.svelte` puts the `.kiosk` scope inside `:where()`, so those rules weigh only as much as their target selector and any scoped class in a Kiosk screen beats them. Every selector in `leader.css` sits wholly inside `:where(.leader …)`, so it has zero specificity: a component's `<style>` always wins, and within `leader.css` the later rule wins. Pseudo-elements cannot go inside `:where()`, so those few rules keep a normal selector. Breaking this (an unwrapped shared selector) has caused real bugs where shared rules overrode screen styles.
+**The Zero-Specificity Rule.** Shared styles carry no weight so a screen's own styles always win. The base element rules in `app.css` (headings, paragraphs, form controls, buttons, links, `:focus-visible`) sit inside `:where()`. The Kiosk's shared vocabulary in `Kiosk.svelte` sits wholly inside `:global(:where(.kiosk …))`, so it has zero specificity too. Every selector in `leader.css` sits wholly inside `:where(.leader …)`, so it has zero specificity: a component's `<style>` always wins, and within `leader.css` the later rule wins. Pseudo-elements cannot go inside `:where()`, so those few rules keep a normal selector. Breaking this has caused real bugs: an unwrapped shared selector overrode screen styles, and a selector list split at a comma inside `:has()` or `:not()` silently changed what it matched. Keep each `:where(...)` one complete selector.
 
 ## Do's and Don'ts
 
@@ -370,6 +381,7 @@ A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; 
 - **Do** pair state colour with a shape or text (check mark, pill label, dashed outline) so meaning never relies on colour alone.
 - **Do** gate motion behind `prefers-reduced-motion: no-preference` and start entrances from a visible state.
 - **Do** use the logo through `Logo.svelte` (it follows the text colour), at 12rem on Kiosk lock screens and 10rem on gate pages.
+- **Do** use Phosphor icons at weight `thin`, 1.5rem or larger, `aria-hidden="true"`, with the control named by its text or `aria-label`.
 - **Do** use fictional names from `bun run seed` in any mock, fixture or screenshot.
 
 ### Don't:
@@ -378,6 +390,7 @@ A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; 
 - **Don't** use `--accent` as a background fill; it turns light rose in dark mode.
 - **Don't** add drop shadows; the inset tab marker is the only box-shadow.
 - **Don't** add a shared selector outside `:where()`.
+- **Don't** mix icon sets or weights, or use emoji or text glyphs as icons.
 - **Don't** make a grid of identical cards the main Kiosk experience; the Handoff's single big name is the main screen and the name list stays secondary.
 - **Don't** build Leader screens as an admin dashboard: no sidebars, data tables or KPI tiles.
 - **Don't** use the logo below 10rem or as a small icon in a bar, button or tab.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-08T22:40:21.780Z",
+  "generatedAt": "2026-11-08T22:42:30.327Z",
   "title": "Design System: Troop 813 HQ",
   "extensions": {
     "colorMeta": {
@@ -329,7 +329,7 @@
         ]
       },
       "focus": {
-        "role": "primary",
+        "role": "neutral",
         "displayName": "Focus Ring",
         "canonical": "oklch(32.2% 0.121 355.3)",
         "cssVar": "--focus",
@@ -653,7 +653,7 @@
         ]
       },
       "dark-focus": {
-        "role": "primary",
+        "role": "neutral",
         "displayName": "Focus Ring (dark theme)",
         "canonical": "oklch(80% 0.075 355)",
         "cssVar": "--focus",
@@ -753,6 +753,11 @@
     ],
     "breakpoints": [
       {
+        "name": "leader-narrow",
+        "value": "max-width: 30rem",
+        "purpose": "Roster row actions become icon-only buttons."
+      },
+      {
         "name": "leader-wide",
         "value": "min-width: 48rem",
         "purpose": "Tab bar moves from the bottom to the top."
@@ -763,6 +768,31 @@
         "purpose": "Kiosk answer buttons stack full-width."
       }
     ],
+    "icons": {
+      "library": "Phosphor (phosphor-svelte 3.1.1)",
+      "weight": "thin",
+      "import": "phosphor-svelte/lib/<Name>, one per icon",
+      "color": "currentColor",
+      "aria": "always aria-hidden=\"true\"; the control's text or aria-label names it",
+      "minSize": "1.5rem (thin weight goes faint below that at 1x)",
+      "sizes": {
+        "tabPhone": "1.75rem, over the label",
+        "tabWide": "1.375rem, beside the label (48rem+)",
+        "rowAction": "1.5rem"
+      },
+      "set": {
+        "Tonight": "Campfire",
+        "Meetings": "CalendarCheck",
+        "Events": "Tent",
+        "Roster": "UsersThree",
+        "Access": "Key",
+        "Edit": "PencilSimple",
+        "Deactivate": "UserMinus",
+        "Reactivate": "UserPlus",
+        "Delete": "Trash"
+      },
+      "iconOnly": "Roster row actions under 30rem: labels hidden, buttons min-width 2.75rem, named by aria-label"
+    },
     "logo": {
       "source": "src/lib/troop-813-logo.svg via src/lib/Logo.svelte",
       "viewBox": "0 0 380 380",
@@ -823,6 +853,14 @@
       "css": ".ds-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-family: var(--body); color: var(--ink); } .ds-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 0.75rem; min-height: 3.25rem; padding: 0.625rem 0.875rem; border-top: 1px solid var(--line); } .ds-list li:first-child { border-top: 0; } .ds-name { flex-basis: 100%; font-weight: 700; } .ds-meta { color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; } .ds-row-btn { margin-left: auto; min-height: 2.75rem; padding: 0.5rem 0.875rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: 0.9375rem; font-weight: 700; cursor: pointer; } .ds-row-btn:hover { border-color: var(--accent); } .ds-row-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }"
     },
     {
+      "name": "Row Action Icon Buttons",
+      "kind": "button",
+      "refersTo": "leader-button",
+      "description": "Roster row actions: thin icon beside the label; icon-only (min 2.75rem wide, named by aria-label) under 30rem.",
+      "html": "<span class=\"ds-acts\"><button class=\"ds-ib\" aria-label=\"Edit Scout Name\"><svg class=\"ds-ico\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M224.49,76.2,179.8,31.51a12,12,0,0,0-17,0L133.17,61.17h0L39.52,154.83A11.9,11.9,0,0,0,36,163.31V208a12,12,0,0,0,12,12H92.69a12,12,0,0,0,8.48-3.51L224.48,93.17a12,12,0,0,0,0-17Zm-129,134.63A4,4,0,0,1,92.69,212H48a4,4,0,0,1-4-4V163.31a4,4,0,0,1,1.17-2.83L136,69.65,186.34,120ZM218.83,87.51,192,114.34,141.66,64l26.82-26.83a4,4,0,0,1,5.66,0l44.69,44.68a4,4,0,0,1,0,5.66Z\"/></svg><span class=\"ds-lbl\">Edit</span></button><button class=\"ds-ib\" aria-label=\"Deactivate Scout Name\"><svg class=\"ds-ico\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M252,136a4,4,0,0,1-4,4H200a4,4,0,0,1,0-8h48A4,4,0,0,1,252,136Zm-56.94,61.43a4,4,0,0,1-6.12,5.14C168,177.7,139.3,164,108,164s-60,13.7-80.94,38.57a4,4,0,1,1-6.12-5.14c16.71-19.9,38.13-33.13,61.89-38.59a64,64,0,1,1,50.34,0C156.93,164.3,178.35,177.53,195.06,197.43ZM108,156a56,56,0,1,0-56-56A56.06,56.06,0,0,0,108,156Z\"/></svg><span class=\"ds-lbl\">Deactivate</span></button><button class=\"ds-ib ds-danger\" aria-label=\"Delete Scout Name\"><svg class=\"ds-ico\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M216,52H172V40a20,20,0,0,0-20-20H104A20,20,0,0,0,84,40V52H40a4,4,0,0,0,0,8H52V208a12,12,0,0,0,12,12H192a12,12,0,0,0,12-12V60h12a4,4,0,0,0,0-8ZM92,40a12,12,0,0,1,12-12h48a12,12,0,0,1,12,12V52H92ZM196,208a4,4,0,0,1-4,4H64a4,4,0,0,1-4-4V60H196ZM108,104v64a4,4,0,0,1-8,0V104a4,4,0,0,1,8,0Zm48,0v64a4,4,0,0,1-8,0V104a4,4,0,0,1,8,0Z\"/></svg><span class=\"ds-lbl\">Delete</span></button></span>",
+      "css": ".ds-acts { display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-ib { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 2.75rem; padding: 0.5rem 0.875rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-family: var(--body); font-size: 0.9375rem; font-weight: 700; white-space: nowrap; cursor: pointer; transition: border-color 160ms var(--ease), background-color 160ms var(--ease); } .ds-ib:hover { border-color: var(--accent); } .ds-ib:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; } .ds-ib .ds-ico { width: 1.5rem; height: 1.5rem; flex: none; } .ds-danger { color: var(--bad); } @media (max-width: 30rem) { .ds-acts { flex-wrap: nowrap; } .ds-ib { min-width: 2.75rem; justify-content: center; padding-inline: 0.5rem; } .ds-ib .ds-lbl { display: none; } }"
+    },
+    {
       "name": "Input",
       "kind": "input",
       "refersTo": "input",
@@ -835,8 +873,8 @@
       "kind": "nav",
       "refersTo": "tab-bar",
       "description": "Bottom tab bar on phones; current tab burgundy with an inset 3px marker.",
-      "html": "<nav class=\"ds-tabs\"><a href=\"#\" aria-current=\"page\">Tonight</a><a href=\"#\">Meetings</a><a href=\"#\">Events</a><a href=\"#\">Roster</a></nav>",
-      "css": ".ds-tabs { display: flex; background: var(--surface); border-top: 1px solid var(--line); font-family: var(--body); } .ds-tabs a { flex: 1; display: grid; place-items: center; min-height: 3.5rem; font-weight: 700; font-size: 0.875rem; color: var(--muted); text-decoration: none; } .ds-tabs a[aria-current=\"page\"] { color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); } .ds-tabs a:hover { color: var(--ink); } .ds-tabs a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }"
+      "html": "<nav class=\"ds-tabs\"><a href=\"#\" aria-current=\"page\"><svg class=\"ds-ico\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M219.81,225.21A4,4,0,0,1,216,228a3.92,3.92,0,0,1-1.21-.19L128,200.2,41.21,227.81A3.92,3.92,0,0,1,40,228a4,4,0,0,1-1.21-7.81l76-24.19-76-24.19a4,4,0,1,1,2.42-7.62L128,191.8l86.79-27.61a4,4,0,1,1,2.42,7.62l-76,24.19,76,24.19A4,4,0,0,1,219.81,225.21ZM72,108c0-19,9.38-38.85,27.12-57.27A152,152,0,0,1,125.9,28.59a4,4,0,0,1,4.2,0,152,152,0,0,1,26.78,22.14C174.62,69.15,184,89,184,108a56,56,0,0,1-54.56,56c-.48,0-1,0-1.44,0s-1,0-1.44,0A56,56,0,0,1,72,108Zm56,48a20,20,0,0,0,20-20c0-17.39-14.37-30.53-20-35-5.63,4.48-20,17.62-20,35A20,20,0,0,0,128,156ZM80,108a48,48,0,0,0,23.28,41.13A27.83,27.83,0,0,1,100,136c0-25.84,24.73-42.63,25.78-43.33a4,4,0,0,1,4.44,0c1.05.7,25.78,17.49,25.78,43.33a27.83,27.83,0,0,1-3.28,13.13A48,48,0,0,0,176,108c0-36.37-38.49-64.76-48-71.21C118.5,43.25,80,71.68,80,108Z\"/></svg>Tonight</a><a href=\"#\"><svg class=\"ds-ico\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M208,36H180V24a4,4,0,0,0-8,0V36H84V24a4,4,0,0,0-8,0V36H48A12,12,0,0,0,36,48V208a12,12,0,0,0,12,12H208a12,12,0,0,0,12-12V48A12,12,0,0,0,208,36ZM48,44H76V56a4,4,0,0,0,8,0V44h88V56a4,4,0,0,0,8,0V44h28a4,4,0,0,1,4,4V84H44V48A4,4,0,0,1,48,44ZM208,212H48a4,4,0,0,1-4-4V92H212V208A4,4,0,0,1,208,212Zm-41.17-86.83a4,4,0,0,1,0,5.66l-48,48a4,4,0,0,1-5.66,0l-24-24a4,4,0,0,1,5.66-5.66L116,170.34l45.17-45.17A4,4,0,0,1,166.83,125.17Z\"/></svg>Meetings</a><a href=\"#\"><svg class=\"ds-ico\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M251.66,190.38l-64-144A4,4,0,0,0,184,44H72a4,4,0,0,0-3.63,2.35s0,0,0,0l0,.06h0l-64,143.93A4,4,0,0,0,8,196H248a4,4,0,0,0,3.66-5.62ZM68,66.85V188H14.16ZM76,188V66.85L129.84,188Zm62.6,0L78.16,52H181.4l60.44,136Z\"/></svg>Events</a><a href=\"#\"><svg class=\"ds-ico\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M237,147.44a4,4,0,0,1-5.48-1.4c-8.33-14-20.93-22-34.56-22a4,4,0,0,1-1.2-.2,36.76,36.76,0,0,1-3.8.2,4,4,0,0,1,0-8,28,28,0,1,0-27.12-35,4,4,0,0,1-7.75-2,36,36,0,1,1,54,39.48c10.81,3.85,20.51,12,27.31,23.48A4,4,0,0,1,237,147.44ZM187.46,214a4,4,0,0,1-1.46,5.46,3.93,3.93,0,0,1-2,.54,4,4,0,0,1-3.46-2,61,61,0,0,0-105.08,0,4,4,0,0,1-6.92-4,68.35,68.35,0,0,1,39.19-31,44,44,0,1,1,40.54,0A68.35,68.35,0,0,1,187.46,214ZM128,180a36,36,0,1,0-36-36A36,36,0,0,0,128,180ZM64,116A28,28,0,1,1,91.12,81a4,4,0,0,0,7.75-2A36,36,0,1,0,45.3,118.75,63.55,63.55,0,0,0,12.8,141.6a4,4,0,0,0,6.4,4.8A55.55,55.55,0,0,1,64,124a4,4,0,0,0,0-8Z\"/></svg>Roster</a></nav>",
+      "css": ".ds-tabs { display: flex; background: var(--surface); border-top: 1px solid var(--line); font-family: var(--body); } .ds-tabs a { flex: 1; display: grid; place-items: center; align-content: center; gap: 0.125rem; min-height: 3.5rem; font-weight: 700; font-size: 0.875rem; color: var(--muted); text-decoration: none; } .ds-tabs a[aria-current=\"page\"] { color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); } .ds-tabs .ds-ico { width: 1.75rem; height: 1.75rem; } .ds-tabs a:hover { color: var(--ink); } .ds-tabs a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }"
     },
     {
       "name": "Segmented RSVP Switch",
@@ -857,10 +895,11 @@
   ],
   "narrative": {
     "northStar": "One Question, One Name",
-    "overview": "Troop 813 HQ is a light, plain working tool in troop burgundy. The Kiosk asks one question per screen and makes the person's name the hero, set in burgundy condensed capitals large enough to read at arm's length on a shared tablet. The Leader screens carry the same world at phone density: a text-only shell bar, a tab bar, lists drawn as one bordered card with a row per item, soft status pills, and large condensed counts.\n\nEverything sits on a near-white, faintly rose-tinted ground with white surfaces and hairline borders. There is no decoration beyond the troop's monoline logo badge, shown large on the lock, sign-in and waiting screens only. Colour carries meaning: burgundy marks the brand, the current choice and the main action; green, amber and red appear only as state. Both surfaces ship light and dark themes from the same tokens.\n\nThe world was pinned by the user from the prototypes (`prototype/kiosk-flow`, `prototype/leader-screens`), with troop burgundy replacing the prototype's green. It refuses two things: the visitor-kiosk grid of identical cards as the main Kiosk experience, and the admin-dashboard look (sidebars, tables, KPI tiles) on the Leader screens.",
+    "overview": "Troop 813 HQ is a light, plain working tool in troop burgundy. The Kiosk asks one question per screen and makes the person's name the hero, set in burgundy condensed capitals large enough to read at arm's length on a shared tablet. The Leader screens carry the same world at phone density: a text-only shell bar, a tab bar, lists drawn as one bordered card with a row per item, soft status pills, and large condensed counts.\n\nEverything sits on a near-white, faintly rose-tinted ground with white surfaces and hairline borders. There is no decoration beyond the troop's monoline logo badge, shown large on the lock, sign-in and waiting screens only. Icons are functional, not decorative: thin-weight Phosphor line icons, whose fine stroke echoes the logo's monoline drawing, label the Leader tabs and Roster row actions. Colour carries meaning: burgundy marks the brand, the current choice and the main action; green, amber and red appear only as state. Both surfaces ship light and dark themes from the same tokens.\n\nThe world was pinned by the user from the prototypes (`prototype/kiosk-flow`, `prototype/leader-screens`), with troop burgundy replacing the prototype's green. It refuses two things: the visitor-kiosk grid of identical cards as the main Kiosk experience, and the admin-dashboard look (sidebars, tables, KPI tiles) on the Leader screens.",
     "keyCharacteristics": [
       "Condensed display (Barlow Condensed) over a legibility-first body (Atkinson Hyperlegible).",
       "One burgundy accent; green only for success and Going.",
+      "Thin Phosphor line icons on Leader navigation and row actions, always paired with a text name.",
       "Flat: white cards on a tinted ground, 1px or 2px outlines, no drop shadows.",
       "Two densities from one token set: Kiosk at a 1.25rem base with 4rem targets, Leader at 1rem with 2.75rem targets.",
       "Light and dark themes; in dark mode the accent splits into light-rose text and deep-burgundy fills."
@@ -907,6 +946,11 @@
         "section": "shapes"
       },
       {
+        "name": "The Thin Icons Need Room Rule",
+        "body": "Use icons at 1.5rem or larger; the thin weight goes faint below that at 1x. An icon never stands alone without an accessible name, and the logo is never an icon.",
+        "section": "components"
+      },
+      {
         "name": "The Zero-Specificity Rule",
         "body": "Shared styles carry no weight so a screen's own styles always win. The base element rules in `app.css` (headings, paragraphs, form controls, buttons, links, `:focus-visible`) sit inside `:where()`. The Kiosk's shared vocabulary in `Kiosk.svelte` puts the `.kiosk` scope inside `:where()`, so those rules weigh only as much as their target selector and any scoped class in a Kiosk screen beats them. Every selector in `leader.css` sits wholly inside `:where(.leader …)`, so it has zero specificity: a component's `<style>` always wins, and within `leader.css` the later rule wins. Pseudo-elements cannot go inside `:where()`, so those few rules keep a normal selector. Breaking this (an unwrapped shared selector) has caused real bugs where shared rules overrode screen styles.",
         "section": "components"
@@ -922,6 +966,7 @@
       "Do pair state colour with a shape or text (check mark, pill label, dashed outline) so meaning never relies on colour alone.",
       "Do gate motion behind `prefers-reduced-motion: no-preference` and start entrances from a visible state.",
       "Do use the logo through `Logo.svelte` (it follows the text colour), at 12rem on Kiosk lock screens and 10rem on gate pages.",
+      "Do use Phosphor icons at weight `thin`, 1.5rem or larger, `aria-hidden=\"true\"`, with the control named by its text or `aria-label`.",
       "Do use fictional names from `bun run seed` in any mock, fixture or screenshot."
     ],
     "donts": [
@@ -929,6 +974,7 @@
       "Don't use `--accent` as a background fill; it turns light rose in dark mode.",
       "Don't add drop shadows; the inset tab marker is the only box-shadow.",
       "Don't add a shared selector outside `:where()`.",
+      "Don't mix icon sets or weights, or use emoji or text glyphs as icons.",
       "Don't make a grid of identical cards the main Kiosk experience; the Handoff's single big name is the main screen and the name list stays secondary.",
       "Don't build Leader screens as an admin dashboard: no sidebars, data tables or KPI tiles.",
       "Don't use the logo below 10rem or as a small icon in a bar, button or tab.",

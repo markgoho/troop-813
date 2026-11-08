@@ -1,7 +1,10 @@
 <script lang="ts">
   // Roster tab (spec stories 54–58, 63–65): Add Scout with rapid entry at the
   // top, then Active Scouts and Inactive Scouts, live from Firestore. Each row
-  // can be edited, deactivated / reactivated, or deleted.
+  // can be edited and deactivated / reactivated. Delete appears only while the
+  // Scout has no Attendance or RSVPs (a typo entry): the user dropped story
+  // 64's always-shown disabled Delete, since nearly every Scout has history
+  // after a Meeting or two (2026-11-08).
   // Rapid entry: Enter in last name submits (native form submit); on success
   // the form clears and focus returns to first name for the next Scout.
   import { ApiError, type Api } from "./api";
@@ -276,12 +279,10 @@
           <button type="button" onclick={() => (confirmingId = null)}>
             Keep
           </button>
-        {:else}
+        {:else if !inUse(s.id)}
           <button
             type="button"
             aria-label="Delete {fullName(s)}"
-            disabled={inUse(s.id)}
-            aria-describedby={inUse(s.id) ? `reason-${s.id}` : undefined}
             class="danger icon"
             onclick={() => (confirmingId = s.id)}
             ><Trash weight="thin" aria-hidden="true" /><span class="label"
@@ -290,11 +291,6 @@
           >
         {/if}
       </span>
-      {#if confirmingId !== s.id && inUse(s.id)}
-        <small id="reason-{s.id}" class="reason">
-          Has Attendance or RSVPs, so it can't be deleted. Deactivate instead.
-        </small>
-      {/if}
     {/if}
   </li>
 {/snippet}
@@ -328,10 +324,24 @@
     flex: none;
   }
   @media (max-width: 30rem) {
+    /* One shape for every row: name over "Present x of y" on the left, the
+       icon actions on the right, whether or not Delete is offered. */
+    li:has(> .actions) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 0.75rem;
+      row-gap: 0.125rem;
+    }
+    li:has(> .actions) > .name,
+    li:has(> .actions) > .meta {
+      grid-column: 1;
+      margin-left: 0;
+    }
     .actions {
+      grid-column: 2;
+      grid-row: 1 / span 2;
       flex-basis: auto;
-      margin-left: auto;
-      flex-wrap: nowrap;
+      justify-content: flex-end;
     }
     .icon {
       min-width: 2.75rem;

@@ -21,30 +21,47 @@
     )
       ? "page"
       : undefined;
+  // The current tab's icon is duotone (a soft fill), the rest thin.
+  const weight = (href: string) => (current(href) ? "duotone" : "thin");
 </script>
 
 <nav aria-label="Leader tabs">
   <a href={resolve("/(leader)")} aria-current={current(resolve("/(leader)"))}
-    ><Campfire weight="thin" aria-hidden="true" />Tonight</a
+    ><Campfire
+      weight={weight(resolve("/(leader)"))}
+      aria-hidden="true"
+    />Tonight</a
   >
   <a
     href={resolve("/(leader)/meetings")}
     aria-current={current(resolve("/(leader)/meetings"))}
-    ><CalendarCheck weight="thin" aria-hidden="true" />Meetings</a
+    ><CalendarCheck
+      weight={weight(resolve("/(leader)/meetings"))}
+      aria-hidden="true"
+    />Meetings</a
   >
   <a
     href={resolve("/(leader)/events")}
     aria-current={current(resolve("/(leader)/events"))}
-    ><Tent weight="thin" aria-hidden="true" />Events</a
+    ><Tent
+      weight={weight(resolve("/(leader)/events"))}
+      aria-hidden="true"
+    />Events</a
   >
   <a
     href={resolve("/(leader)/roster")}
     aria-current={current(resolve("/(leader)/roster"))}
-    ><UsersThree weight="thin" aria-hidden="true" />Roster</a
+    ><UsersThree
+      weight={weight(resolve("/(leader)/roster"))}
+      aria-hidden="true"
+    />Roster</a
   >
   {#if role === "admin"}<a
       href={resolve("/(leader)/access")}
       aria-current={current(resolve("/(leader)/access"))}
-      ><Key weight="thin" aria-hidden="true" />Access</a
+      ><Key
+        weight={weight(resolve("/(leader)/access"))}
+        aria-hidden="true"
+      />Access</a
     >{/if}
 </nav>

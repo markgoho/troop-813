@@ -8,9 +8,6 @@ import type { WithId } from "./live";
 import { fakeApi } from "./testing/fakeApi";
 import { fakeLive, scout } from "./testing/fakeLive";
 
-const IN_USE =
-  "Has Attendance or RSVPs, so it can't be deleted. Deactivate instead.";
-
 function setup(
   api: Partial<Api> = {},
   rsvps: WithId<RSVP>[] = [],
@@ -141,28 +138,33 @@ describe("Add Scout: duplicate of an inactive Scout", () => {
 });
 
 describe("Delete", () => {
-  test("is shown but disabled, with the reason, while the Scout has RSVPs", () => {
+  // Shown only while the Scout has no Attendance or RSVPs (typo entries); a
+  // Scout with history has just Edit and Deactivate.
+  const maybe = (name: string) =>
+    screen.queryByRole("button", { name: `Delete ${name}` });
+
+  test("is not offered while the Scout has RSVPs", () => {
     setup({}, [rsvpFor("s1")]);
 
-    const del = button("Delete Avery Quill");
-    expect(del).toBeDisabled();
-    expect(del).toHaveAccessibleDescription(IN_USE);
+    expect(maybe("Avery Quill")).not.toBeInTheDocument();
+    expect(button("Deactivate Avery Quill")).toBeInTheDocument();
   });
 
-  test("is disabled up front, with the reason, while the Scout has Attendance (undone included)", async () => {
+  test("is not offered while the Scout has Attendance (undone included)", async () => {
     // hasAttendance counts undone records too, like the server's in_use rule.
     const scoutAttendance = vi.fn(async () => ({
       scouts: { s1: { present: 0, total: 2, hasAttendance: true } },
     }));
     setup({ scoutAttendance });
 
-    await vi.waitFor(() => expect(button("Delete Avery Quill")).toBeDisabled());
-    expect(button("Delete Avery Quill")).toHaveAccessibleDescription(IN_USE);
+    await vi.waitFor(() =>
+      expect(maybe("Avery Quill")).not.toBeInTheDocument(),
+    );
     // The inactive Scout has none, so stays deletable.
     expect(button("Delete Rowan Pike")).toBeEnabled();
   });
 
-  test("stays enabled for a Scout with neither Attendance nor RSVPs", async () => {
+  test("is offered for a Scout with neither Attendance nor RSVPs", async () => {
     const scoutAttendance = vi.fn(async () => ({
       scouts: { s1: { present: 0, total: 0, hasAttendance: false } },
     }));
@@ -183,7 +185,7 @@ describe("Delete", () => {
     expect(deleteScout).toHaveBeenCalledExactlyOnceWith("s3");
   });
 
-  test("a 409 in_use (Attendance the page can't see) disables it with the reason", async () => {
+  test("a 409 in_use (Attendance the page can't see) withdraws it", async () => {
     const deleteScout = vi.fn(async () => {
       throw new ApiError(409, { code: "in_use" });
     });
@@ -192,7 +194,8 @@ describe("Delete", () => {
     await userEvent.click(button("Delete Avery Quill"));
     await userEvent.click(button("Yes, delete Avery Quill"));
 
-    await vi.waitFor(() => expect(button("Delete Avery Quill")).toBeDisabled());
-    expect(button("Delete Avery Quill")).toHaveAccessibleDescription(IN_USE);
+    await vi.waitFor(() =>
+      expect(maybe("Avery Quill")).not.toBeInTheDocument(),
+    );
   });
 });

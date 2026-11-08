@@ -192,25 +192,25 @@
   }
 
   /* Shared Kiosk vocabulary, at zero specificity so each screen can override. */
-  :global(:where(.kiosk) h1) {
+  :global(:where(.kiosk h1)) {
     font-size: 3rem;
   }
-  :global(:where(.kiosk) .sub),
-  :global(:where(.kiosk) .status) {
+  :global(:where(.kiosk .sub)),
+  :global(:where(.kiosk .status)) {
     color: var(--muted);
     font-size: 1.375rem;
   }
-  :global(:where(.kiosk) .status) {
+  :global(:where(.kiosk .status)) {
     text-align: center;
   }
-  :global(:where(.kiosk) .alert) {
+  :global(:where(.kiosk .alert)) {
     background: var(--bad-soft);
     color: var(--bad);
     border-radius: var(--radius-sm);
     padding: 0.75rem 1rem;
     font-weight: 700;
   }
-  :global(:where(.kiosk) button) {
+  :global(:where(.kiosk button)) {
     min-height: 4rem;
     padding: 0.75rem 1.5rem;
     border: 2px solid var(--line);
@@ -224,48 +224,48 @@
       background-color 160ms var(--ease),
       transform 160ms var(--ease);
   }
-  :global(:where(.kiosk) button:not(:disabled):hover) {
+  :global(:where(.kiosk button:not(:disabled):hover)) {
     border-color: var(--accent);
   }
   @media (prefers-reduced-motion: no-preference) {
-    :global(:where(.kiosk) button:not(:disabled):active) {
+    :global(:where(.kiosk button:not(:disabled):active)) {
       transform: scale(0.98);
     }
   }
-  :global(:where(.kiosk) button:disabled) {
+  :global(:where(.kiosk button:disabled)) {
     opacity: 0.55;
   }
-  :global(:where(.kiosk) button.primary),
-  :global(:where(.kiosk) button.yes) {
+  :global(:where(.kiosk button.primary)),
+  :global(:where(.kiosk button.yes)) {
     background: var(--fill);
     border-color: var(--fill);
     color: var(--fill-ink);
   }
-  :global(:where(.kiosk) button.primary:not(:disabled):hover),
-  :global(:where(.kiosk) button.yes:not(:disabled):hover) {
+  :global(:where(.kiosk button.primary:not(:disabled):hover)),
+  :global(:where(.kiosk button.yes:not(:disabled):hover)) {
     background: var(--fill-hover);
     border-color: var(--fill-hover);
   }
-  :global(:where(.kiosk) button.quiet) {
+  :global(:where(.kiosk button.quiet)) {
     border-color: transparent;
     background: transparent;
     color: var(--muted);
     font-weight: 400;
   }
-  :global(:where(.kiosk) .choices) {
+  :global(:where(.kiosk .choices)) {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
   }
-  :global(:where(.kiosk) .choices button) {
+  :global(:where(.kiosk .choices button)) {
     flex: 1 1 14rem;
   }
   /* Upright tablet: answers stack full-width, so long labels stay on one line. */
   @media (orientation: portrait) {
-    :global(:where(.kiosk) .choices) {
+    :global(:where(.kiosk .choices)) {
       flex-direction: column;
     }
-    :global(:where(.kiosk) .choices button) {
+    :global(:where(.kiosk .choices button)) {
       flex-basis: auto;
     }
   }

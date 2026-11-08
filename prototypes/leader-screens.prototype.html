@@ -1,0 +1,540 @@
+<title>Leader Screens Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* PROTOTYPE (throwaway). Three navigation variants of the Leader screens on a phone, switch with the bottom bar or ←/→. In-memory only.
+   Layout: phone frame on the left, proposed defaults + write log on the right; stacks on narrow screens. Add -phone to the hash for phone-only. */
+:root {
+  --bg: #eef2ef; --surface: #ffffff; --ink: #18221d; --muted: #5b6b62; --line: #d3ddd7;
+  --accent: #2f6b4f; --accent-ink: #ffffff; --accent-soft: #dcebe2;
+  --warn: #9a5b00; --warn-soft: #fbecd2; --bad: #a3322a; --bad-soft: #f7dcd9;
+  --changed: #fff3a8; --chrome: #18221d; --chrome-ink: #f2f6f3;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121815; --surface: #1b2420; --ink: #e3ebe6; --muted: #9aaba1; --line: #2e3b35;
+  --accent: #6fbf95; --accent-ink: #0d1a13; --accent-soft: #23392d;
+  --warn: #e7b25c; --warn-soft: #3a2e17; --bad: #ef8a80; --bad-soft: #3d2220; --changed: #4a4214;
+  --chrome: #e3ebe6; --chrome-ink: #121815; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121815; --surface: #1b2420; --ink: #e3ebe6; --muted: #9aaba1; --line: #2e3b35;
+  --accent: #6fbf95; --accent-ink: #0d1a13; --accent-soft: #23392d;
+  --warn: #e7b25c; --warn-soft: #3a2e17; --bad: #ef8a80; --bad-soft: #3d2220; --changed: #4a4214;
+  --chrome: #e3ebe6; --chrome-ink: #121815; color-scheme: dark }
+html, body { min-height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 90px; box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: .01em; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.intro { max-width: 1180px; margin: 0 auto 16px; display: grid; gap: 8px; }
+.intro h1 { font-size: 30px; }
+.intro p { margin: 0; max-width: 75ch; color: var(--muted); }
+.tag { display: inline-block; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 4px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+body.phoneonly .intro, body.phoneonly .side { display: none; }
+body.phoneonly .wrap { grid-template-columns: minmax(0, 1fr); max-width: 440px; }
+body.phoneonly .device { padding: 0; background: none; box-shadow: none; }
+body.phoneonly .ctl { max-width: 440px; margin-inline: auto; }
+.side { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h2 { font-size: 20px; margin-bottom: 8px; }
+.panel ol, .panel ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.ctl { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 5px 10px; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.log { font: 12px/1.5 ui-monospace, "Cascadia Mono", Menlo, monospace; display: grid; gap: 6px; max-height: 340px; overflow: auto; }
+.log div { padding: 6px 8px; border-radius: 6px; background: var(--bg); overflow-wrap: anywhere; }
+.log div:first-child { background: var(--changed); }
+
+/* Phone */
+.device { background: #0b0f0d; border-radius: 34px; padding: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.18); position: sticky; top: env(safe-area-inset-top, 0px); }
+.phone { background: var(--surface); border-radius: 24px; height: 760px; max-height: calc(100vh - 140px); min-height: 520px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+body.phoneonly .phone { border-radius: 14px; border: 1px solid var(--line); height: calc(100vh - 160px); max-height: none; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid var(--line); min-height: 54px; }
+.bar h2 { font-size: 24px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iconbtn { border: 0; background: none; font-size: 22px; line-height: 1; padding: 4px 8px; border-radius: 8px; color: var(--ink); }
+.iconbtn:hover { background: var(--accent-soft); }
+.body { flex: 1; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 16px; }
+.tabs { display: flex; border-top: 1px solid var(--line); }
+.tabs button { flex: 1; border: 0; background: none; padding: 9px 2px 11px; font-size: 12px; font-weight: 700; color: var(--muted); display: grid; gap: 2px; justify-items: center; }
+.tabs button .ico { font-size: 18px; }
+.tabs button[aria-current="true"] { color: var(--accent); }
+.sec { display: grid; gap: 8px; }
+.sec > h3 { font-size: 18px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sec > h3 small { font-family: var(--body); font-size: 13px; font-weight: 400; color: var(--muted); }
+.list { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--line); min-height: 48px; background: var(--surface); width: 100%; text-align: left; border-left: 0; border-right: 0; border-bottom: 0; }
+.item:first-child { border-top: 0; }
+button.item:hover { background: var(--accent-soft); }
+.item .main { flex: 1; min-width: 0; display: grid; }
+.item .main .t { font-weight: 700; }
+.item .main .s { font-size: 13px; color: var(--muted); }
+.item .chev { color: var(--muted); }
+.struck .t, .struck .tt { text-decoration: line-through; color: var(--muted); }
+.pill { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 2px 7px; border-radius: 999px; background: var(--bg); color: var(--muted); white-space: nowrap; }
+.pill.ok { background: var(--accent-soft); color: var(--accent); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 700; font-size: 14px; white-space: nowrap; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.danger { color: var(--bad); }
+.btn.danger.solid { background: var(--bad); color: var(--surface); border-color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.wide { width: 100%; padding: 11px; font-size: 16px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+.banner { border-radius: 10px; padding: 12px; display: grid; gap: 8px; background: var(--accent-soft); }
+.banner.warn { background: var(--warn-soft); }
+.banner.bad { background: var(--bad-soft); }
+.banner strong { font-size: 16px; }
+.big { font-family: var(--display); font-size: 44px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.stats { display: flex; gap: 18px; flex-wrap: wrap; }
+.stats > div { display: grid; }
+.confirm { background: var(--bad-soft); border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; font-size: 14px; }
+.field { display: grid; gap: 3px; font-size: 13px; color: var(--muted); }
+.field input, .field select { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--surface); color: var(--ink); font-size: 15px; width: 100%; }
+.form { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rsvp { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.rsvp button { border: 0; background: none; padding: 6px 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.rsvp button + button { border-left: 1px solid var(--line); }
+.rsvp button[aria-pressed="true"].g { background: var(--accent); color: var(--accent-ink); }
+.rsvp button[aria-pressed="true"].n { background: var(--bad); color: var(--surface); }
+.rsvp button[aria-pressed="true"].c { background: var(--bg); color: var(--ink); }
+.hist { font-size: 12px; color: var(--muted); display: grid; gap: 2px; padding: 0 12px 10px 12px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--line); }
+.dot.on { background: var(--accent); border-color: var(--accent); }
+.check { width: 26px; height: 26px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; font-weight: 700; color: var(--accent-ink); }
+.check.on { background: var(--accent); border-color: var(--accent); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+.chips button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.datehead { font-family: var(--display); font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 4px 2px 0; }
+.daybox { width: 46px; flex-shrink: 0; text-align: center; display: grid; line-height: 1.05; }
+.daybox b { font-family: var(--display); font-size: 22px; }
+.daybox span { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.sheet { position: absolute; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-end; z-index: 5; }
+.sheet > div { background: var(--surface); width: 100%; border-radius: 18px 18px 0 0; padding: 16px; display: grid; gap: 8px; }
+.waiting { flex: 1; display: grid; place-content: center; text-align: center; gap: 12px; padding: 24px; }
+.waiting h2 { font-size: 32px; }
+.waiting p { margin: 0; color: var(--muted); max-width: 30ch; margin-inline: auto; }
+
+/* Prototype switcher: obviously not part of the design */
+.switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--chrome); color: var(--chrome-ink); border-radius: 999px; display: flex; align-items: center; gap: 4px; padding: 6px; box-shadow: 0 6px 24px rgba(0,0,0,.3); z-index: 20; max-width: calc(100% - 32px); }
+.switcher button { border: 0; background: none; color: inherit; font-size: 18px; padding: 6px 12px; border-radius: 999px; }
+.switcher button:hover { background: rgba(127,127,127,.25); }
+.switcher span { font-weight: 700; font-size: 14px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="intro">
+  <span class="tag">Prototype · throwaway</span>
+  <h1>Leader screens on a phone</h1>
+  <p>Three navigation variants of the same eight screens. Flip with the black bar at the bottom or the ← → keys. Switch role and Kiosk state above the phone. Everything is in memory, so reload to reset. It's Monday Nov 9, 7:25pm, and tonight's Meeting is live on the tablet.</p>
+</header>
+
+<div class="wrap">
+  <div>
+    <div class="ctl">
+      <span class="label">View as</span>
+      <span class="seg" id="roleSeg"></span>
+      <span class="label">Tonight</span>
+      <span class="seg" id="kioskSeg"></span>
+      <button class="btn" id="phoneOnly" type="button">Phone only</button>
+    </div>
+    <div class="device"><div class="phone" id="phone"></div></div>
+  </div>
+  <aside class="side">
+    <section class="panel">
+      <h2 id="variantTitle">Variant</h2>
+      <p class="note" id="variantDesc"></p>
+    </section>
+    <section class="panel">
+      <h2>Defaults to react to</h2>
+      <ol>
+        <li><b>Live Meeting</b>: one list of checked-in Scouts (Undo) and not checked in (Check in). Undo opens an inline confirm that names the RSVP answers it will roll back.</li>
+        <li><b>Kiosk asleep</b> shows as a warning banner with one Wake Kiosk button, at the top of the live view.</li>
+        <li><b>No Meeting today</b>: the phone says the Admin starts it on the Kiosk. The phone can only create Meetings for <i>past</i> dates.</li>
+        <li><b>Past Meeting</b>: pick a date (defaults to the latest Monday with no Meeting), then tap Scouts to toggle present. Toggling off is an undo. Delete appears once nobody is present.</li>
+        <li><b>RSVP list</b>: every active Scout with Going / Not going / No answer. "No answer" clears it, so the Kiosk asks again. Tap a name for the answer history.</li>
+        <li><b>Scout page</b>: "Present X of Y" since the Scout was added, then each Meeting newest first, then their RSVPs.</li>
+        <li><b>Deleting</b> a Scout or Event: the button is always shown, disabled with the reason when it's in use. Deactivate / Cancel are the normal path.</li>
+        <li><b>Admin</b>: a Users list with a Leader switch per person. New sign-ins sit at the top as "Waiting".</li>
+        <li><b>Parent</b>: one waiting page, no navigation.</li>
+      </ol>
+    </section>
+    <section class="panel">
+      <h2>Writes</h2>
+      <p class="note">What the API would write, newest first. In memory only.</p>
+      <div class="log" id="log"></div>
+    </section>
+  </aside>
+</div>
+
+<nav class="switcher" aria-label="Prototype variant">
+  <button type="button" id="prev" aria-label="Previous variant">←</button>
+  <span id="vlabel"></span>
+  <button type="button" id="next" aria-label="Next variant">→</button>
+</nav>
+
+<script>
+// ---------- Fixtures (match ADR 0004 shapes) ----------
+const TODAY = '2026-11-09', NOW = '19:25';
+const VARIANTS = {
+  a: { name: 'Tabs', desc: 'Bottom tabs: Tonight · Roster · Events · Meetings (+ Admin). Each tab is a list; tap to drill in, back arrow to return. Familiar and predictable; the live Meeting is one tab among equals.' },
+  b: { name: 'Tonight-first', desc: 'One home screen with no tabs. The live Meeting sits on top with counts and actions, then Coming up (Events with RSVP counts), Recent Meetings, then rows for Roster and Users. Everything else is a drill-in from home.' },
+  c: { name: 'Timeline', desc: 'Home is one chronological feed of Meetings and Events: Tonight pinned at the top, upcoming Events, then the past. Filter chips narrow it. Roster, Users and Add live in a ☰ menu. Tapping any Scout name opens that Scout.' },
+};
+const S = (id, f, l, created = '2026-09-01', active = true) => ({ id, firstName: f, lastName: l, active, createdAt: created });
+const db = {
+  scouts: [
+    S('s1','Owen','Barrett'), S('s2','Liam','Castellano'), S('s3','Eli','Dunn'), S('s4','Mason','Fitch'),
+    S('s5','Noah','Greer'), S('s6','Caleb','Hollis'), S('s7','Ethan','Kowalski'), S('s8','Lucas','Marsh'),
+    S('s9','Henry','Novak'), S('s10','Jack','Okafor'), S('s11','Sam','Pruitt'), S('s12','Owen','Reyes'),
+    S('s13','Wyatt','Sola','2026-10-05'), S('s14','Ben','Torres','2026-09-01',false), S('s15','Jonh','Pierce','2026-11-02'),
+  ],
+  events: [
+    { id: 'e1', name: 'Fall Camporee', startDate: '2026-10-16', endDate: '2026-10-18', location: 'Camp Cutler', cancelled: false },
+    { id: 'e2', name: 'Letchworth Campout', startDate: '2026-11-13', endDate: '2026-11-15', location: 'Letchworth State Park', cancelled: false },
+    { id: 'e3', name: 'Service hike', startDate: '2026-11-21', endDate: '2026-11-21', location: 'Erie Canal trail', cancelled: true },
+    { id: 'e4', name: 'Winter cabin campout', startDate: '2026-12-11', endDate: '2026-12-13', location: 'Camp Babcock-Hovey', cancelled: false },
+    { id: 'e5', name: 'Klondike Derby', startDate: '2027-01-29', endDate: '2027-01-31', location: '', cancelled: false },
+  ],
+  meetings: {},   // date -> {date, startedBy, handoffOrder, notFound, checkedIn, attendance: [] }
+  rsvps: {},      // `${eventId}_${scoutId}` -> {answer, history: []}
+  users: [
+    { uid: 'u1', name: 'Mark Goho', email: 'mark@…', role: 'admin', since: '2026-11-01' },
+    { uid: 'u2', name: 'Dana Whitfield', email: 'dana@…', role: 'leader', since: '2026-11-02' },
+    { uid: 'u3', name: 'Chris Albright', email: 'chris@…', role: 'leader', since: '2026-11-02' },
+    { uid: 'u4', name: 'Pat Lindqvist', email: 'pat@…', role: 'parent', since: '2026-11-03' },
+    { uid: 'u5', name: 'Jordan Mei', email: 'jordan@…', role: 'parent', since: '2026-11-08', isNew: true },
+  ],
+};
+let seq = 1;
+const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+const PAST = ['2026-09-14','2026-09-21','2026-09-28','2026-10-05','2026-10-19','2026-10-26','2026-11-02'];
+for (const d of PAST) {
+  const m = { date: d, startedBy: 'Mark Goho', handoffOrder: [], notFound: [], checkedIn: {}, attendance: [] };
+  for (const s of db.scouts) {
+    if (s.createdAt > d || s.id === 's15') continue;
+    if (s.id === 's14' && d > '2026-09-28') continue;
+    if (hash(s.id + d) % 10 < 8) {
+      const a = { id: 'a' + seq++, scoutId: s.id, method: hash(d + s.id) % 3 ? 'handoff' : 'nameList', at: d + ' 19:1' + (seq % 9), by: 'kiosk', undoneAt: null };
+      m.attendance.push(a); m.checkedIn[s.id] = a.id;
+    }
+  }
+  db.meetings[d] = m;
+}
+function setRsvp(eid, sid, answer, at, by, attendanceId) {
+  const k = eid + '_' + sid; const r = db.rsvps[k] || (db.rsvps[k] = { answer: null, history: [] });
+  r.history.push({ answer, at, by, attendanceId }); r.answer = answer;
+}
+// Past RSVPs from earlier Meetings (Kiosk) and one Leader edit
+const m1102 = db.meetings['2026-11-02'];
+for (const s of db.scouts.filter(s => s.active)) {
+  const att = m1102.checkedIn[s.id]; if (!att) continue;
+  const h = hash(s.id + 'r');
+  if (h % 4 !== 0) setRsvp('e2', s.id, h % 3 ? 'going' : 'notGoing', '2026-11-02 19:2' + (h % 9), 'kiosk', att);
+  if (h % 5 === 1) setRsvp('e4', s.id, 'going', '2026-11-02 19:3' + (h % 9), 'kiosk', att);
+}
+for (const s of db.scouts.filter(s => s.createdAt <= '2026-10-05')) {
+  const h = hash(s.id + 'c'); setRsvp('e1', s.id, h % 3 ? 'going' : 'notGoing', '2026-10-05 19:2' + (h % 9), 'kiosk', db.meetings['2026-10-05'].checkedIn[s.id] || null);
+}
+setRsvp('e2', 's9', 'notGoing', '2026-11-05 08:12', 'Dana Whitfield', null);
+// Tonight
+const order = db.scouts.filter(s => s.active).map(s => s.id).sort((a, b) => hash(a + TODAY) - hash(b + TODAY));
+const tonight = { date: TODAY, startedBy: 'Mark Goho', handoffOrder: order, notFound: ['s10'], checkedIn: {}, attendance: [] };
+db.meetings[TODAY] = tonight;
+function kioskCheckIn(sid, method, at) {
+  const a = { id: 'a' + seq++, scoutId: sid, method, at: TODAY + ' ' + at, by: 'kiosk', undoneAt: null };
+  tonight.attendance.push(a); tonight.checkedIn[sid] = a.id; return a.id;
+}
+kioskCheckIn('s4', 'nameList', '19:04');
+kioskCheckIn('s1', 'handoff', '19:07');
+setRsvp('e4', 's1', 'notGoing', TODAY + ' 19:08', 'kiosk', tonight.checkedIn.s1);
+setRsvp('e5', 's1', 'going', TODAY + ' 19:08', 'kiosk', tonight.checkedIn.s1);
+kioskCheckIn('s8', 'handoff', '19:11');
+setRsvp('e2', 's8', 'going', TODAY + ' 19:12', 'kiosk', tonight.checkedIn.s8);
+kioskCheckIn('s3', 'handoff', '19:15');
+kioskCheckIn('s12', 'nameList', '19:21');
+setRsvp('e5', 's12', 'notGoing', TODAY + ' 19:22', 'kiosk', tonight.checkedIn.s12);
+const kiosk = { lastActivityAt: '19:22' };
+
+// ---------- UI state ----------
+const ui = { variant: 'a', role: 'admin', kioskState: 'awake', stack: [], tab: 'live', filter: 'all', confirm: null, menu: false, flash: null, openHist: null };
+const log = [];
+const me = () => ({ admin: 'Mark Goho', leader: 'Dana Whitfield', parent: 'Jordan Mei' })[ui.role];
+function write(line) { log.unshift(line); }
+
+// ---------- Helpers ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const D = d => new Date(d + 'T12:00:00');
+const fmt = d => D(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const fmtShort = d => D(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const range = e => e.startDate === e.endDate ? fmt(e.startDate) : `${fmt(e.startDate)} – ${fmtShort(e.endDate)}`;
+const scout = id => db.scouts.find(s => s.id === id);
+const full = s => `${s.firstName} ${s.lastName}`;
+const active = () => db.scouts.filter(s => s.active).sort((a, b) => a.firstName.localeCompare(b.firstName) || a.lastName.localeCompare(b.lastName));
+const ev = id => db.events.find(e => e.id === id);
+const METHOD = { nameList: 'Name list', handoff: 'Handoff', leader: 'Leader' };
+const liveAtt = m => m.attendance.filter(a => !a.undoneAt);
+const hasTonight = () => ui.kioskState !== 'none' && !!db.meetings[TODAY];
+const meetingDates = () => Object.keys(db.meetings).filter(d => d !== TODAY || hasTonight()).sort().reverse();
+const upcoming = () => db.events.filter(e => e.endDate >= TODAY).sort((a, b) => a.startDate.localeCompare(b.startDate));
+const pastEvents = () => db.events.filter(e => e.endDate < TODAY).sort((a, b) => b.startDate.localeCompare(a.startDate));
+const scoutUsed = sid => Object.values(db.meetings).some(m => m.attendance.some(a => a.scoutId === sid)) || Object.keys(db.rsvps).some(k => k.endsWith('_' + sid) && db.rsvps[k].history.length);
+const eventUsed = eid => Object.keys(db.rsvps).some(k => k.startsWith(eid + '_') && db.rsvps[k].history.length);
+const rsvpCounts = eid => { let g = 0, n = 0; for (const s of active()) { const r = db.rsvps[eid + '_' + s.id]; if (r?.answer === 'going') g++; else if (r?.answer === 'notGoing') n++; } return { g, n, none: active().length - g - n }; };
+const rsvpsFrom = attId => Object.entries(db.rsvps).flatMap(([k, r]) => r.history.filter(h => h.attendanceId === attId).map(h => ({ k, ...h })));
+const nextNoMeetingMonday = () => { const d = D(TODAY); d.setDate(d.getDate() - 1); while (true) { if (d.getDay() === 1) { const iso = d.toISOString().slice(0, 10); if (!db.meetings[iso]) return iso; } d.setDate(d.getDate() - 1); } };
+
+// ---------- Mutations (stubbed API) ----------
+function undo(date, attId) {
+  const m = db.meetings[date]; const a = m.attendance.find(x => x.id === attId);
+  a.undoneAt = date === TODAY ? NOW : 'later'; a.undoneBy = me(); delete m.checkedIn[a.scoutId];
+  write(`meetings/${date}/attendance/${attId}: undoneAt=${a.undoneAt}, undoneBy=${me()}; checkedIn −${scout(a.scoutId).firstName}`);
+  for (const [k, r] of Object.entries(db.rsvps)) {
+    const before = r.answer; const n = r.history.length;
+    r.history = r.history.filter(h => h.attendanceId !== attId);
+    if (r.history.length !== n) { r.answer = r.history.length ? r.history[r.history.length - 1].answer : null; write(`rsvps/${k}: removed ${n - r.history.length} entr${n - r.history.length > 1 ? 'ies' : 'y'}, answer ${before} → ${r.answer}`); }
+  }
+  if (date === TODAY) bump();
+}
+function leaderCheckIn(date, sid) {
+  const m = db.meetings[date];
+  const a = { id: 'a' + seq++, scoutId: sid, method: 'leader', at: date + ' ' + (date === TODAY ? NOW : '—'), by: me(), undoneAt: null };
+  m.attendance.push(a); m.checkedIn[sid] = a.id;
+  write(`meetings/${date}/attendance/${a.id}: scoutId=${sid}, method=leader, by=${me()}; checkedIn +${scout(sid).firstName}`);
+}
+function bump() { /* Leader actions don't bump lastActivityAt; only Kiosk writes and Wake do */ }
+function wake() { kiosk.lastActivityAt = NOW; ui.kioskState = 'awake'; write(`kioskSessions/k1: lastActivityAt=${NOW} (Wake Kiosk by ${me()}). Tablet resumes via onSnapshot.`); }
+function leaderRsvp(eid, sid, answer) {
+  setRsvp(eid, sid, answer, TODAY + ' ' + NOW, me(), null);
+  write(`rsvps/${eid}_${sid}: answer=${answer}, history += {by: ${me()}, attendanceId: null}`);
+}
+
+// ---------- Navigation ----------
+const go = (screen, p = {}) => { ui.stack.push({ screen, ...p }); ui.confirm = null; ui.openHist = null; ui.menu = false; };
+const back = () => { ui.stack.pop(); ui.confirm = null; ui.openHist = null; };
+const top = () => ui.stack[ui.stack.length - 1];
+
+// ---------- Screen bodies (shared by all variants) ----------
+function kioskBanner() {
+  if (!hasTonight()) return `<div class="banner"><strong>No Meeting today yet</strong><p class="note">The Admin starts today's Meeting on the Kiosk tablet. If the Admin can't make it, add the Attendance afterwards as a past Meeting.</p></div>`;
+  if (ui.kioskState === 'asleep') return `<div class="banner warn"><strong>Kiosk asleep since 7:22pm</strong><p class="note">No check-ins for 30 minutes, so the tablet shows "Kiosk asleep, ask a Leader".</p><button class="btn primary wide" data-act="wake">Wake Kiosk</button></div>`;
+  return `<div class="row"><span class="pill ok">Kiosk awake</span><span class="note">last check-in ${kiosk.lastActivityAt === NOW ? 'just now' : '7:22pm'} · sleeps after 30 min idle · closes 10pm</span></div>`;
+}
+function confirmUndo(date, attId) {
+  const a = db.meetings[date].attendance.find(x => x.id === attId); const s = scout(a.scoutId);
+  const rs = rsvpsFrom(attId);
+  const lines = rs.map(h => { const [eid] = h.k.split('_'); return `<li>${esc(ev(eid).name)}: ${h.answer === 'going' ? 'Going' : 'Not going'}</li>`; }).join('');
+  return `<div class="confirm"><div>Undo ${esc(s.firstName)}'s check-in?</div>${rs.length ? `<div>This also removes the RSVP answers ${esc(s.firstName)} gave during it:</div><ul style="margin:0;padding-left:18px">${lines}</ul>` : `<div class="note">No RSVP answers were given during this check-in.</div>`}<div class="row"><button class="btn danger solid" data-act="undo" data-date="${date}" data-id="${attId}">Undo check-in</button><button class="btn" data-act="cancel">Keep</button></div></div>`;
+}
+function liveScreen() {
+  if (!hasTonight()) return kioskBanner() + pastMeetingCta();
+  const m = tonight; const ins = liveAtt(m).sort((a, b) => b.at.localeCompare(a.at));
+  const outs = active().filter(s => !m.checkedIn[s.id]);
+  return `${kioskBanner()}
+  <div class="stats"><div><span class="big">${ins.length}</span><span class="label">checked in</span></div><div><span class="big" style="color:var(--muted)">${outs.length}</span><span class="label">not yet</span></div></div>
+  <div class="sec"><h3>Checked in <small>newest first</small></h3><div class="list">${ins.map(a => { const s = scout(a.scoutId);
+    return `<div class="item"><div class="main"><span class="t" data-act="scout" data-id="${s.id}" style="cursor:pointer">${esc(full(s))}</span><span class="s">${a.at.slice(11)}pm · ${METHOD[a.method]}${a.method === 'leader' ? ' (' + esc(a.by) + ')' : ''}${rsvpsFrom(a.id).length ? ' · ' + rsvpsFrom(a.id).length + ' RSVP' : ''}</span></div><button class="btn danger" data-act="askundo" data-date="${TODAY}" data-id="${a.id}">Undo</button></div>${ui.confirm === a.id ? `<div style="padding:0 10px 10px">${confirmUndo(TODAY, a.id)}</div>` : ''}`; }).join('') || '<div class="item"><span class="note">Nobody yet.</span></div>'}</div></div>
+  <div class="sec"><h3>Not checked in <small>Leader check-in asks no RSVPs</small></h3><div class="list">${outs.map(s => `<div class="item"><div class="main"><span class="t" data-act="scout" data-id="${s.id}" style="cursor:pointer">${esc(full(s))}</span>${m.notFound.includes(s.id) ? '<span class="s">Marked not found on the Kiosk</span>' : ''}</div><button class="btn" data-act="leaderin" data-date="${TODAY}" data-id="${s.id}">Check in</button></div>`).join('')}</div></div>`;
+}
+function pastMeetingCta() { return `<button class="btn wide" data-act="go" data-screen="addMeeting">Add a past Meeting</button>`; }
+function rosterScreen() {
+  const inactive = db.scouts.filter(s => !s.active);
+  return `<form class="form" data-form="addScout"><span class="label">Add Scout</span><div class="grid2"><label class="field">First name<input id="fFirst" required></label><label class="field">Last name<input id="fLast" required></label></div><button class="btn primary">Add to Roster</button></form>
+  <div class="sec"><h3>Active <small>${active().length} Scouts</small></h3><div class="list">${active().map(s => scoutRow(s)).join('')}</div></div>
+  ${inactive.length ? `<div class="sec"><h3>Inactive <small>kept for history</small></h3><div class="list">${inactive.map(s => scoutRow(s)).join('')}</div></div>` : ''}`;
+}
+function presence(s) { const ms = PAST.concat(hasTonight() ? [TODAY] : []).filter(d => db.meetings[d] && d >= s.createdAt); const p = ms.filter(d => db.meetings[d].checkedIn[s.id]).length; return { p, y: ms.length, ms }; }
+function scoutRow(s) { const { p, y } = presence(s); return `<button class="item" data-act="scout" data-id="${s.id}"><div class="main"><span class="t">${esc(full(s))}</span><span class="s">${y ? `Present ${p} of ${y}` : 'No Meetings yet'}${s.createdAt > '2026-09-01' ? ' · added ' + fmtShort(s.createdAt) : ''}</span></div><span class="chev">›</span></button>`; }
+function scoutScreen(id) {
+  const s = scout(id); const { p, y } = presence(s); const used = scoutUsed(id);
+  const allMs = Object.keys(db.meetings).filter(d => (d !== TODAY || hasTonight()) && d >= s.createdAt).sort().reverse();
+  const rs = db.events.map(e => ({ e, r: db.rsvps[e.id + '_' + id] })).filter(x => x.r?.answer || x.e.endDate >= TODAY);
+  return `<div class="stats"><div><span class="big">${p}<span style="color:var(--muted)">/${y}</span></span><span class="label">Meetings present since ${fmtShort(s.createdAt)}</span></div></div>
+  ${s.active ? '' : '<div class="banner warn"><strong>Inactive</strong><p class="note">Not on the Kiosk or RSVP lists. History is kept.</p></div>'}
+  <div class="sec"><h3>Attendance</h3><div class="list">${allMs.map(d => { const on = !!db.meetings[d].checkedIn[id]; return `<button class="item" data-act="meeting" data-date="${d}"><span class="dot ${on ? 'on' : ''}"></span><div class="main"><span class="t">${fmt(d)}${d === TODAY ? ' · tonight' : ''}</span></div><span class="pill ${on ? 'ok' : ''}">${on ? 'Present' : 'Absent'}</span></button>`; }).join('') || '<div class="item note">No Meetings since added.</div>'}</div></div>
+  <div class="sec"><h3>RSVPs</h3><div class="list">${rs.map(({ e, r }) => `<button class="item ${e.cancelled ? 'struck' : ''}" data-act="event" data-id="${e.id}"><div class="main"><span class="t">${esc(e.name)}</span><span class="s">${range(e)}</span></div><span class="pill ${r?.answer === 'going' ? 'ok' : r?.answer === 'notGoing' ? 'bad' : ''}">${r?.answer === 'going' ? 'Going' : r?.answer === 'notGoing' ? 'Not going' : 'No answer'}</span></button>`).join('')}</div></div>
+  <div class="sec"><h3>Edit</h3><form class="form" data-form="editScout" data-id="${id}"><div class="grid2"><label class="field">First name<input id="eFirst" value="${esc(s.firstName)}"></label><label class="field">Last name<input id="eLast" value="${esc(s.lastName)}"></label></div><button class="btn">Save name</button></form>
+  <div class="row"><button class="btn" data-act="toggleActive" data-id="${id}">${s.active ? 'Deactivate' : 'Reactivate'}</button>${ui.confirm === 'del' + id ? `<button class="btn danger solid" data-act="delScout" data-id="${id}">Delete forever</button><button class="btn" data-act="cancel">Keep</button>` : `<button class="btn danger" data-act="askdel" data-id="${id}" ${used ? 'disabled' : ''}>Delete</button>`}</div>
+  ${used ? '<p class="note">Delete is only for typos: this Scout has Attendance or RSVPs. Deactivate instead.</p>' : '<p class="note">No Attendance or RSVPs, so this Scout can be deleted.</p>'}</div>`;
+}
+function eventRow(e) { const c = rsvpCounts(e.id); return `<button class="item ${e.cancelled ? 'struck' : ''}" data-act="event" data-id="${e.id}"><div class="main"><span class="t">${esc(e.name)}</span><span class="s">${range(e)}${e.location ? ' · ' + esc(e.location) : ''}</span></div>${e.cancelled ? '<span class="pill bad">Cancelled</span>' : `<span class="pill ok">${c.g} going</span>`}<span class="chev">›</span></button>`; }
+function eventsScreen() {
+  return `<button class="btn primary wide" data-act="go" data-screen="addEvent">Add Event</button>
+  <div class="sec"><h3>Upcoming</h3><div class="list">${upcoming().map(eventRow).join('')}</div></div>
+  <div class="sec"><h3>Past</h3><div class="list">${pastEvents().map(eventRow).join('')}</div></div>`;
+}
+function addEventScreen() {
+  return `<form class="form" data-form="addEvent"><label class="field">Name<input id="nName" required placeholder="Campout"></label><div class="grid2"><label class="field">Starts<input id="nStart" type="date" required value="2027-02-19"></label><label class="field">Ends<input id="nEnd" type="date" required value="2027-02-21"></label></div><label class="field">Location (optional)<input id="nLoc"></label><button class="btn primary">Add Event</button><p class="note">Scouts are asked about it at every Meeting until it starts.</p></form>`;
+}
+function eventScreen(id) {
+  const e = ev(id); const c = rsvpCounts(id); const used = eventUsed(id); const past = e.endDate < TODAY;
+  return `<div class="${e.cancelled ? 'struck' : ''}" style="display:grid;gap:2px"><span class="tt" style="font-weight:700;font-size:17px">${esc(e.name)}</span><span class="note">${range(e)}${e.location ? ' · ' + esc(e.location) : ''}</span></div>
+  ${e.cancelled ? '<div class="banner bad"><strong>Cancelled</strong><p class="note">The Kiosk no longer asks about it.</p></div>' : ''}
+  <div class="stats"><div><span class="big">${c.g}</span><span class="label">going</span></div><div><span class="big" style="color:var(--bad)">${c.n}</span><span class="label">not going</span></div><div><span class="big" style="color:var(--muted)">${c.none}</span><span class="label">no answer</span></div></div>
+  <div class="sec"><h3>RSVPs <small>${past ? 'Event is over' : 'tap a name for history'}</small></h3><div class="list">${active().map(s => { const r = db.rsvps[id + '_' + s.id]; const a = r?.answer ?? null; const last = r?.history[r.history.length - 1];
+    return `<div class="item"><div class="main"><span class="t" data-act="hist" data-id="${s.id}" style="cursor:pointer">${esc(full(s))}</span><span class="s">${last ? (last.by === 'kiosk' ? 'Kiosk, ' + fmtShort(last.at.slice(0, 10)) : esc(last.by) + ', ' + fmtShort(last.at.slice(0, 10))) : '—'}</span></div><span class="rsvp"><button class="g" aria-pressed="${a === 'going'}" data-act="rsvp" data-e="${id}" data-s="${s.id}" data-a="going">Going</button><button class="n" aria-pressed="${a === 'notGoing'}" data-act="rsvp" data-e="${id}" data-s="${s.id}" data-a="notGoing">Not</button><button class="c" aria-pressed="${a === null}" data-act="rsvp" data-e="${id}" data-s="${s.id}" data-a="">—</button></span></div>${ui.openHist === s.id ? `<div class="hist">${r?.history.length ? r.history.map(h => `<span>${h.at} · ${h.answer === 'going' ? 'Going' : h.answer === 'notGoing' ? 'Not going' : 'Cleared'} · ${h.by === 'kiosk' ? 'Kiosk check-in ' + esc(h.attendanceId) : esc(h.by)}</span>`).join('') : '<span>Never answered.</span>'}</div>` : ''}`; }).join('')}</div>
+  <p class="note">— clears the answer, so the Kiosk asks again next Meeting.</p></div>
+  <div class="sec"><h3>Edit</h3><form class="form" data-form="editEvent" data-id="${id}"><label class="field">Name<input id="xName" value="${esc(e.name)}"></label><div class="grid2"><label class="field">Starts<input id="xStart" type="date" value="${e.startDate}"></label><label class="field">Ends<input id="xEnd" type="date" value="${e.endDate}"></label></div><label class="field">Location<input id="xLoc" value="${esc(e.location)}"></label><button class="btn">Save</button></form>
+  <div class="row"><button class="btn" data-act="toggleCancel" data-id="${id}">${e.cancelled ? 'Uncancel' : 'Cancel Event'}</button>${ui.confirm === 'del' + id ? `<button class="btn danger solid" data-act="delEvent" data-id="${id}">Delete forever</button><button class="btn" data-act="cancel">Keep</button>` : `<button class="btn danger" data-act="askdel" data-id="${id}" ${used ? 'disabled' : ''}>Delete</button>`}</div>
+  <p class="note">${used ? 'Delete is only for mistakes: this Event has RSVPs. Cancel it instead.' : 'No RSVPs yet, so it can be deleted.'}</p></div>`;
+}
+function meetingRow(d) { const m = db.meetings[d]; const n = liveAtt(m).length; return `<button class="item" data-act="meeting" data-date="${d}"><div class="main"><span class="t">${fmt(d)}${d === TODAY ? ' · tonight' : ''}</span><span class="s">${n} present${d === TODAY ? ' so far' : ''}</span></div>${d === TODAY ? '<span class="pill ok">Live</span>' : ''}<span class="chev">›</span></button>`; }
+function meetingsScreen() { return `${pastMeetingCta()}<div class="list">${meetingDates().map(meetingRow).join('')}</div><p class="note">Mon Oct 12 has no Meeting: skipped for the holiday.</p>`; }
+function addMeetingScreen() {
+  return `<form class="form" data-form="addMeeting"><label class="field">Date<input id="mDate" type="date" required max="2026-11-08" value="${nextNoMeetingMonday()}"></label><button class="btn primary">Create Meeting</button><p class="note">Past dates only. Today's Meeting is started by the Admin on the Kiosk.</p>${ui.flash ? `<p class="note" style="color:var(--bad)">${esc(ui.flash)}</p>` : ''}</form>`;
+}
+function meetingScreen(d) {
+  if (d === TODAY) return liveScreen();
+  const m = db.meetings[d]; const present = liveAtt(m); const ids = new Set([...active().map(s => s.id), ...present.map(a => a.scoutId)]);
+  const list = [...ids].map(scout).filter(s => s.createdAt <= d).sort((a, b) => a.firstName.localeCompare(b.firstName));
+  return `<div class="stats"><div><span class="big">${present.length}</span><span class="label">present</span></div></div>
+  <p class="note">Tap to mark present. Unmarking undoes that check-in, including any RSVP answers given during it.</p>
+  <div class="list">${list.map(s => { const attId = m.checkedIn[s.id]; const a = attId && m.attendance.find(x => x.id === attId);
+    return `<button class="item" data-act="${attId ? 'askundo' : 'leaderin'}" data-date="${d}" data-id="${attId || s.id}"><span class="check ${attId ? 'on' : ''}">${attId ? '✓' : ''}</span><div class="main"><span class="t">${esc(full(s))}</span>${a ? `<span class="s">${METHOD[a.method]}</span>` : ''}</div></button>${ui.confirm === attId && attId ? `<div style="padding:0 10px 10px">${confirmUndo(d, attId)}</div>` : ''}`; }).join('')}</div>
+  ${present.length ? '<p class="note">Delete appears once nobody is marked present.</p>' : (ui.confirm === 'delm' ? `<div class="row"><button class="btn danger solid" data-act="delMeeting" data-date="${d}">Delete Meeting</button><button class="btn" data-act="cancel">Keep</button></div>` : `<button class="btn danger wide" data-act="askdelm">Delete this Meeting</button>`)}`;
+}
+function adminScreen() {
+  const us = [...db.users].sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
+  return `<p class="note">Everyone who signs in with Google starts as a Parent. Turn on Leader to give access. It takes effect on their next tap.</p>
+  <div class="list">${us.map(u => `<div class="item"><div class="main"><span class="t">${esc(u.name)}</span><span class="s">${esc(u.email)} · signed up ${fmtShort(u.since)}</span></div>${u.role === 'admin' ? '<span class="pill ok">Admin</span>' : `${u.isNew ? '<span class="pill warn">Waiting</span>' : ''}<button class="btn ${u.role === 'leader' ? 'primary' : ''}" data-act="role" data-id="${u.uid}" aria-pressed="${u.role === 'leader'}">${u.role === 'leader' ? 'Leader ✓' : 'Make Leader'}</button>`}</div>`).join('')}</div>`;
+}
+function parentPage() {
+  return `<div class="waiting"><h2>You're signed in</h2><p>Hi ${esc(me().split(' ')[0])}. Troop 813's Leader screens are only for Leaders for now.</p><p>If you're a Leader, ask Mark Goho to give you access, then reload this page.</p><button class="btn" data-act="noop">Sign out</button></div>`;
+}
+const SCREENS = {
+  live: { title: 'Tonight', body: liveScreen }, roster: { title: 'Roster', body: rosterScreen }, events: { title: 'Events', body: eventsScreen },
+  meetings: { title: 'Meetings', body: meetingsScreen }, admin: { title: 'Users', body: adminScreen },
+  scout: { title: p => full(scout(p.id)), body: p => scoutScreen(p.id) }, event: { title: p => ev(p.id).name, body: p => eventScreen(p.id) },
+  meeting: { title: p => p.date === TODAY ? 'Tonight' : fmt(p.date), body: p => meetingScreen(p.date) },
+  addEvent: { title: 'New Event', body: addEventScreen }, addMeeting: { title: 'Add past Meeting', body: addMeetingScreen },
+};
+function renderScreen(p) { const S = SCREENS[p.screen]; return { title: typeof S.title === 'function' ? S.title(p) : S.title, body: S.body(p) }; }
+const barHtml = (title, backable, extra = '') => `<div class="bar">${backable ? '<button class="iconbtn" data-act="back" aria-label="Back">‹</button>' : ''}<h2>${esc(title)}</h2>${extra}</div>`;
+
+// ---------- Variant A: Tabs ----------
+function variantA() {
+  const tabs = [['live', '●', 'Tonight'], ['roster', '☰', 'Roster'], ['events', '⛺', 'Events'], ['meetings', '▦', 'Meetings']].concat(ui.role === 'admin' ? [['admin', '⚑', 'Users']] : []);
+  if (!tabs.some(t => t[0] === ui.tab)) ui.tab = 'live';
+  const cur = top() || { screen: ui.tab }; const r = renderScreen(cur);
+  return `${barHtml(r.title, ui.stack.length > 0)}<div class="body">${r.body}</div><nav class="tabs">${tabs.map(([k, i, l]) => `<button data-act="tab" data-tab="${k}" aria-current="${ui.tab === k}"><span class="ico">${i}</span>${l}</button>`).join('')}</nav>`;
+}
+// ---------- Variant B: Tonight-first home ----------
+function homeB() {
+  const ins = hasTonight() ? liveAtt(tonight).length : 0;
+  const waiting = db.users.filter(u => u.isNew && u.role === 'parent').length;
+  const tonightCard = hasTonight() ? `<div class="sec"><h3>Tonight <small>${fmt(TODAY)}</small></h3>${kioskBanner()}<div class="stats"><div><span class="big">${ins}</span><span class="label">checked in</span></div><div><span class="big" style="color:var(--muted)">${active().length - ins}</span><span class="label">not yet</span></div></div><button class="btn primary wide" data-act="go" data-screen="live">Check-ins · Undo · Check in</button></div>` : `<div class="sec"><h3>Tonight</h3>${kioskBanner()}</div>`;
+  return `${tonightCard}
+  <div class="sec"><h3>Coming up <small><button class="btn" data-act="go" data-screen="addEvent">+ Event</button></small></h3><div class="list">${upcoming().map(eventRow).join('')}</div></div>
+  <div class="sec"><h3>Recent Meetings <small><button class="btn" data-act="go" data-screen="meetings">All</button></small></h3><div class="list">${meetingDates().filter(d => d !== TODAY).slice(0, 3).map(meetingRow).join('')}</div></div>
+  <div class="list"><button class="item" data-act="go" data-screen="roster"><div class="main"><span class="t">Roster</span><span class="s">${active().length} active Scouts</span></div><span class="chev">›</span></button>
+  <button class="item" data-act="go" data-screen="events"><div class="main"><span class="t">All Events</span><span class="s">including past and cancelled</span></div><span class="chev">›</span></button>
+  ${ui.role === 'admin' ? `<button class="item" data-act="go" data-screen="admin"><div class="main"><span class="t">Users</span><span class="s">Parents and Leaders</span></div>${waiting ? `<span class="pill warn">${waiting} waiting</span>` : ''}<span class="chev">›</span></button>` : ''}</div>`;
+}
+function variantB() {
+  const cur = top(); if (!cur) return `${barHtml('Troop 813', false)}<div class="body">${homeB()}</div>`;
+  const r = renderScreen(cur); return `${barHtml(r.title, true)}<div class="body">${r.body}</div>`;
+}
+// ---------- Variant C: Timeline ----------
+function feedC() {
+  const f = ui.filter; const items = [];
+  if (f !== 'events') for (const d of meetingDates()) items.push({ kind: 'm', date: d });
+  if (f !== 'meetings') for (const e of db.events) items.push({ kind: 'e', date: e.startDate, e });
+  const fut = items.filter(i => i.date > TODAY).sort((a, b) => a.date.localeCompare(b.date));
+  const past = items.filter(i => i.date < TODAY).sort((a, b) => b.date.localeCompare(a.date));
+  const card = i => { const dd = D(i.date); const box = `<div class="daybox"><span>${dd.toLocaleDateString('en-US', { month: 'short' })}</span><b>${dd.getDate()}</b><span>${dd.toLocaleDateString('en-US', { weekday: 'short' })}</span></div>`;
+    if (i.kind === 'm') { const n = liveAtt(db.meetings[i.date]).length; return `<button class="item" data-act="meeting" data-date="${i.date}">${box}<div class="main"><span class="t">Meeting</span><span class="s">${n} present</span></div><span class="chev">›</span></button>`; }
+    const c = rsvpCounts(i.e.id); return `<button class="item ${i.e.cancelled ? 'struck' : ''}" data-act="event" data-id="${i.e.id}">${box}<div class="main"><span class="t">${esc(i.e.name)}</span><span class="s">${i.e.cancelled ? 'Cancelled' : `${c.g} going · ${c.n} not · ${c.none} no answer`}</span></div><span class="chev">›</span></button>`; };
+  return `<div class="chips">${[['all', 'All'], ['meetings', 'Meetings'], ['events', 'Events']].map(([k, l]) => `<button data-act="filter" data-f="${k}" aria-pressed="${f === k}">${l}</button>`).join('')}</div>
+  ${f !== 'events' ? `<div class="datehead">Tonight · ${fmt(TODAY)}</div>${liveScreen()}` : ''}
+  ${fut.length ? `<div class="datehead">Coming up</div><div class="list">${fut.map(card).join('')}</div>` : ''}
+  <div class="datehead">Earlier</div><div class="list">${past.map(card).join('')}</div>`;
+}
+function variantC() {
+  const cur = top(); const menuBtn = '<button class="iconbtn" data-act="menu" aria-label="Menu">☰</button>';
+  const sheet = ui.menu ? `<div class="sheet" data-act="closemenu"><div><button class="btn wide" data-act="go" data-screen="roster">Roster</button><button class="btn wide" data-act="go" data-screen="addEvent">Add Event</button><button class="btn wide" data-act="go" data-screen="addMeeting">Add a past Meeting</button>${ui.role === 'admin' ? '<button class="btn wide" data-act="go" data-screen="admin">Users</button>' : ''}<button class="btn wide" data-act="closemenu">Close</button></div></div>` : '';
+  if (!cur) return `${barHtml('Troop 813', false, menuBtn)}<div class="body">${feedC()}</div>${sheet}`;
+  const r = renderScreen(cur); return `${barHtml(r.title, true, menuBtn)}<div class="body">${r.body}</div>${sheet}`;
+}
+
+// ---------- Render ----------
+const $ = id => document.getElementById(id);
+function render() {
+  const keys = Object.keys(VARIANTS); const v = VARIANTS[ui.variant];
+  $('vlabel').textContent = `${ui.variant.toUpperCase()} (${v.name}) · ${keys.indexOf(ui.variant) + 1}/${keys.length}`;
+  $('variantTitle').textContent = `${ui.variant.toUpperCase()}: ${v.name}`; $('variantDesc').textContent = v.desc;
+  $('roleSeg').innerHTML = [['admin', 'Admin'], ['leader', 'Leader'], ['parent', 'Parent']].map(([k, l]) => `<button type="button" data-role="${k}" aria-pressed="${ui.role === k}">${l}</button>`).join('');
+  $('kioskSeg').innerHTML = [['awake', 'Awake'], ['asleep', 'Asleep'], ['none', 'No Meeting']].map(([k, l]) => `<button type="button" data-kiosk="${k}" aria-pressed="${ui.kioskState === k}">${l}</button>`).join('');
+  const scrollY = $('phone').querySelector('.body')?.scrollTop || 0;
+  $('phone').innerHTML = ui.role === 'parent' ? `${barHtml('Troop 813', false)}${parentPage()}` : ({ a: variantA, b: variantB, c: variantC })[ui.variant]();
+  const b = $('phone').querySelector('.body'); if (b && ui.keepScroll) b.scrollTop = scrollY; ui.keepScroll = false;
+  $('log').innerHTML = log.length ? log.map(l => `<div>${esc(l)}</div>`).join('') : '<p class="note">Nothing yet. Undo a check-in, change an RSVP or wake the Kiosk.</p>';
+}
+function setVariant(k, push = true) { ui.variant = k; ui.stack = []; ui.menu = false; ui.confirm = null; const h = k + (document.body.classList.contains('phoneonly') ? '-phone' : ''); if (push) history.replaceState(null, '', '#' + h); render(); }
+function readHash() { const h = location.hash.slice(1); const m = /^([abc])(-phone)?$/.exec(h); document.body.classList.toggle('phoneonly', !!m?.[2]); setVariant(m ? m[1] : 'a', false); }
+function cycle(dir) { const k = Object.keys(VARIANTS); setVariant(k[(k.indexOf(ui.variant) + dir + k.length) % k.length]); }
+$('prev').onclick = () => cycle(-1); $('next').onclick = () => cycle(1);
+$('phoneOnly').onclick = () => { document.body.classList.toggle('phoneonly'); setVariant(ui.variant); };
+document.addEventListener('keydown', e => { if (e.target.closest('input, textarea, select, [contenteditable]')) return; if (e.key === 'ArrowLeft') cycle(-1); if (e.key === 'ArrowRight') cycle(1); });
+window.addEventListener('hashchange', readHash);
+document.addEventListener('click', e => {
+  const r = e.target.closest('[data-role]'); if (r) { ui.role = r.dataset.role; ui.stack = []; render(); return; }
+  const k = e.target.closest('[data-kiosk]'); if (k) { ui.kioskState = k.dataset.kiosk; if (k.dataset.kiosk === 'asleep') kiosk.lastActivityAt = '18:50'; ui.stack = ui.stack.filter(s => !(s.screen === 'meeting' && s.date === TODAY)); render(); return; }
+  const t = e.target.closest('[data-act]'); if (!t || !$('phone').contains(t)) return;
+  if (t.classList.contains('sheet') && e.target !== t) return;
+  const d = t.dataset; ui.keepScroll = true;
+  switch (d.act) {
+    case 'tab': ui.tab = d.tab; ui.stack = []; ui.keepScroll = false; break;
+    case 'back': back(); ui.keepScroll = false; break;
+    case 'go': go(d.screen); ui.flash = null; ui.keepScroll = false; break;
+    case 'scout': go('scout', { id: d.id }); ui.keepScroll = false; break;
+    case 'event': go('event', { id: d.id }); ui.keepScroll = false; break;
+    case 'meeting': go('meeting', { date: d.date }); ui.keepScroll = false; break;
+    case 'menu': ui.menu = true; break;
+    case 'closemenu': ui.menu = false; break;
+    case 'filter': ui.filter = d.f; break;
+    case 'askundo': ui.confirm = ui.confirm === d.id ? null : d.id; break;
+    case 'cancel': ui.confirm = null; break;
+    case 'undo': undo(d.date, d.id); ui.confirm = null; break;
+    case 'leaderin': leaderCheckIn(d.date, d.id); break;
+    case 'wake': wake(); break;
+    case 'rsvp': leaderRsvp(d.e, d.s, d.a || null); break;
+    case 'hist': ui.openHist = ui.openHist === d.id ? null : d.id; break;
+    case 'toggleActive': { const s = scout(d.id); s.active = !s.active; write(`scouts/${d.id}: active=${s.active}`); break; }
+    case 'toggleCancel': { const x = ev(d.id); x.cancelled = !x.cancelled; write(`events/${d.id}: cancelled=${x.cancelled}`); break; }
+    case 'askdel': ui.confirm = 'del' + d.id; break;
+    case 'delScout': db.scouts = db.scouts.filter(s => s.id !== d.id); write(`scouts/${d.id}: deleted (no Attendance or RSVPs)`); back(); break;
+    case 'delEvent': db.events = db.events.filter(x => x.id !== d.id); write(`events/${d.id}: deleted (no RSVPs)`); back(); break;
+    case 'askdelm': ui.confirm = 'delm'; break;
+    case 'delMeeting': delete db.meetings[d.date]; write(`meetings/${d.date}: deleted (zero Attendance)`); back(); break;
+    case 'role': { const u = db.users.find(x => x.uid === d.id); u.role = u.role === 'leader' ? 'parent' : 'leader'; u.isNew = false; write(`users/${u.uid}: role=${u.role} (by ${me()})`); break; }
+    default: return;
+  }
+  render();
+});
+document.addEventListener('submit', e => {
+  e.preventDefault(); const f = e.target.dataset.form; const v = id => $(id).value.trim();
+  if (f === 'addScout') { const id = 's' + (db.scouts.length + 100); db.scouts.push(S(id, v('fFirst'), v('fLast'), TODAY)); write(`scouts/${id}: ${v('fFirst')} ${v('fLast')}, active=true, createdAt=${TODAY}`); }
+  if (f === 'editScout') { const s = scout(e.target.dataset.id); s.firstName = v('eFirst'); s.lastName = v('eLast'); write(`scouts/${s.id}: firstName=${s.firstName}, lastName=${s.lastName}`); }
+  if (f === 'addEvent') { const id = 'e' + (db.events.length + 100); db.events.push({ id, name: v('nName'), startDate: v('nStart'), endDate: v('nEnd'), location: v('nLoc'), cancelled: false }); write(`events/${id}: ${v('nName')} ${v('nStart')}..${v('nEnd')}`); back(); go('event', { id }); }
+  if (f === 'editEvent') { const x = ev(e.target.dataset.id); Object.assign(x, { name: v('xName'), startDate: v('xStart'), endDate: v('xEnd'), location: v('xLoc') }); write(`events/${x.id}: updated`); }
+  if (f === 'addMeeting') { const d = v('mDate');
+    if (d >= TODAY) { ui.flash = 'Pick a past date. Today\'s Meeting starts on the Kiosk.'; }
+    else if (db.meetings[d]) { ui.flash = `${fmt(d)} already has a Meeting.`; }
+    else { db.meetings[d] = { date: d, startedBy: me(), handoffOrder: [], notFound: [], checkedIn: {}, attendance: [] }; PAST.push(d); PAST.sort(); write(`meetings/${d}: created by ${me()} (past date, no Kiosk)`); ui.flash = null; back(); go('meeting', { date: d }); } }
+  render();
+});
+readHash();
+</script>

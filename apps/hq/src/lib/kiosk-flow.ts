@@ -2,9 +2,10 @@
 // functions of (Meeting doc, Roster, Events, RSVPs, now). Screens only render
 // what these return; Go never recomputes them.
 //
-// So far: the name list. Later tickets add nextScout and the was-next
-// fallback (#24), pendingEvents / isLastChance (#26) and asleep (#27).
+// So far: the name list, the Handoff and asleep. #26 adds pendingEvents /
+// isLastChance.
 import type { Scout } from "./contract.gen";
+import { meetingEnds } from "./dates";
 import type { WithId } from "./live";
 
 /** One row of the Kiosk name list. */
@@ -80,4 +81,30 @@ export function nameList(scouts: WithId<Scout>[]): NameListEntry[] {
       return { id: s.id, label: shared ? `${first} ${initial}.` : first };
     })
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** How long a Kiosk session stays awake without a Kiosk write or a Wake (ADR 0003; Go's auth.KioskIdle). */
+export const KIOSK_IDLE_MS = 30 * 60 * 1000;
+
+/** The slice of kioskSessions/{id} the sleep decision reads. */
+export interface SleepState {
+  meetingId: string;
+  lastActivityAt: Date;
+}
+
+/** True from 22:00 New York on the Meeting's date: no Wake can revive the Kiosk. */
+export function meetingOver(meetingId: string, now: Date): boolean {
+  return now.getTime() >= meetingEnds(meetingId).getTime();
+}
+
+/**
+ * Whether the Kiosk is asleep (stories 37, 38): 30 minutes since its last
+ * write or Wake, or past 22:00 on the Meeting date. The tablet runs this on
+ * its own timer; Go enforces the same rule on every call.
+ */
+export function asleep(session: SleepState, now: Date): boolean {
+  return (
+    now.getTime() >= session.lastActivityAt.getTime() + KIOSK_IDLE_MS ||
+    meetingOver(session.meetingId, now)
+  );
 }

@@ -28,12 +28,15 @@
     live,
     kiosk,
     onExpired,
+    onAsleep,
   }: {
     api: Api;
     live: Live;
     kiosk: KioskClaims;
     /** The server says the session is over (22:00 or replaced). */
     onExpired: () => void;
+    /** The server says the session is asleep: the parent shows the asleep screen. */
+    onAsleep: () => void;
   } = $props();
 
   // The parent re-creates this component for a new session.
@@ -101,9 +104,9 @@
       if (code === "session_expired") {
         onExpired();
       } else if (code === "session_asleep") {
-        // The asleep screen and Wake arrive with #27.
-        confirming = null;
-        message = "Kiosk asleep, ask a Leader";
+        // The asleep screen covers this one; whatever the Scout was doing
+        // is still here when a Leader wakes the Kiosk.
+        onAsleep();
       } else {
         message = fail;
       }

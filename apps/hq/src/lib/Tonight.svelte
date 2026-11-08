@@ -5,6 +5,7 @@
   import { ApiError, type Api } from "./api";
   import type { Attendance, Scout } from "./contract.gen";
   import { clockTime, localDate } from "./dates";
+  import { asleep, meetingOver } from "./kiosk-flow";
   import type { Live, WithId } from "./live";
 
   let {
@@ -21,6 +22,30 @@
   const attendance = live.attendance(meetingId);
   // svelte-ignore state_referenced_locally
   const scouts = live.scouts();
+  // svelte-ignore state_referenced_locally
+  const kioskSession = live.currentKioskSession(meetingId);
+
+  // Ticked once a second: the Kiosk falls asleep by the clock, with no
+  // snapshot to say so.
+  // svelte-ignore state_referenced_locally
+  let at = $state(now());
+  $effect(() => {
+    const timer = setInterval(() => {
+      at = now();
+    }, 1000);
+    return () => clearInterval(timer);
+  });
+
+  // The Kiosk header: awake (with its last activity), asleep (Wake), or over
+  // for the night. null while loading or when no Kiosk session is live.
+  const kiosk = $derived.by(() => {
+    if ($kioskSession.state !== "ready" || !$kioskSession.doc) return null;
+    const lastActivityAt = $kioskSession.doc.lastActivityAt.toDate();
+    if (meetingOver(meetingId, at)) return { state: "over" } as const;
+    return asleep({ meetingId, lastActivityAt }, at)
+      ? ({ state: "asleep" } as const)
+      : ({ state: "awake", lastActivityAt } as const);
+  });
 
   // Leader uid → name, for "Leader: <name>". Unknown → just "Leader".
   let leaderNames = $state<Record<string, string>>({});
@@ -96,6 +121,8 @@
     }
   }
 
+  const wake = () =>
+    run("Couldn't wake the Kiosk. Try again.", () => api.wakeKiosk());
   const checkIn = (s: WithId<Scout>) =>
     run(`Couldn't check in ${fullName(s)}. Try again.`, () =>
       api.leaderCheckIn(meetingId, s.id),
@@ -116,6 +143,22 @@
   {:else if $meeting.state === "loading" || $attendance.state === "loading" || $scouts.state === "loading"}
     <p>Loading…</p>
   {:else}
+    {#if kiosk}
+      <p class="kiosk-status">
+        {#if kiosk.state === "awake"}
+          <strong>Kiosk awake</strong>
+          · last activity {clockTime(kiosk.lastActivityAt)}
+        {:else if kiosk.state === "asleep"}
+          <strong>Kiosk asleep</strong>
+          <button type="button" disabled={busy} onclick={wake}>
+            Wake Kiosk
+          </button>
+        {:else}
+          <strong>Kiosk closed for the night</strong>
+        {/if}
+      </p>
+    {/if}
+
     <p class="counts">
       <strong>{Object.keys(checkedIn).length} checked in</strong>
       ·

@@ -4,17 +4,13 @@
   // Not checked in list (Leader check-in). A phone never starts a Meeting.
   import { resolve } from "$app/paths";
   import { ApiError, type Api } from "./api";
-  import type {
-    Attendance,
-    RSVPAnswer,
-    RSVPRollbackItem,
-    Scout,
-  } from "./contract.gen";
+  import type { Attendance, RSVPRollbackItem, Scout } from "./contract.gen";
   import { docsOf } from "./events";
   import { clockTime, localDate } from "./dates";
   import { asleep, meetingOver } from "./kiosk-flow";
   import type { Live, WithId } from "./live";
   import ScoutLink from "./ScoutLink.svelte";
+  import UndoConfirm, { loadRollback } from "./UndoConfirm.svelte";
 
   let {
     api,
@@ -112,9 +108,6 @@
     return given;
   });
 
-  const answerText = (a: RSVPAnswer | null) =>
-    a === "going" ? "Going" : a === "notGoing" ? "Not going" : "No answer";
-
   function nameOf(scoutId: string): string {
     const s = scoutsById.get(scoutId);
     return s ? fullName(s) : "Unknown Scout";
@@ -161,13 +154,8 @@
     if (busy) return;
     busy = true;
     message = null;
-    try {
-      rollback = (await api.rsvpRollbackPreview(meetingId, a.id)).items;
-    } catch {
-      rollback = null;
-    } finally {
-      busy = false;
-    }
+    rollback = await loadRollback(api, meetingId, a.id);
+    busy = false;
     confirming = a.id;
   }
   const undo = (a: WithId<Attendance>) =>
@@ -228,36 +216,13 @@
             <span class="rsvps">{n} {n === 1 ? "RSVP" : "RSVPs"}</span>
           {/if}
           {#if confirming === a.id}
-            <span class="confirm">
-              <span>Undo {nameOf(a.scoutId)}'s check-in?</span>
-              {#if rollback === null}
-                <span>
-                  Couldn't load which RSVPs this rolls back; Undo still rolls
-                  them back.
-                </span>
-              {:else if rollback.length > 0}
-                <span>This rolls back:</span>
-                <ul aria-label="RSVPs this rolls back">
-                  {#each rollback as item (item.eventId)}
-                    <li>
-                      {item.eventName}: {answerText(item.from)} → {answerText(
-                        item.to,
-                      )}
-                    </li>
-                  {/each}
-                </ul>
-              {/if}
-              <button type="button" disabled={busy} onclick={() => undo(a)}>
-                Yes, undo
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onclick={() => (confirming = null)}
-              >
-                Cancel
-              </button>
-            </span>
+            <UndoConfirm
+              name={nameOf(a.scoutId)}
+              {rollback}
+              {busy}
+              onConfirm={() => undo(a)}
+              onCancel={() => (confirming = null)}
+            />
           {:else}
             <button
               type="button"

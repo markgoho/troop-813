@@ -5,10 +5,11 @@
   // Meeting" only while nobody is present, and never for tonight's.
   import { resolve } from "$app/paths";
   import { ApiError, type Api } from "./api";
-  import type { Scout } from "./contract.gen";
+  import type { RSVPRollbackItem, Scout } from "./contract.gen";
   import { shortDay } from "./dates";
   import type { Live, WithId } from "./live";
   import ScoutLink from "./ScoutLink.svelte";
+  import UndoConfirm, { loadRollback } from "./UndoConfirm.svelte";
 
   let {
     api,
@@ -48,6 +49,8 @@
 
   let confirming = $state<string | null>(null); // scout id awaiting Yes/Cancel
   let deleting = $state(false);
+  // The answers confirming's Undo rolls back; null when the preview failed.
+  let rollback = $state<RSVPRollbackItem[] | null>(null);
   let busy = $state(false);
   let message = $state<string | null>(null);
 
@@ -70,12 +73,20 @@
     }
   }
 
+  async function askUndo(s: WithId<Scout>) {
+    busy = true;
+    message = null;
+    rollback = await loadRollback(api, meetingId, checkedIn[s.id] ?? "");
+    busy = false;
+    confirming = s.id;
+  }
+
   function toggle(e: MouseEvent, s: WithId<Scout>) {
     // The checkbox mirrors the live Meeting doc, never its own click.
     e.preventDefault();
     if (busy) return;
     if (s.id in checkedIn) {
-      confirming = s.id;
+      void askUndo(s);
     } else {
       confirming = null;
       void run(`Couldn't check in ${fullName(s)}. Try again.`, () =>
@@ -136,19 +147,13 @@
           />
           <span class="name"><ScoutLink scout={s} /></span>
           {#if confirming === s.id}
-            <span class="confirm">
-              <span>Undo {fullName(s)}'s check-in?</span>
-              <button type="button" disabled={busy} onclick={() => undo(s)}>
-                Yes, undo
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onclick={() => (confirming = null)}
-              >
-                Cancel
-              </button>
-            </span>
+            <UndoConfirm
+              name={fullName(s)}
+              {rollback}
+              {busy}
+              onConfirm={() => undo(s)}
+              onCancel={() => (confirming = null)}
+            />
           {/if}
         </li>
       {/each}

@@ -21,7 +21,10 @@ function setup(
   overrides: Parameters<typeof fakeApi>[0] = {},
   meetingId = PAST,
 ) {
-  const api = fakeApi(overrides);
+  const api = fakeApi({
+    rsvpRollbackPreview: async () => ({ items: [] }),
+    ...overrides,
+  });
   const live = fakeLive();
   live.scoutsStore.set(ready(roster));
   live
@@ -75,10 +78,59 @@ describe("MeetingPage checklist", () => {
 
     await userEvent.click(await box("Avery Quill"));
 
-    expect(screen.getByText("Undo Avery Quill's check-in?")).toBeVisible();
+    expect(
+      await screen.findByText("Undo Avery Quill's check-in?"),
+    ).toBeVisible();
     expect(undoCheckIn).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Yes, undo" }));
     expect(undoCheckIn).toHaveBeenCalledWith(PAST, "a1");
+  });
+
+  test("the unmark confirm lists the RSVPs it rolls back", async () => {
+    const rsvpRollbackPreview = vi.fn(async () => ({
+      items: [
+        {
+          eventId: "fall",
+          eventName: "Fall Campout",
+          from: "going" as const,
+          to: null,
+        },
+      ],
+    }));
+    setup({ s1: "a1" }, { rsvpRollbackPreview });
+
+    await userEvent.click(await box("Avery Quill"));
+
+    expect(rsvpRollbackPreview).toHaveBeenCalledExactlyOnceWith(PAST, "a1");
+    const list = await screen.findByRole("list", {
+      name: "RSVPs this rolls back",
+    });
+    expect(
+      within(list)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(["Fall Campout: Going → No answer"]);
+  });
+
+  test("if the rollback can't be previewed, the confirm still works and says so", async () => {
+    const undoCheckIn = vi.fn(async () => {});
+    setup(
+      { s1: "a1" },
+      {
+        undoCheckIn,
+        rsvpRollbackPreview: async () => {
+          throw new ApiError(500, null);
+        },
+      },
+    );
+
+    await userEvent.click(await box("Avery Quill"));
+
+    expect(
+      await screen.findByText(/Couldn't load which RSVPs/),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Yes, undo" }));
+    expect(undoCheckIn).toHaveBeenCalledExactlyOnceWith(PAST, "a1");
   });
 
   test("Cancel leaves them present", async () => {

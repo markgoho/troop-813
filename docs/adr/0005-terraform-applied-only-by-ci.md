@@ -1,6 +1,6 @@
 # Terraform applied only by CI; path-filtered single-job workflows
 
-Status: accepted (2026-11-08). Decided in [Deploy, CI and environments](https://github.com/markgoho/troop-813/issues/10). Builds on [ADR 0001](0001-stack-and-hosting.md).
+Status: accepted (2026-11-08). Decided in [Deploy, CI and environments](https://github.com/markgoho/troop-813/issues/10). Builds on [ADR 0001](0001-stack-and-hosting.md). Amended 2026-11-08 by [Domain and URL](https://github.com/markgoho/troop-813/issues/14): Terraform also owns Hosting sites, custom-domain mappings and the authorized-domain list.
 
 ## Context
 
@@ -9,8 +9,8 @@ The infra is small and should rarely change once built. The owner doesn't want t
 ## Decision
 
 - **Nobody runs `terraform apply` by hand.** `terraform.yml` runs `init → plan → apply -auto-approve` on any push to `trunk` that touches `terraform/**`. A failed apply is fixed forward. State lives in a versioned GCS bucket.
-- **Terraform owns only what nothing else touches:** enabled APIs, the Artifact Registry repo and its keep-newest-5 cleanup policy, the Cloud Run service shape (`ignore_changes` on the image), service accounts and IAM, WIF, the Firestore database (`prevent_destroy`), and Identity Platform config. The **Firebase CLI** owns Hosting, rules and indexes. **CI** owns the image. **No console edits** to anything Terraform owns.
-- **Manual and one-time, outside Terraform:** the billing account and its $1 budget, enabling the Google sign-in provider in the console (so no OAuth client secret ever reaches CI), and `terraform/bootstrap.sh`, which creates the project, the state bucket, the WIF pool/provider and the Terraform SA. That's chicken-and-egg: CI can't authenticate until those exist.
+- **Terraform owns only what nothing else touches:** enabled APIs, the Artifact Registry repo and its keep-newest-5 cleanup policy, the Cloud Run service shape (`ignore_changes` on the image), service accounts and IAM, WIF, the Firestore database (`prevent_destroy`), Identity Platform config (including the authorized-domain list), and the Firebase Hosting sites (one per `apps/*`) and any custom-domain mappings. The **Firebase CLI** deploys Hosting content, rules and indexes. **CI** owns the image. **No console edits** to anything Terraform owns.
+- **Manual and one-time, outside Terraform:** the billing account and its $1 budget, enabling the Google sign-in provider in the console (so no OAuth client secret ever reaches CI) and adding each app origin's `https://<origin>/__/auth/handler` redirect URI to that OAuth client, and `terraform/bootstrap.sh`, which creates the project, the state bucket, the WIF pool/provider and the Terraform SA. That's chicken-and-egg: CI can't authenticate until those exist.
 - **CI auth is WIF only**, restricted to `markgoho/troop-813` on `refs/heads/trunk`. No keys, and no secrets store in the MVP. Terraform uses its own SA. Deploys use a narrower deploy SA.
 - **Three path-filtered workflows, one job each** (checks then deploy): `api.yml`, `web.yml`, `terraform.yml`. Docs-only commits run nothing. Each workflow queues and never cancels. Development is single-threaded: one push, one CI run at a time.
 - **One environment** (prod), plus the Firebase emulators for local dev. Failures are fixed forward, with no rollback path.

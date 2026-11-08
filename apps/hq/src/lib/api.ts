@@ -10,6 +10,7 @@ import type {
   EventInput,
   Health,
   KioskCheckInRequest,
+  KioskNotFoundRequest,
   Me,
   RSVPAnswer,
   SetRole,
@@ -59,6 +60,11 @@ export interface Api {
    * return the existing attendanceId. ApiError 401 session_asleep / session_expired.
    */
   kioskCheckIn(req: KioskCheckInRequest): Promise<CheckInResponse>;
+  /**
+   * Kiosk only: the Kiosk couldn't find this Scout. Never named again this
+   * Meeting, still able to check in. ApiError 401 session_asleep / session_expired.
+   */
+  kioskNotFound(req: KioskNotFoundRequest): Promise<void>;
 }
 
 export class ApiError extends Error {
@@ -172,6 +178,9 @@ export function httpApi(
         req,
       );
       return (await res.json()) as CheckInResponse;
+    },
+    kioskNotFound: async (req) => {
+      await send(fetchFn, token, "POST", "/api/kiosk/not-found", req);
     },
   };
 }

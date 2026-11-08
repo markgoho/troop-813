@@ -36,7 +36,7 @@ export const ErrorCodeBadRequest = "bad_request"; // malformed or disallowed req
 export const ErrorCodeNotFound = "not_found"; // the thing named in the path doesn't exist (404)
 export const ErrorCodeFixedRole = "fixed_role"; // an Admin's role can't be changed from HQ (409)
 export const ErrorCodeInUse = "in_use"; // can't delete: other records point at it (409)
-export const ErrorCodeDuplicateScout = "duplicate_scout"; // an active Scout already has this first + last name (409)
+export const ErrorCodeDuplicateScout = "duplicate_scout"; // another Scout has this first + last name (409); inactiveMatchId when that Scout is inactive
 export const ErrorCodeTooLate = "too_late"; // past 22:00 America/New_York: today's Meeting can't be started (409)
 export const ErrorCodeSessionAsleep = "session_asleep"; // Kiosk session idle 30 min; a Leader can wake it (401)
 export const ErrorCodeSessionExpired = "session_expired"; // Kiosk session past 22:00 or replaced by a newer unlock (401)
@@ -57,6 +57,11 @@ export type ErrorCode =
  */
 export interface ErrorBody {
   code: ErrorCode;
+  /**
+   * InactiveMatchID is set on a duplicate_scout whose match is an inactive
+   * Scout: the UI offers Reactivate for that ID.
+   */
+  inactiveMatchId?: string;
 }
 /**
  * Role is a signed-in person's access level, stored in users/{uid}.role.
@@ -189,6 +194,13 @@ export interface AddScoutRequest {
   lastName: string;
 }
 /**
+ * EditScoutRequest is the body of PUT /api/scouts/{id}: the Scout's new name.
+ */
+export interface EditScoutRequest {
+  firstName: string;
+  lastName: string;
+}
+/**
  * AddScoutResponse is the 201 body of POST /api/scouts.
  */
 export interface AddScoutResponse {
@@ -310,6 +322,27 @@ export interface StartMeetingResponse {
 export interface KioskCheckInRequest {
   scoutId: string;
   method: AttendanceMethod;
+}
+/**
+ * LeaderCheckInRequest is the body of POST /api/meetings/{date}/check-ins
+ * (Leader): check a Scout in with method leader.
+ */
+export interface LeaderCheckInRequest {
+  scoutId: string;
+}
+/**
+ * LeaderSummary is one Leader's uid and name, so the Tonight tab can say
+ * which Leader checked a Scout in. No email.
+ */
+export interface LeaderSummary {
+  uid: string;
+  displayName: string;
+}
+/**
+ * LeaderList is the body of GET /api/leaders (any Leader): every Leader and the Admin.
+ */
+export interface LeaderList {
+  leaders: LeaderSummary[];
 }
 /**
  * KioskNotFoundRequest is the body of POST /api/kiosk/not-found (Kiosk only):

@@ -341,6 +341,19 @@ describe("Kiosk session", () => {
     ).toBeNull();
   });
 
+  test("a Leader's undo shows live: the Scout is selectable again", async () => {
+    const { live } = setup(kioskUser);
+    live.meetingStore(TODAY).set(meeting(TODAY, { checkedIn: { s3: "a9" } }));
+    await tick();
+    expect(screen.getByRole("button", { name: /Rowan/ })).toBeDisabled();
+
+    // Go's undo removes the Scout from checkedIn.
+    live.meetingStore(TODAY).set(meeting(TODAY, { checkedIn: {} }));
+    await tick();
+
+    expect(screen.getByRole("button", { name: "Rowan" })).toBeEnabled();
+  });
+
   test("a Kiosk session from an earlier date is dropped, so the Admin can unlock again", async () => {
     const { session } = setup({
       uid: "kiosk-old",

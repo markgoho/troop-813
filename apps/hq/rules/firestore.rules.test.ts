@@ -188,6 +188,20 @@ describe("Leaders read Events and RSVPs", () => {
   }
 });
 
+describe("Leaders read Meetings and their attendance", () => {
+  for (const uid of ["u-leader", "u-admin"]) {
+    test(`${uid} can get any Meeting and list its attendance`, async () => {
+      const db = env.authenticatedContext(uid).firestore();
+      await expectAllowed(getDoc(doc(db, "meetings/2026-11-09")));
+      await expectAllowed(getDoc(doc(db, "meetings/2026-11-02")));
+      await expectAllowed(getDoc(doc(db, "meetings/2026-11-09/attendance/a1")));
+      await expectAllowed(
+        getDocs(collection(db, "meetings/2026-11-09/attendance")),
+      );
+    });
+  }
+});
+
 describe("Parents and anonymous users read nothing else", () => {
   const identities = {
     anonymous: () => env.unauthenticatedContext(),
@@ -201,6 +215,10 @@ describe("Parents and anonymous users read nothing else", () => {
       await expectDenied(getDoc(doc(db, "scouts/s1")));
       await expectDenied(getDocs(collection(db, "scouts")));
       await expectDenied(getDoc(doc(db, "meetings/2026-11-09")));
+      await expectDenied(getDoc(doc(db, "meetings/2026-11-09/attendance/a1")));
+      await expectDenied(
+        getDocs(collection(db, "meetings/2026-11-09/attendance")),
+      );
       await expectDenied(getDoc(doc(db, "events/e1")));
       await expectDenied(getDocs(collection(db, "events")));
       await expectDenied(getDoc(doc(db, "rsvps/e1_s1")));

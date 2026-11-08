@@ -4,11 +4,14 @@ import type {
   AddScoutRequest,
   AddScoutResponse,
   CheckInResponse,
+  EditScoutRequest,
   ErrorBody,
   EventCreated,
   EventInput,
   Health,
   KioskCheckInRequest,
+  LeaderCheckInRequest,
+  LeaderList,
   KioskNotFoundRequest,
   Me,
   RSVPAnswer,
@@ -47,6 +50,14 @@ export interface Api {
   scoutHistory(id: string): Promise<ScoutHistory>;
   /** Leader only: every Scout's X of Y Meetings present, by Scout id. */
   scoutAttendance(): Promise<ScoutAttendance>;
+  /** Leader only: renames a Scout. ApiError 409 duplicate_scout when another Scout has the name. */
+  editScout(id: string, name: EditScoutRequest): Promise<void>;
+  /** Leader only: drops a Scout off the Kiosk, keeping their history. */
+  deactivateScout(id: string): Promise<void>;
+  /** Leader only: ApiError 409 duplicate_scout while an active Scout has the same name. */
+  reactivateScout(id: string): Promise<void>;
+  /** Leader only: ApiError 409 in_use while the Scout has Attendance or RSVPs. */
+  deleteScout(id: string): Promise<void>;
   /**
    * Admin only: starts (or re-opens) today's Meeting and issues a new Kiosk
    * session. ApiError 409 too_late from 22:00 New York time.
@@ -57,6 +68,12 @@ export interface Api {
    * return the existing attendanceId. ApiError 401 session_asleep / session_expired.
    */
   kioskCheckIn(req: KioskCheckInRequest): Promise<CheckInResponse>;
+  /** Leader only: checks a Scout in to a Meeting (method leader). A repeat returns the existing id. */
+  leaderCheckIn(meetingId: string, scoutId: string): Promise<CheckInResponse>;
+  /** Leader only: soft-deletes a check-in; the Scout can check in again. Idempotent. */
+  undoCheckIn(meetingId: string, attendanceId: string): Promise<void>;
+  /** Leader only: every Leader and the Admin by uid and name (no emails). */
+  leaders(): Promise<LeaderList>;
   /**
    * Kiosk only: the Kiosk couldn't find this Scout. Never named again this
    * Meeting, still able to check in. ApiError 401 session_asleep / session_expired.
@@ -158,6 +175,18 @@ export function httpApi(
       ),
     scoutAttendance: () =>
       getJSON<ScoutAttendance>(fetchFn, token, "/api/scouts/attendance"),
+    editScout: async (id, name) => {
+      await send(fetchFn, token, "PUT", scoutPath(id), name);
+    },
+    deactivateScout: async (id) => {
+      await send(fetchFn, token, "POST", `${scoutPath(id)}/deactivate`);
+    },
+    reactivateScout: async (id) => {
+      await send(fetchFn, token, "POST", `${scoutPath(id)}/reactivate`);
+    },
+    deleteScout: async (id) => {
+      await send(fetchFn, token, "DELETE", scoutPath(id));
+    },
     startMeeting: async () => {
       const res = await send(fetchFn, token, "POST", "/api/kiosk/start");
       return (await res.json()) as StartMeetingResponse;
@@ -172,10 +201,38 @@ export function httpApi(
       );
       return (await res.json()) as CheckInResponse;
     },
+    leaderCheckIn: async (meetingId, scoutId) => {
+      const body: LeaderCheckInRequest = { scoutId };
+      const res = await send(
+        fetchFn,
+        token,
+        "POST",
+        `${meetingPath(meetingId)}/check-ins`,
+        body,
+      );
+      return (await res.json()) as CheckInResponse;
+    },
+    undoCheckIn: async (meetingId, attendanceId) => {
+      await send(
+        fetchFn,
+        token,
+        "POST",
+        `${meetingPath(meetingId)}/attendance/${encodeURIComponent(attendanceId)}/undo`,
+      );
+    },
+    leaders: () => getJSON<LeaderList>(fetchFn, token, "/api/leaders"),
     kioskNotFound: async (req) => {
       await send(fetchFn, token, "POST", "/api/kiosk/not-found", req);
     },
   };
+}
+
+function meetingPath(id: string): string {
+  return `/api/meetings/${encodeURIComponent(id)}`;
+}
+
+function scoutPath(id: string): string {
+  return `/api/scouts/${encodeURIComponent(id)}`;
 }
 
 function eventPath(id: string): string {

@@ -1,0 +1,187 @@
+<script lang="ts">
+  // Tonight tab (spec stories 44–52): today's Meeting live. Counts, the
+  // Checked in list (newest first, with Undo and an inline confirm) and the
+  // Not checked in list (Leader check-in). A phone never starts a Meeting.
+  import { ApiError, type Api } from "./api";
+  import type { Attendance, Scout } from "./contract.gen";
+  import { clockTime, localDate } from "./dates";
+  import type { Live, WithId } from "./live";
+  import ScoutLink from "./ScoutLink.svelte";
+
+  let {
+    api,
+    live,
+    now = () => new Date(),
+  }: { api: Api; live: Live; now?: () => Date } = $props();
+
+  // svelte-ignore state_referenced_locally
+  const meetingId = localDate(now());
+  // svelte-ignore state_referenced_locally
+  const meeting = live.meeting(meetingId);
+  // svelte-ignore state_referenced_locally
+  const attendance = live.attendance(meetingId);
+  // svelte-ignore state_referenced_locally
+  const scouts = live.scouts();
+
+  // Leader uid → name, for "Leader: <name>". Unknown → just "Leader".
+  let leaderNames = $state<Record<string, string>>({});
+  $effect(() => {
+    api.leaders().then(
+      ({ leaders }) => {
+        leaderNames = Object.fromEntries(
+          leaders.map((l) => [l.uid, l.displayName]),
+        );
+      },
+      () => {},
+    );
+  });
+
+  const fullName = (s: WithId<Scout>) => `${s.firstName} ${s.lastName}`;
+  const byName = (a: WithId<Scout>, b: WithId<Scout>) =>
+    a.firstName.localeCompare(b.firstName) ||
+    a.lastName.localeCompare(b.lastName);
+
+  const scoutsById = $derived(
+    $scouts.state === "ready"
+      ? new Map($scouts.docs.map((s) => [s.id, s]))
+      : new Map<string, WithId<Scout>>(),
+  );
+  const checkedIn = $derived(
+    $meeting.state === "ready" && $meeting.doc ? $meeting.doc.checkedIn : {},
+  );
+
+  // A check-in is shown while the Meeting doc still points at it.
+  const present = $derived(
+    $attendance.state === "ready"
+      ? $attendance.docs
+          .filter((a) => !a.undoneAt && checkedIn[a.scoutId] === a.id)
+          .sort((a, b) => b.at.toMillis() - a.at.toMillis())
+      : [],
+  );
+  const notYet = $derived(
+    [...scoutsById.values()]
+      .filter((s) => s.active && !(s.id in checkedIn))
+      .sort(byName),
+  );
+
+  function nameOf(scoutId: string): string {
+    const s = scoutsById.get(scoutId);
+    return s ? fullName(s) : "Unknown Scout";
+  }
+
+  function methodLabel(a: Attendance): string {
+    if (a.method === "nameList") return "Name list";
+    if (a.method === "handoff") return "Handoff";
+    const name = leaderNames[a.by];
+    return name ? `Leader: ${name}` : "Leader";
+  }
+
+  let confirming = $state<string | null>(null); // attendance id awaiting Yes/Cancel
+  let busy = $state(false);
+  let message = $state<string | null>(null);
+
+  async function run(failure: string, action: () => Promise<unknown>) {
+    if (busy) return;
+    busy = true;
+    message = null;
+    try {
+      await action();
+      confirming = null;
+    } catch (err) {
+      message =
+        err instanceof ApiError && err.status === 404
+          ? `${failure} It may already have changed.`
+          : failure;
+    } finally {
+      busy = false;
+    }
+  }
+
+  const checkIn = (s: WithId<Scout>) =>
+    run(`Couldn't check in ${fullName(s)}. Try again.`, () =>
+      api.leaderCheckIn(meetingId, s.id),
+    );
+  const undo = (a: WithId<Attendance>) =>
+    run(`Couldn't undo ${nameOf(a.scoutId)}'s check-in. Try again.`, () =>
+      api.undoCheckIn(meetingId, a.id),
+    );
+</script>
+
+<main>
+  <h1>Tonight</h1>
+
+  {#if $meeting.state === "ready" && !$meeting.doc}
+    <p>No Meeting today: the Admin starts it on the Kiosk</p>
+  {:else if $meeting.state === "error" || $attendance.state === "error" || $scouts.state === "error"}
+    <p role="alert">Couldn't load tonight's Meeting. Reload to try again.</p>
+  {:else if $meeting.state === "loading" || $attendance.state === "loading" || $scouts.state === "loading"}
+    <p>Loading…</p>
+  {:else}
+    <p class="counts">
+      <strong>{Object.keys(checkedIn).length} checked in</strong>
+      ·
+      <span>{notYet.length} not yet</span>
+    </p>
+
+    {#if message}<p role="alert">{message}</p>{/if}
+
+    <h2>Checked in</h2>
+    <ul aria-label="Checked in">
+      {#each present as a (a.id)}
+        {@const who = scoutsById.get(a.scoutId)}
+        <li>
+          <span class="name"
+            >{#if who}<ScoutLink scout={who} />{:else}{nameOf(
+                a.scoutId,
+              )}{/if}</span
+          >
+          <span class="time">{clockTime(a.at.toDate())}</span>
+          <span class="method">{methodLabel(a)}</span>
+          {#if confirming === a.id}
+            <span class="confirm">
+              <span>Undo {nameOf(a.scoutId)}'s check-in?</span>
+              <button type="button" disabled={busy} onclick={() => undo(a)}>
+                Yes, undo
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onclick={() => (confirming = null)}
+              >
+                Cancel
+              </button>
+            </span>
+          {:else}
+            <button
+              type="button"
+              aria-label="Undo {nameOf(a.scoutId)}"
+              onclick={() => (confirming = a.id)}
+            >
+              Undo
+            </button>
+          {/if}
+        </li>
+      {/each}
+    </ul>
+
+    <h2>Not checked in</h2>
+    <ul aria-label="Not checked in">
+      {#each notYet as s (s.id)}
+        <li>
+          <span class="name"><ScoutLink scout={s} /></span>
+          {#if $meeting.state === "ready" && $meeting.doc?.notFound.includes(s.id)}
+            <span class="not-found">Not found at the Kiosk</span>
+          {/if}
+          <button
+            type="button"
+            aria-label="Check in {fullName(s)}"
+            disabled={busy}
+            onclick={() => checkIn(s)}
+          >
+            Check in
+          </button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+</main>

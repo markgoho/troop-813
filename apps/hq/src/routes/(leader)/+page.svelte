@@ -1,13 +1,11 @@
 <script lang="ts">
-  // Tonight: a placeholder until the Tonight ticket lands.
+  // Tonight: today's Meeting, live. Any Leader; Go and the rules refuse everyone else.
   import HealthStatus from "#lib/HealthStatus.svelte";
+  import Tonight from "#lib/Tonight.svelte";
   import { getHq } from "#lib/hq.ts";
 
-  const { api } = getHq();
+  const { api, live } = getHq();
 </script>
 
-<main>
-  <h1>Tonight</h1>
-  <p>Tonight's Meeting will show here.</p>
-  <HealthStatus {api} />
-</main>
+<Tonight {api} {live} />
+<HealthStatus {api} />

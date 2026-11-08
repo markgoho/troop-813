@@ -41,6 +41,17 @@ const momentFormat = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
+const clockFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: NY,
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** "7:12 PM" in New York time. */
+export function clockTime(at: Date): string {
+  return clockFormat.format(at);
+}
+
 /** "Mon 11/9 7:12 PM" in New York time. */
 export function moment(at: Date): string {
   return momentFormat.format(at).replace(/,/g, "");

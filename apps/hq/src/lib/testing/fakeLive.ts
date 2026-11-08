@@ -2,7 +2,14 @@
 // snapshots into. Add each new Live method here once.
 import { derived, writable, type Writable } from "svelte/store";
 import { Timestamp } from "firebase/firestore";
-import type { Attendance, Event, Meeting, RSVP, Scout } from "../contract.gen";
+import type {
+  Attendance,
+  Event,
+  KioskSession,
+  Meeting,
+  RSVP,
+  Scout,
+} from "../contract.gen";
 import type { Live, LiveDoc, LiveDocs, WithId } from "../live";
 
 export interface FakeLive extends Live {
@@ -10,6 +17,8 @@ export interface FakeLive extends Live {
   meetingStore(id: string): Writable<LiveDoc<Meeting>>;
   /** One store per Meeting ID, like meetingStore. */
   attendanceStore(meetingId: string): Writable<LiveDocs<Attendance>>;
+  /** One store per key; kioskSession(id) and currentKioskSession(meetingId) both read it, keyed by the id they are given. */
+  kioskSessionStore(key: string): Writable<LiveDoc<KioskSession>>;
   scoutsStore: Writable<LiveDocs<Scout>>;
   eventsStore: Writable<LiveDocs<Event>>;
   rsvpsStore: Writable<LiveDocs<RSVP>>;
@@ -34,6 +43,15 @@ export function fakeLive(): FakeLive {
     }
     return s;
   };
+  const sessions = new Map<string, Writable<LiveDoc<KioskSession>>>();
+  const kioskSessionStore = (key: string) => {
+    let s = sessions.get(key);
+    if (!s) {
+      s = writable<LiveDoc<KioskSession>>({ state: "loading" });
+      sessions.set(key, s);
+    }
+    return s;
+  };
   const scoutsStore = writable<LiveDocs<Scout>>({ state: "loading" });
   const eventsStore = writable<LiveDocs<Event>>({ state: "loading" });
   const rsvpsStore = writable<LiveDocs<RSVP>>({ state: "loading" });
@@ -41,6 +59,9 @@ export function fakeLive(): FakeLive {
     meetingStore,
     attendanceStore,
     attendance: attendanceStore,
+    kioskSessionStore,
+    kioskSession: kioskSessionStore,
+    currentKioskSession: kioskSessionStore,
     scoutsStore,
     eventsStore,
     rsvpsStore,
@@ -117,5 +138,27 @@ export function scout(
     lastName,
     active,
     createdAt: Timestamp.fromDate(new Date("2026-11-01T00:00:00Z")),
+  };
+}
+
+/**
+ * A Kiosk session snapshot, for kioskSessionStore(key).set(kioskSession(...)).
+ * `lastActivityAt` is an ISO instant.
+ */
+export function kioskSession(
+  id: string,
+  meetingId: string,
+  lastActivityAt: string,
+): LiveDoc<KioskSession> {
+  return {
+    state: "ready",
+    doc: {
+      id,
+      meetingId,
+      createdAt: Timestamp.fromDate(new Date(lastActivityAt)),
+      createdBy: "u-admin",
+      lastActivityAt: Timestamp.fromDate(new Date(lastActivityAt)),
+      replaced: false,
+    },
   };
 }

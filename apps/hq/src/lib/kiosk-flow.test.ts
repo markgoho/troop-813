@@ -3,7 +3,9 @@ import { Timestamp } from "firebase/firestore";
 import type { Event, RSVP, RSVPAnswer } from "./contract.gen";
 import type { WithId } from "./live";
 import {
+  asleep,
   isLastChance,
+  meetingOver,
   nameList,
   nextScout,
   pendingEvents,
@@ -212,5 +214,51 @@ describe("isLastChance", () => {
   test("counts days across a month and year end", () => {
     expect(isLastChance("2027-01-03", "2026-12-27")).toBe(true);
     expect(isLastChance("2027-01-04", "2026-12-27")).toBe(false);
+  });
+});
+
+describe("asleep", () => {
+  const last = new Date("2026-11-10T00:00:00Z"); // 19:00 EST on 2026-11-09
+  const session = { meetingId: "2026-11-09", lastActivityAt: last };
+  const at = (ms: number) => new Date(last.getTime() + ms);
+  const MIN = 60_000;
+
+  test("awake until 30 minutes after the last Kiosk activity", () => {
+    expect(asleep(session, at(0))).toBe(false);
+    expect(asleep(session, at(30 * MIN - 1))).toBe(false);
+  });
+
+  test("asleep from exactly 30 minutes", () => {
+    expect(asleep(session, at(30 * MIN))).toBe(true);
+    expect(asleep(session, at(31 * MIN))).toBe(true);
+  });
+
+  test("asleep from 22:00 New York on the Meeting date, however recent the activity", () => {
+    const recent = {
+      ...session,
+      lastActivityAt: new Date("2026-11-10T02:50:00Z"),
+    }; // 21:50 EST
+    expect(asleep(recent, new Date("2026-11-10T02:59:59Z"))).toBe(false);
+    expect(asleep(recent, new Date("2026-11-10T03:00:00Z"))).toBe(true);
+  });
+
+  test("22:00 follows daylight time", () => {
+    const summer = {
+      meetingId: "2026-07-01",
+      lastActivityAt: new Date("2026-07-02T01:50:00Z"), // 21:50 EDT
+    };
+    expect(asleep(summer, new Date("2026-07-02T01:59:59Z"))).toBe(false);
+    expect(asleep(summer, new Date("2026-07-02T02:00:00Z"))).toBe(true);
+  });
+});
+
+describe("meetingOver", () => {
+  test("true from 22:00 New York on the Meeting date", () => {
+    expect(meetingOver("2026-11-09", new Date("2026-11-10T02:59:59Z"))).toBe(
+      false,
+    );
+    expect(meetingOver("2026-11-09", new Date("2026-11-10T03:00:00Z"))).toBe(
+      true,
+    );
   });
 });

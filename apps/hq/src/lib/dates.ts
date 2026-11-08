@@ -56,3 +56,32 @@ export function clockTime(at: Date): string {
 export function moment(at: Date): string {
   return momentFormat.format(at).replace(/,/g, "");
 }
+
+const wallFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: NY,
+  hourCycle: "h23",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  second: "numeric",
+});
+
+/** 22:00 in New York on a Meeting's date (YYYY-MM-DD): when its Kiosk session ends (Go's clock.MeetingEnds). */
+export function meetingEnds(meetingId: string): Date {
+  const wall = new Date(`${meetingId}T22:00:00Z`); // 22:00 read as if UTC
+  const parts = Object.fromEntries(
+    wallFormat.formatToParts(wall).map((p) => [p.type, Number(p.value)]),
+  );
+  // What New York's clock reads at `wall`, as UTC, minus `wall` = New York's offset.
+  const shown = Date.UTC(
+    parts.year ?? 0,
+    (parts.month ?? 1) - 1,
+    parts.day ?? 1,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  );
+  return new Date(wall.getTime() - (shown - wall.getTime()));
+}

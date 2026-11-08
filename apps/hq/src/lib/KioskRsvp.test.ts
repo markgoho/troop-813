@@ -127,6 +127,22 @@ describe("Kiosk RSVP cards", () => {
     });
   });
 
+  test("an asleep session while saving shows the asleep screen, not the failure message", async () => {
+    const { kioskSetRsvp, session } = setup();
+    kioskSetRsvp.mockRejectedValueOnce(
+      new ApiError(401, { code: "session_asleep" }),
+    );
+    await checkInRowan();
+
+    await click("Going");
+
+    expect(
+      await screen.findByText("Kiosk asleep, ask a Leader"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't save that. Try again.")).toBeNull();
+    expect(session.signOut).not.toHaveBeenCalled();
+  });
+
   test("Ask me next week saves nothing; the last Meeting before an Event says so and offers Not sure instead", async () => {
     const { kioskSetRsvp } = setup();
     await checkInRowan();

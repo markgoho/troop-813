@@ -29,6 +29,7 @@
     scout,
     onDone,
     onExpired,
+    onAsleep,
   }: {
     api: Api;
     live: Live;
@@ -40,6 +41,8 @@
     onDone: () => void;
     /** The server says the session is over (22:00 or replaced). */
     onExpired: () => void;
+    /** The server says the session is asleep: the parent shows the asleep screen. */
+    onAsleep: () => void;
   } = $props();
 
   // The parent re-creates this component per Scout.
@@ -109,8 +112,9 @@
       if (code === "session_expired") {
         onExpired();
       } else if (code === "session_asleep") {
-        // The asleep screen and Wake arrive with #27.
-        message = "Kiosk asleep, ask a Leader";
+        // The parent's asleep screen covers this one; the card is still
+        // here when a Leader wakes the Kiosk.
+        onAsleep();
       } else {
         message = "Couldn't save that. Try again.";
       }

@@ -92,6 +92,12 @@ export interface Api {
     meetingId: string,
     attendanceId: string,
   ): Promise<RSVPRollbackPreview>;
+  /**
+   * Leader only: restarts the live Kiosk's 30 idle minutes, so an asleep tablet
+   * resumes by itself. ApiError 404 with no live session, 409 session_expired
+   * from 22:00.
+   */
+  wakeKiosk(): Promise<void>;
 }
 
 export class ApiError extends Error {
@@ -246,6 +252,9 @@ export function httpApi(
         token,
         `${meetingPath(meetingId)}/attendance/${encodeURIComponent(attendanceId)}/rsvp-rollback`,
       ),
+    wakeKiosk: async () => {
+      await send(fetchFn, token, "POST", "/api/kiosk/wake");
+    },
   };
 }
 

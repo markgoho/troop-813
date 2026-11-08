@@ -74,6 +74,7 @@ func Routes(d Deps) *router.Router {
 	rs := rsvp.Handlers{FS: d.Firestore, Logger: d.Logger}
 	r.Gated("PUT /api/kiosk/rsvps", []router.Accept{router.Kiosk}, rs.KioskSet)
 	r.Gated("GET /api/meetings/{date}/attendance/{id}/rsvp-rollback", leader, mtg.RSVPRollbackPreview)
+	r.Gated("POST /api/kiosk/wake", leader, mtg.Wake)
 	return r
 }
 

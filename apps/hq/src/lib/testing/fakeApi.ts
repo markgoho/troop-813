@@ -32,6 +32,7 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     kioskNotFound: unexpected("kioskNotFound"),
     kioskSetRsvp: unexpected("kioskSetRsvp"),
     rsvpRollbackPreview: unexpected("rsvpRollbackPreview"),
+    wakeKiosk: unexpected("wakeKiosk"),
     ...overrides,
   };
 }

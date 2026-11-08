@@ -6,6 +6,16 @@ Monorepo for Troop 813 apps and websites.
 - `api`: the Go API, the only writer to Firestore
 - `firebase.json`, `firestore.rules`, `firestore.indexes.json`: Firebase config
 - `scripts`: repo-root Bun scripts (local stack, emulators)
+- `terraform`: prod infra, applied only by CI (ADR 0005); `bootstrap.sh` is the one-time setup
+- `.github/workflows`: `api.yml`, `web.yml`, `terraform.yml`, each path-filtered: checks, then deploy on push to `trunk`
+
+## Prod
+
+`https://troop-813-hq.web.app` (Hosting, `/api/**` rewritten to Cloud Run `api` in us-east1), project `troop-813`. A push to `trunk` deploys whatever it touched. The one-time manual steps (billing, $1 budget, `terraform/bootstrap.sh`, Google sign-in provider, OAuth redirect URI) are a wizard:
+
+```sh
+scripts/prod-setup-wizard.sh
+```
 
 ## Prerequisites
 

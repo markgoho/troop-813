@@ -42,3 +42,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # SvelteKit
 .svelte-kit
 build
+
+# Terraform (terraform/.terraform.lock.hcl IS committed)
+.terraform/
+tfplan

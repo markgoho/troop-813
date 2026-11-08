@@ -1,0 +1,78 @@
+# The Go API: checks, then build → push to Artifact Registry → deploy to Cloud Run.
+# Terraform owns the service's shape; this owns its image (ADR 0005).
+name: api
+
+on:
+  push:
+    branches: [trunk]
+    paths:
+      - api/**
+      - apps/hq/src/lib/contract.gen.ts
+      - .github/actions/checks/**
+      - .github/workflows/api.yml
+  workflow_dispatch: {}
+
+# Queue, never cancel: a deploy is never cut off halfway (ADR 0005).
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  SERVICE: api
+  REGION: us-east1
+  IMAGE: us-east1-docker.pkg.dev/troop-813/api/api:${{ github.sha }}
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/checks
+
+      - name: Authenticate to Google Cloud (WIF)
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: troop-813
+          workload_identity_provider: projects/1003933813667/locations/global/workloadIdentityPools/github/providers/github
+          service_account: deploy@troop-813.iam.gserviceaccount.com
+          token_format: access_token
+
+      - uses: docker/login-action@v4
+        with:
+          registry: us-east1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: api
+          push: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          project_id: troop-813
+          image: ${{ env.IMAGE }}
+
+      - name: Smoke test /api/health
+        env:
+          URL: ${{ steps.deploy.outputs.url }}/api/health
+        run: |
+          body=$(curl -fsS --retry 5 --retry-all-errors "$URL")
+          echo "$body"
+          [[ "$(jq -r .status <<<"$body")" == "ok" ]]

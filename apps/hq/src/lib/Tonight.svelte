@@ -163,7 +163,7 @@
     <p>Loading…</p>
   {:else}
     {#if kiosk}
-      <p class="kiosk-status">
+      <p class="kiosk-status banner" class:warn={kiosk.state !== "awake"}>
         {#if kiosk.state === "awake"}
           <strong>Kiosk awake</strong>
           · {lastCheckIn
@@ -180,9 +180,8 @@
       </p>
     {/if}
 
-    <p class="counts">
+    <p class="counts stats">
       <strong>{Object.keys(checkedIn).length} checked in</strong>
-      ·
       <span>{notYet.length} not yet</span>
     </p>
 
@@ -232,7 +231,7 @@
         <li>
           <span class="name"><ScoutLink scout={s} /></span>
           {#if $meeting.state === "ready" && $meeting.doc?.notFound.includes(s.id)}
-            <span class="not-found">Not found at the Kiosk</span>
+            <span class="not-found pill warn">Not found at the Kiosk</span>
           {/if}
           <button
             type="button"

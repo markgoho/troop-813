@@ -59,14 +59,3 @@
     <button type="button" onclick={onCancel}>Cancel</button>
   {/if}
 </form>
-
-<style>
-  form {
-    display: grid;
-    gap: 0.5em;
-    max-width: 24em;
-  }
-  label {
-    display: grid;
-  }
-</style>

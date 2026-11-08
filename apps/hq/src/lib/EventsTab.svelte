@@ -39,13 +39,16 @@
           <li>
             <a href={resolve("/(leader)/events/[id]", { id: e.id })}>
               {#if e.cancelled}
-                <s class="name">{e.name}</s> <span class="pill">Cancelled</span>
+                <s class="name">{e.name}</s>
+                <span class="pill bad">Cancelled</span>
               {:else}
                 <span class="name">{e.name}</span>
               {/if}
             </a>
-            <span>{dateRange(e.startDate, e.endDate)}</span>
-            <span>{tally(e.id, active, docsOf($rsvps)).going} going</span>
+            <span class="meta">{dateRange(e.startDate, e.endDate)}</span>
+            <span class="pill ok"
+              >{tally(e.id, active, docsOf($rsvps)).going} going</span
+            >
           </li>
         {/each}
       </ul>
@@ -65,16 +68,3 @@
     <p>Loading…</p>
   {/if}
 </main>
-
-<style>
-  li {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75em;
-  }
-  .pill {
-    border-radius: 999px;
-    padding: 0 0.5em;
-    background: #e5e7eb;
-  }
-</style>

@@ -43,9 +43,9 @@
     <ul>
       {#each users as u (u.uid)}
         <li>
-          <span>{u.displayName}</span>
+          <span class="name">{u.displayName}</span>
           <span class="email">{u.email}</span>
-          {#if u.role === "parent"}<span class="pill">Waiting</span>{/if}
+          {#if u.role === "parent"}<span class="pill warn">Waiting</span>{/if}
           <button
             type="button"
             disabled={u.uid === myUid || u.role === "admin" || busy === u.uid}
@@ -59,15 +59,3 @@
     </ul>
   {/if}
 </main>
-
-<style>
-  .email {
-    color: #666;
-    font-size: 0.875em;
-  }
-  .pill {
-    border-radius: 999px;
-    padding: 0 0.5em;
-    background: #fde68a;
-  }
-</style>

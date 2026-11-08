@@ -130,7 +130,7 @@
   {:else}
     <h1>
       {#if event.cancelled}
-        <s>{event.name}</s> <span class="pill">Cancelled</span>
+        <s>{event.name}</s> <span class="pill bad">Cancelled</span>
       {:else}
         {event.name}
       {/if}
@@ -151,7 +151,7 @@
         onCancel={() => (editing = false)}
       />
     {:else}
-      <div class="actions">
+      <div class="actions row">
         <button type="button" onclick={() => (editing = true)}>Edit</button>
         <button
           type="button"
@@ -164,6 +164,7 @@
           type="button"
           disabled={inUse || busy}
           aria-describedby={inUse ? "delete-reason" : undefined}
+          class="danger"
           onclick={() => (confirmingDelete = true)}>Delete Event</button
         >
         {#if inUse}
@@ -172,7 +173,12 @@
             Cancel it instead.
           </p>
         {:else if confirmingDelete}
-          <button type="button" disabled={busy} onclick={() => void remove()}>
+          <button
+            type="button"
+            class="danger solid"
+            disabled={busy}
+            onclick={() => void remove()}
+          >
             Yes, delete {event.name}
           </button>
           <button type="button" onclick={() => (confirmingDelete = false)}>
@@ -184,10 +190,10 @@
 
     {#if error}<p role="alert">{error}</p>{/if}
 
-    <ul aria-label="Counts" class="counts">
-      <li>Going {counts.going}</li>
-      <li>Not going {counts.notGoing}</li>
-      <li>No answer {counts.noAnswer}</li>
+    <ul aria-label="Counts" class="counts stats">
+      <li>Going <span class="big">{counts.going}</span></li>
+      <li>Not going <span class="big">{counts.notGoing}</span></li>
+      <li>No answer <span class="big">{counts.noAnswer}</span></li>
     </ul>
 
     <ul class="scouts">
@@ -195,10 +201,10 @@
         {@const doc = byScout.get(s.id)}
         {@const last = doc?.history.at(-1)}
         <li>
-          <ScoutLink scout={s} />
+          <span class="name"><ScoutLink scout={s} /></span>
           <div role="radiogroup" aria-label={fullName(s)}>
             {#each choices as c (c.label)}
-              <label>
+              <label class="c-{c.value ?? 'clear'}">
                 <input
                   type="radio"
                   name="rsvp-{s.id}"
@@ -233,39 +239,18 @@
 </main>
 
 <style>
-  .pill {
-    border-radius: 999px;
-    padding: 0 0.5em;
-    background: #e5e7eb;
-    font-size: 0.6em;
-    vertical-align: middle;
+  .counts li {
+    color: var(--muted);
+    font-size: 0.875rem;
+    font-weight: 700;
   }
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5em;
-    align-items: center;
+  /* "Not going" chosen reads red, "—" (cleared) neutral, as in the prototype. */
+  [role="radiogroup"] label.c-notGoing:has(input:checked) {
+    background: var(--bad);
+    color: var(--surface);
   }
-  .reason {
-    color: #666;
-    font-size: 0.875em;
-    margin: 0;
-  }
-  .counts {
-    display: flex;
-    gap: 1.5em;
-    list-style: none;
-    padding: 0;
-  }
-  .scouts > li {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75em;
-    align-items: baseline;
-    padding: 0.25em 0;
-  }
-  [role="radiogroup"] {
-    display: inline-flex;
-    gap: 0.5em;
+  [role="radiogroup"] label.c-clear:has(input:checked) {
+    background: var(--bg);
+    color: var(--ink);
   }
 </style>

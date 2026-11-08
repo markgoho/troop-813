@@ -158,7 +158,7 @@
 <main>
   <h1>Roster</h1>
 
-  <form onsubmit={add} aria-label="Add Scout">
+  <form onsubmit={add} aria-label="Add Scout" class="add">
     <label>
       First name
       <input
@@ -234,7 +234,7 @@
       <span class="name"><ScoutLink scout={s} /></span>
       {#if s.active}
         {@const c = counts[s.id]}
-        {#if c}<span>Present {c.present} of {c.total}</span>{/if}
+        {#if c}<span class="meta">Present {c.present} of {c.total}</span>{/if}
       {/if}
       <button
         type="button"
@@ -250,7 +250,11 @@
           )}>{s.active ? "Deactivate" : "Reactivate"}</button
       >
       {#if confirmingId === s.id}
-        <button type="button" onclick={() => void remove(s)}>
+        <button
+          type="button"
+          class="danger solid"
+          onclick={() => void remove(s)}
+        >
           Yes, delete {fullName(s)}
         </button>
         <button type="button" onclick={() => (confirmingId = null)}>
@@ -262,6 +266,7 @@
           aria-label="Delete {fullName(s)}"
           disabled={inUse(s.id)}
           aria-describedby={inUse(s.id) ? `reason-${s.id}` : undefined}
+          class="danger"
           onclick={() => (confirmingId = s.id)}>Delete</button
         >
         {#if inUse(s.id)}
@@ -273,3 +278,13 @@
     {/if}
   </li>
 {/snippet}
+
+<style>
+  /* Rapid entry: first and last name side by side, Add Scout under them. */
+  .add {
+    grid-template-columns: 1fr 1fr;
+  }
+  .add button {
+    grid-column: 1 / -1;
+  }
+</style>

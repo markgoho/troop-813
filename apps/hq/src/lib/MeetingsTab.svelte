@@ -36,7 +36,7 @@
         <li>
           {#if m.id === today}
             <a href={resolve("/(leader)")}>{shortDay(m.id)}</a>
-            <strong class="live">Live</strong>
+            <strong class="live pill">Live</strong>
           {:else}
             <a href={resolve("/(leader)/meetings/[id]", { id: m.id })}
               >{shortDay(m.id)}</a

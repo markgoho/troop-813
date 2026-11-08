@@ -110,7 +110,9 @@
   {:else if !$meeting.doc}
     <p>No Meeting on {shortDay(meetingId)}.</p>
   {:else}
-    <p class="counts"><strong>{presentCount} present</strong></p>
+    <p class="counts stats">
+      <strong>{presentCount} present</strong>
+    </p>
     {#if isTonight}
       <p><a href={resolve("/(leader)")}>Open Tonight</a></p>
     {/if}
@@ -143,7 +145,12 @@
     {#if presentCount === 0 && !isTonight}
       {#if deleting}
         <p>
-          <button type="button" disabled={busy} onclick={remove}>
+          <button
+            type="button"
+            class="danger solid"
+            disabled={busy}
+            onclick={remove}
+          >
             Yes, delete this Meeting
           </button>
           <button
@@ -156,7 +163,11 @@
         </p>
       {:else}
         <p>
-          <button type="button" onclick={() => (deleting = true)}>
+          <button
+            type="button"
+            class="danger"
+            onclick={() => (deleting = true)}
+          >
             Delete this Meeting
           </button>
         </p>

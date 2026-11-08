@@ -98,7 +98,12 @@
       {:else}
         <ul aria-label="Meetings">
           {#each loaded.history.meetings as m (m.date)}
-            <li>{shortDay(m.date)} {m.present ? "Present" : "Absent"}</li>
+            <li>
+              <span class="name">{shortDay(m.date)}</span>
+              <span class="pill" class:ok={m.present}
+                >{m.present ? "Present" : "Absent"}</span
+              >
+            </li>
           {/each}
         </ul>
       {/if}

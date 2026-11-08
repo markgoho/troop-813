@@ -59,6 +59,8 @@
       {/each}
     </ul>
   {/if}
-  <button type="button" disabled={busy} onclick={onConfirm}>Yes, undo</button>
+  <button type="button" class="danger solid" disabled={busy} onclick={onConfirm}
+    >Yes, undo</button
+  >
   <button type="button" disabled={busy} onclick={onCancel}>Cancel</button>
 </span>

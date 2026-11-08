@@ -4,6 +4,7 @@
   import LeaderTabs from "./LeaderTabs.svelte";
   import type { Me } from "./contract.gen";
   import { provideCaller } from "./hq";
+  import "./leader.css";
 
   let { me, children }: { me: Me; children: Snippet } = $props();
 
@@ -12,5 +13,11 @@
   provideCaller(me);
 </script>
 
-<LeaderTabs role={me.role} />
-{@render children()}
+<div class="leader">
+  <header class="bar">
+    <img src="/brand/troop-813-logo.png" alt="" />
+    <span>Troop 813 HQ</span>
+  </header>
+  <LeaderTabs role={me.role} />
+  {@render children()}
+</div>

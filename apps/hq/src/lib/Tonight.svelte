@@ -75,11 +75,11 @@
   // RSVPs given in each check-in: RSVP docs with an entry carrying its id.
   // Still loading or unreadable counts as none, so the list never waits on it.
   const rsvpsGiven = $derived.by(() => {
-    const given = new Map<string, number>();
+    const given: Record<string, number> = {};
     for (const r of docsOf($rsvps)) {
       const ids = new Set(r.history.map((h) => h.attendanceId));
       for (const id of ids) {
-        if (id !== null) given.set(id, (given.get(id) ?? 0) + 1);
+        if (id !== null) given[id] = (given[id] ?? 0) + 1;
       }
     }
     return given;
@@ -177,8 +177,8 @@
           >
           <span class="time">{clockTime(a.at.toDate())}</span>
           <span class="method">{methodLabel(a)}</span>
-          {#if rsvpsGiven.get(a.id)}
-            {@const n = rsvpsGiven.get(a.id)}
+          {#if rsvpsGiven[a.id]}
+            {@const n = rsvpsGiven[a.id]}
             <span class="rsvps">{n} {n === 1 ? "RSVP" : "RSVPs"}</span>
           {/if}
           {#if confirming === a.id}

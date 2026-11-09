@@ -253,7 +253,10 @@
   <Announcer text={spokenResult} />
 
   {#if $meeting.state === "ready" && !$meeting.doc}
-    <p>No Meeting today: the Admin starts it on the Kiosk</p>
+    <p>
+      Today's Meeting hasn't started. The Admin starts it on the Kiosk, any time
+      before 10pm.
+    </p>
     {#if admin}
       <p><a href={resolve("/kiosk")}>Open the Kiosk</a></p>
     {/if}

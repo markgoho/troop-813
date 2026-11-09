@@ -85,13 +85,13 @@ const items = (name: string) =>
     .map((li) => li.textContent?.replace(/\s+/g, " ").trim());
 
 describe("Tonight", () => {
-  test("with no Meeting today it says the Admin starts it on the Kiosk", async () => {
+  test("with no Meeting today it says the Meeting hasn't started", async () => {
     const { live } = setup();
     live.meetingStore(TODAY).set({ state: "ready", doc: null });
 
     expect(
       await screen.findByText(
-        "No Meeting today: the Admin starts it on the Kiosk",
+        "Today's Meeting hasn't started. The Admin starts it on the Kiosk, any time before 10pm.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();

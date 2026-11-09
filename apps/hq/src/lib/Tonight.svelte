@@ -21,7 +21,14 @@
     api,
     live,
     now = () => new Date(),
-  }: { api: Api; live: Live; now?: () => Date } = $props();
+    admin = false,
+  }: {
+    api: Api;
+    live: Live;
+    now?: () => Date;
+    /** The Admin gets a way to the Kiosk, where today's Meeting starts. */
+    admin?: boolean;
+  } = $props();
 
   // svelte-ignore state_referenced_locally
   const meetingId = localDate(now());
@@ -247,6 +254,9 @@
 
   {#if $meeting.state === "ready" && !$meeting.doc}
     <p>No Meeting today: the Admin starts it on the Kiosk</p>
+    {#if admin}
+      <p><a href={resolve("/kiosk")}>Open the Kiosk</a></p>
+    {/if}
     <p><a href={resolve("/(leader)/meetings/new")}>Add a past Meeting</a></p>
   {:else if $meeting.state === "error" || $attendance.state === "error" || $scouts.state === "error"}
     <p role="alert">Couldn't load tonight's Meeting. Reload to try again.</p>

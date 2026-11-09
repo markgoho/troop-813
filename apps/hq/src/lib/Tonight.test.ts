@@ -30,6 +30,7 @@ const roster = [
 function setup(
   overrides: Parameters<typeof fakeApi>[0] = {},
   clock: () => Date = now,
+  admin = false,
 ) {
   const api = fakeApi({
     leaders: async () => ({
@@ -40,7 +41,7 @@ function setup(
   });
   const live = fakeLive();
   live.scoutsStore.set(ready(roster));
-  render(Tonight, { api, live, now: clock });
+  render(Tonight, { api, live, now: clock, admin });
   return { api, live };
 }
 
@@ -97,6 +98,18 @@ describe("Tonight", () => {
     expect(
       screen.getByRole("link", { name: "Add a past Meeting" }),
     ).toHaveAttribute("href", "/meetings/new");
+    expect(
+      screen.queryByRole("link", { name: "Open the Kiosk" }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("with no Meeting today the Admin gets a link to the Kiosk", async () => {
+    const { live } = setup({}, now, true);
+    live.meetingStore(TODAY).set({ state: "ready", doc: null });
+
+    expect(
+      await screen.findByRole("link", { name: "Open the Kiosk" }),
+    ).toHaveAttribute("href", "/kiosk");
   });
 
   test("shows checked-in and not-yet counts (active Scouts only for not-yet)", async () => {

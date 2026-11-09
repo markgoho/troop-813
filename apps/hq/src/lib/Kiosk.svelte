@@ -161,7 +161,7 @@
           {#if caller.role === "admin" || caller.role === "leader"}
             <!-- No Kiosk session is live here, so a way back to the Leader
                  screens is safe; the installed app has no address bar. -->
-            <a class="hq" href={resolve("/")}>Go to Troop 813 HQ</a>
+            <a class="hq" href={resolve("/(leader)")}>Go to Troop 813 HQ</a>
           {/if}
           {@render signOut()}
         </div>

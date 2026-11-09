@@ -77,7 +77,7 @@ describe("AccessList", () => {
     expect(api.setRole).toHaveBeenCalledWith("u-blake", "leader");
     expect(
       await within(row("Blake Fictional")).findByRole("button", {
-        name: "Leader: Blake Fictional",
+        name: "Remove Leader: Blake Fictional",
       }),
     ).toBeInTheDocument();
     expect(
@@ -86,9 +86,12 @@ describe("AccessList", () => {
 
     await userEvent.click(
       within(row("Avery Fictional")).getByRole("button", {
-        name: "Leader: Avery Fictional",
+        name: "Remove Leader: Avery Fictional",
       }),
     );
+    expect(
+      await screen.findByText("Avery Fictional is no longer a Leader"),
+    ).toHaveClass("sr-only");
     expect(api.setRole).toHaveBeenCalledWith("u-avery", "parent");
     expect(
       await within(row("Avery Fictional")).findByRole("button", {

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/svelte";
+import { render, screen, waitFor, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import MeetingPage from "./MeetingPage.svelte";
@@ -70,6 +70,29 @@ describe("MeetingPage checklist", () => {
     await userEvent.click(await box("Avery Quill"));
 
     expect(leaderCheckIn).toHaveBeenCalledWith(PAST, "s1");
+    expect(await screen.findByText("Avery Quill checked in")).toHaveClass(
+      "sr-only",
+    );
+  });
+
+  test("the undo confirm is a labelled group; Yes announces and returns focus to the checkbox", async () => {
+    setup({ s1: "a1" }, { undoCheckIn: async () => {} });
+    await userEvent.click(await box("Avery Quill"));
+    expect(
+      await screen.findByRole("group", {
+        name: "Undo Avery Quill's check-in?",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Yes, undo" }));
+    expect(
+      await screen.findByText("Avery Quill's check-in undone"),
+    ).toHaveClass("sr-only");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("checkbox", { name: "Avery Quill" }),
+      ).toHaveFocus(),
+    );
   });
 
   test("unticking asks first, then undoes that Scout's current check-in", async () => {

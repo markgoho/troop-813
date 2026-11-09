@@ -189,9 +189,28 @@ describe("Delete", () => {
     setup({}, [rsvpFor("s1")], true);
 
     await userEvent.click(button("Delete Quincy Harrow"));
-    expect(button("Yes, delete Quincy Harrow")).toHaveFocus();
+    expect(button("Keep")).toHaveFocus();
     await userEvent.click(button("Keep"));
     expect(button("Delete Quincy Harrow")).toHaveFocus();
+  });
+
+  test("Yes, delete announces it and moves focus on", async () => {
+    setup({ deleteScout: async () => {} }, [], true);
+
+    await userEvent.click(button("Delete Quincy Harrow"));
+    await userEvent.click(button("Yes, delete Quincy Harrow"));
+
+    expect(await screen.findByText("Quincy Harrow deleted")).toHaveClass(
+      "sr-only",
+    );
+  });
+
+  test("Deactivate announces it", async () => {
+    setup({ deactivateScout: async () => {} });
+    await userEvent.click(button("Deactivate Avery Quill"));
+    expect(await screen.findByText("Avery Quill deactivated")).toHaveClass(
+      "sr-only",
+    );
   });
 
   test("a 409 in_use (Attendance the page can't see) withdraws it", async () => {

@@ -5,6 +5,7 @@
   // Meeting" only while nobody is present, and never for tonight's.
   import { tick } from "svelte";
   import { resolve } from "$app/paths";
+  import Announcer from "./Announcer.svelte";
   import { ApiError, type Api } from "./api";
   import type { RSVPRollbackItem, Scout } from "./contract.gen";
   import { shortDay } from "./dates";
@@ -49,6 +50,8 @@
   let deleting = $state(false);
   // The answers confirming's Undo rolls back; null when the preview failed.
   let rollback = $state<RSVPRollbackItem[] | null>(null);
+  // Spoken, not shown: a check-in or its Undo.
+  let announcement = $state("");
   const guard = guardedActions();
   const busy = $derived(guard.busy);
   const message = $derived(guard.message);
@@ -64,7 +67,7 @@
   // trigger (the Scout's checkbox, the Delete button) when it is dismissed.
   const checkboxes: Record<string, HTMLInputElement | null> = {};
   let deleteButton: HTMLButtonElement | undefined = $state();
-  let deleteYes: HTMLButtonElement | undefined = $state();
+  let deleteKeep: HTMLButtonElement | undefined = $state();
   async function cancelUndo(id: string) {
     confirming = null;
     await tick();
@@ -73,7 +76,7 @@
   async function askDelete() {
     deleting = true;
     await tick();
-    deleteYes?.focus();
+    deleteKeep?.focus();
   }
   async function keepMeeting() {
     deleting = false;
@@ -99,14 +102,28 @@
       confirming = null;
       void run(`Couldn't check in ${fullName(s)}. Try again.`, () =>
         api.leaderCheckIn(meetingId, s.id),
-      );
+      ).then((ok) => {
+        if (ok) announcement = `${fullName(s)} checked in`;
+      });
     }
   }
 
-  const undo = (s: WithId<Scout>) =>
-    run(`Couldn't undo ${fullName(s)}'s check-in. Try again.`, () =>
-      api.undoCheckIn(meetingId, checkedIn[s.id] ?? ""),
+  async function undo(s: WithId<Scout>) {
+    // The confirm (and the focus in it) closes: hand focus to the checkbox.
+    const inRow = checkboxes[s.id]
+      ?.closest("li")
+      ?.contains(document.activeElement);
+    const ok = await run(
+      `Couldn't undo ${fullName(s)}'s check-in. Try again.`,
+      () => api.undoCheckIn(meetingId, checkedIn[s.id] ?? ""),
     );
+    if (!ok) return;
+    announcement = `${fullName(s)}'s check-in undone`;
+    if (inRow) {
+      await tick();
+      checkboxes[s.id]?.focus();
+    }
+  }
 
   async function remove() {
     const ok = await guard.run(
@@ -126,6 +143,7 @@
 
 <main>
   <h1>{shortDay(meetingId)}</h1>
+  <Announcer text={announcement} />
 
   {#if $meeting.state === "error" || $scouts.state === "error"}
     <p role="alert">Couldn't load this Meeting. Reload to try again.</p>
@@ -172,9 +190,9 @@
 
     {#if presentCount === 0 && !isTonight}
       {#if deleting}
-        <p>
+        <p role="group" aria-labelledby="delete-yes">
           <button
-            bind:this={deleteYes}
+            id="delete-yes"
             type="button"
             class="danger solid"
             disabled={busy}
@@ -183,6 +201,7 @@
             Yes, delete this Meeting
           </button>
           <button
+            bind:this={deleteKeep}
             type="button"
             disabled={busy}
             onclick={() => void keepMeeting()}

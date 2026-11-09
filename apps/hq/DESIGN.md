@@ -60,6 +60,11 @@ typography:
     fontSize: "2.75rem"
     fontWeight: 700
     lineHeight: 1
+  count:
+    fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
+    fontSize: "2.5rem"
+    fontWeight: 700
+    lineHeight: 1.1
   title:
     fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
     fontSize: "2.25rem"
@@ -81,6 +86,11 @@ typography:
     fontFamily: "Atkinson Hyperlegible, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
+    lineHeight: 1.45
+  small:
+    fontFamily: "Atkinson Hyperlegible, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "0.9375rem"
+    fontWeight: 700
     lineHeight: 1.45
   meta:
     fontFamily: "Atkinson Hyperlegible, system-ui, -apple-system, Segoe UI, sans-serif"
@@ -283,11 +293,13 @@ One deep troop burgundy against warm-neutral greys with a faint rose cast, plus 
 
 - **Display** (700, `clamp()` up to 14rem, 0.95): the Kiosk Handoff's hero name only. Sized from the stage's width (`cqi`) and the name's length (`--len`) so a long name stays on one line.
 - **Headline** (700, 3rem, 1.05): Kiosk screen titles (3.5rem for the Event name on an RSVP screen).
-- **Stat** (700, 2.5 to 2.75rem, 1 to 1.1): Leader headline counts ("N checked in", burgundy, beside a muted "N not yet") and big stat numbers.
+- **Stat** (700, 2.75rem, 1): big stat numbers (the Event page's Going / Not going / No answer counts).
+- **Count** (700, 2.5rem, 1.1): Leader headline counts ("N checked in", "N not yet"), one step under Stat's 2.75rem.
 - **Title** (700, 2.25rem, 1.05): Leader page titles.
 - **Section** (700, 1.375rem): Leader section headings.
 - **Prompt** (Atkinson 700, 1.75rem): the Kiosk's one question per screen ("Are you …?", the RSVP ask).
 - **Body** (400, 1rem, 1.45): Leader text. The Kiosk raises its base to 1.25rem, and its sub-lines, status text, buttons, name-list tiles and the Handoff's "Pass the tablet to" lead to 1.375rem.
+- **Small** (Atkinson 700, 0.9375rem): Leader button labels and the wide-screen tab labels.
 - **Meta** (400, 0.875rem, muted): times, methods, emails, reasons and notes under a row's name.
 - **Label** (Atkinson 700, 0.75rem, 0.06em, uppercase): status pills only.
 - **Shell** (Barlow Condensed 700, 1.0625rem Leader / 1.125rem Kiosk, 0.06em, uppercase, muted): the shell bar's troop name ("Troop 813 HQ", "Troop 813 · Meeting").

@@ -3,7 +3,8 @@
    Every selector sits wholly inside :where(.leader …), so it has zero
    specificity: a screen's own styles always win, and within this file the
    later rule wins. (Pseudo-elements can't go inside :where, so those few
-   rules keep a normal selector.) */
+   rules keep a normal selector.) The one rule outside .leader is the
+   :where(html) scroll-padding, still zero specificity. */
 
 /* Links and struck-through names (first, so later rules refine them). */
 :where(.leader a) {

@@ -40,23 +40,34 @@
     onCancel: () => void;
   } = $props();
 
-  // The confirm replaces the Undo button, so focus moves into it.
-  let yes: HTMLButtonElement | undefined = $state();
-  onMount(() => yes?.focus());
+  // The confirm replaces the Undo button, so focus moves into it, onto the
+  // safe button: a stray Enter or tap must not undo.
+  let cancel: HTMLButtonElement | undefined = $state();
+  onMount(() => cancel?.focus());
+  const id = $props.id();
 
   const answerText = (a: RSVPAnswer | null) =>
     a === "going" ? "Going" : a === "notGoing" ? "Not going" : "No answer";
 </script>
 
-<span class="confirm">
-  <span>Undo {name}'s check-in?</span>
+<span
+  class="confirm"
+  role="group"
+  aria-labelledby="{id}-q"
+  aria-describedby={rollback === null
+    ? `${id}-note`
+    : rollback.length > 0
+      ? `${id}-intro ${id}-list`
+      : undefined}
+>
+  <span id="{id}-q">Undo {name}'s check-in?</span>
   {#if rollback === null}
-    <span>
+    <span id="{id}-note">
       Couldn't load which RSVPs this rolls back; Undo still rolls them back.
     </span>
   {:else if rollback.length > 0}
-    <span>This rolls back:</span>
-    <ul aria-label="RSVPs this rolls back">
+    <span id="{id}-intro">This rolls back:</span>
+    <ul id="{id}-list" aria-label="RSVPs this rolls back">
       {#each rollback as item (item.eventId)}
         <li>
           {item.eventName}: {answerText(item.from)} → {answerText(item.to)}
@@ -64,12 +75,10 @@
       {/each}
     </ul>
   {/if}
-  <button
-    bind:this={yes}
-    type="button"
-    class="danger solid"
-    disabled={busy}
-    onclick={onConfirm}>Yes, undo</button
+  <button type="button" class="danger solid" disabled={busy} onclick={onConfirm}
+    >Yes, undo</button
   >
-  <button type="button" disabled={busy} onclick={onCancel}>Cancel</button>
+  <button bind:this={cancel} type="button" disabled={busy} onclick={onCancel}
+    >Cancel</button
+  >
 </span>

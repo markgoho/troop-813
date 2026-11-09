@@ -5,6 +5,7 @@
   // Status first: counts, then the list, then the actions below it.
   // Reads are live (onSnapshot); every change goes through the API.
   import { tick } from "svelte";
+  import Announcer from "./Announcer.svelte";
   import EventForm from "./EventForm.svelte";
   import ScoutLink from "./ScoutLink.svelte";
   import { ApiError, type Api } from "./api";
@@ -57,6 +58,8 @@
   let editing = $state(false);
   let confirmingDelete = $state(false);
   let busy = $state(false);
+  // Spoken, not shown: what a Cancel / Uncancel or an RSVP change did.
+  let announcement = $state("");
 
   const choices: { value: RSVPAnswer | null; text: string; label: string }[] = [
     { value: "going", text: "Going", label: "Going" },
@@ -79,6 +82,7 @@
     pending[s.id] = answer;
     try {
       await api.setRsvp(eventId, s.id, answer);
+      announcement = `${fullName(s)}: ${answer === null ? "No answer" : answerText[answer]}`;
     } catch {
       delete pending[s.id];
       error = `Couldn't save ${s.firstName}'s RSVP. Try again.`;
@@ -89,11 +93,12 @@
     return `${e.attendanceId === null ? "Leader" : "Kiosk"} · ${moment(e.at.toDate())}`;
   }
 
-  async function act(f: () => Promise<void>, failed: string) {
+  async function act(f: () => Promise<void>, failed: string, done = "") {
     error = null;
     busy = true;
     try {
       await f();
+      announcement = done;
     } catch (e) {
       error =
         e instanceof ApiError && e.body?.code === "in_use"
@@ -104,14 +109,14 @@
     }
   }
 
-  // Focus follows the inline delete confirm: into it on open, back to
-  // Delete Event on Keep it.
+  // Focus follows the inline delete confirm: onto its safe button on open,
+  // back to Delete Event on Keep it.
   let deleteButton: HTMLButtonElement | undefined = $state();
-  let confirmYes: HTMLButtonElement | undefined = $state();
+  let keepButton: HTMLButtonElement | undefined = $state();
   async function askDelete() {
     confirmingDelete = true;
     await tick();
-    confirmYes?.focus();
+    keepButton?.focus();
   }
   async function keepIt() {
     confirmingDelete = false;
@@ -128,6 +133,7 @@
     act(
       () => api.setEventCancelled(eventId, cancelled),
       "Couldn't update the Event. Try again.",
+      cancelled ? "Event cancelled" : "Event uncancelled",
     );
 
   const remove = () =>
@@ -142,6 +148,7 @@
 >
 
 <main>
+  <Announcer text={announcement} />
   {#if $events.state === "error"}
     <p role="alert">Couldn't load this Event. Reload to try again.</p>
   {:else if $events.state === "loading"}
@@ -247,16 +254,24 @@
             Cancel it instead.
           </p>
         {:else if confirmingDelete}
-          <button
-            bind:this={confirmYes}
-            type="button"
-            class="danger solid"
-            disabled={busy}
-            onclick={() => void remove()}
-          >
-            Yes, delete {event.name}
-          </button>
-          <button type="button" onclick={() => void keepIt()}> Keep it </button>
+          <span class="confirm-group" role="group" aria-labelledby="delete-yes">
+            <button
+              id="delete-yes"
+              type="button"
+              class="danger solid"
+              disabled={busy}
+              onclick={() => void remove()}
+            >
+              Yes, delete {event.name}
+            </button>
+            <button
+              bind:this={keepButton}
+              type="button"
+              onclick={() => void keepIt()}
+            >
+              Keep it
+            </button>
+          </span>
         {/if}
       </div>
     {/if}
@@ -264,6 +279,9 @@
 </main>
 
 <style>
+  .confirm-group {
+    display: contents;
+  }
   .when {
     display: grid;
     gap: 0.25rem;

@@ -279,9 +279,10 @@ describe("EventPage", () => {
   test("the delete confirm takes focus; Keep it returns it to Delete Event", async () => {
     setup();
     await userEvent.click(screen.getByRole("button", { name: "Delete Event" }));
+    expect(screen.getByRole("button", { name: "Keep it" })).toHaveFocus();
     expect(
-      screen.getByRole("button", { name: "Yes, delete Fall Campout" }),
-    ).toHaveFocus();
+      screen.getByRole("group", { name: "Yes, delete Fall Campout" }),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Keep it" }));
     expect(screen.getByRole("button", { name: "Delete Event" })).toHaveFocus();
   });

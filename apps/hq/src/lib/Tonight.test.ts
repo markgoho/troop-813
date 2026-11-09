@@ -220,20 +220,72 @@ describe("Tonight", () => {
     await userEvent.type(await screen.findByLabelText("Find a Scout"), "e");
     expect(await screen.findByText("3 Scouts match")).toHaveClass("sr-only");
     await userEvent.type(screen.getByLabelText("Find a Scout"), "zzz");
-    expect(screen.getAllByText("No Scout matches “ezzz”.")).toHaveLength(2);
+    await waitFor(() =>
+      expect(screen.getAllByText("No Scout matches “ezzz”.")).toHaveLength(2),
+    );
   });
 
-  test("the Undo confirm takes focus, and Cancel hands it back to Undo", async () => {
+  test("the Undo confirm takes focus on Cancel, and Cancel hands it back to Undo", async () => {
     const { live } = setup();
     tonight(live, { s1: "a1", s2: "a2" });
     await userEvent.click(
       await screen.findByRole("button", { name: "Undo Avery Quill" }),
     );
-    expect(screen.getByRole("button", { name: "Yes, undo" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    expect(
+      screen.getByRole("group", { name: "Undo Avery Quill's check-in?" }),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(
       screen.getByRole("button", { name: "Undo Avery Quill" }),
     ).toHaveFocus();
+  });
+
+  test("after a Check in the row leaves and focus moves to the next row's Check in", async () => {
+    const { live } = setup({ leaderCheckIn: async () => ({}) as never });
+    tonight(live, {});
+    const first = await screen.findByRole("button", {
+      name: "Check in Avery Quill",
+    });
+    await userEvent.click(first);
+    live.meetingStore(TODAY).set(meeting(TODAY, { checkedIn: { s1: "a9" } }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Check in Ellis Thorne" }),
+      ).toHaveFocus(),
+    );
+  });
+
+  test("after checking in the last row focus falls to the Find a Scout field", async () => {
+    const { live } = setup({ leaderCheckIn: async () => ({}) as never });
+    tonight(live, { s1: "a1" }, []);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Check in Rowan Fenwick" }),
+    );
+    live
+      .meetingStore(TODAY)
+      .set(meeting(TODAY, { checkedIn: { s1: "a1", s2: "a9" } }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Find a Scout")).toHaveFocus(),
+    );
+  });
+
+  test("after the last Check in focus falls to the Not checked in heading", async () => {
+    const { live } = setup({ leaderCheckIn: async () => ({}) as never });
+    tonight(live, { s2: "a2", s3: "a3" }, []);
+    const only = await screen.findByRole("button", {
+      name: "Check in Avery Quill",
+    });
+    await userEvent.click(only);
+    live
+      .meetingStore(TODAY)
+      .set(meeting(TODAY, { checkedIn: { s1: "a9", s2: "a2", s3: "a3" } }));
+    // Nobody left: no field, so the heading takes focus.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Not checked in" }),
+      ).toHaveFocus(),
+    );
   });
 
   test("a failed Check in shows a message", async () => {
@@ -590,7 +642,9 @@ describe("Tonight Find a Scout", () => {
     const box = await screen.findByRole("searchbox", { name: "Find a Scout" });
     await userEvent.type(box, "xy");
     // Shown, and spoken once through the polite region.
-    expect(screen.getAllByText("No Scout matches “xy”.")).toHaveLength(2);
+    await waitFor(() =>
+      expect(screen.getAllByText("No Scout matches “xy”.")).toHaveLength(2),
+    );
     expect(within(notIn()).queryAllByRole("listitem")).toHaveLength(0);
 
     await userEvent.clear(box);

@@ -4,9 +4,11 @@
   // Not checked in list (Leader check-in). A phone never starts a Meeting.
   import { tick } from "svelte";
   import { resolve } from "$app/paths";
+  import Announcer from "./Announcer.svelte";
   import type { Api } from "./api";
   import type { Attendance, RSVPRollbackItem, Scout } from "./contract.gen";
   import { docsOf } from "./events";
+  import { focusAfterRemoval, focusedRow, nextRowButton } from "./focus";
   import { clockTime, localDate } from "./dates";
   import { guardedActions } from "./guarded.svelte";
   import { asleep, meetingOver } from "./kiosk-flow";
@@ -58,8 +60,8 @@
   });
 
   // Spoken, not shown: Leader actions and the Kiosk falling asleep (polite
-  // region), and the Find a Scout result (its own region, so typing never
-  // overwrites an action).
+  // region), and the Find a Scout result (its own region, debounced, so
+  // typing never overwrites an action or chatters per keystroke).
   let announcement = $state("");
   let wasAwake = false;
   $effect(() => {
@@ -124,6 +126,20 @@
         : `${shown.length} ${shown.length === 1 ? "Scout matches" : "Scouts match"}`,
   );
 
+  let spokenResult = $state("");
+  $effect(() => {
+    const text = searchResult;
+    if (!text) {
+      spokenResult = "";
+      return;
+    }
+    const timer = setTimeout(() => (spokenResult = text), 400);
+    return () => clearTimeout(timer);
+  });
+  let searchInput: HTMLInputElement | undefined = $state();
+  let notCheckedInHeading: HTMLHeadingElement | undefined = $state();
+  let checkedInHeading: HTMLHeadingElement | undefined = $state();
+
   // RSVPs given in each check-in: RSVP docs with an entry carrying its id.
   // Still loading or unreadable counts as none, so the list never waits on it.
   const rsvpsGiven = $derived.by(() => {
@@ -161,11 +177,13 @@
     failure: string,
     action: () => Promise<unknown>,
     done = "",
-  ) {
-    if (await guard.run(failure, action)) {
+  ): Promise<boolean> {
+    const ok = await guard.run(failure, action);
+    if (ok) {
       confirming = null;
       announcement = done;
     }
+    return ok;
   }
 
   // Undo buttons by attendance id, to hand focus back on Cancel.
@@ -178,12 +196,23 @@
 
   const wake = () =>
     run("Couldn't wake the Kiosk. Try again.", () => api.wakeKiosk());
-  const checkIn = (s: WithId<Scout>) =>
-    run(
+  async function checkIn(s: WithId<Scout>) {
+    // The row leaves when the snapshot lands: hand focus to the next row.
+    const row = focusedRow();
+    const next = nextRowButton(row);
+    const ok = await run(
       `Couldn't check in ${fullName(s)}. Try again.`,
       () => api.leaderCheckIn(meetingId, s.id),
       `${fullName(s)} checked in`,
     );
+    if (ok)
+      void focusAfterRemoval(
+        row,
+        () => next,
+        () => searchInput,
+        () => notCheckedInHeading,
+      );
+  }
   /** Previews the RSVP rollback, then shows the inline confirm. */
   async function askUndo(a: WithId<Attendance>) {
     // loadRollback never throws: a failed preview is null.
@@ -192,20 +221,29 @@
     });
     if (ok) confirming = a.id;
   }
-  const undo = (a: WithId<Attendance>) =>
-    run(
+  async function undo(a: WithId<Attendance>) {
+    const row = focusedRow();
+    const next = nextRowButton(row);
+    const ok = await run(
       `Couldn't undo ${nameOf(a.scoutId)}'s check-in. Try again.`,
       () => api.undoCheckIn(meetingId, a.id),
       `${nameOf(a.scoutId)}'s check-in undone`,
     );
+    if (ok)
+      void focusAfterRemoval(
+        row,
+        () => next,
+        () => checkedInHeading,
+      );
+  }
 </script>
 
 <svelte:head><title>Tonight · Troop 813 HQ</title></svelte:head>
 
 <main>
   <h1>Tonight</h1>
-  <p class="sr-only" role="status" aria-live="polite">{announcement}</p>
-  <p class="sr-only" role="status" aria-live="polite">{searchResult}</p>
+  <Announcer text={announcement} />
+  <Announcer text={spokenResult} />
 
   {#if $meeting.state === "ready" && !$meeting.doc}
     <p>No Meeting today: the Admin starts it on the Kiosk</p>
@@ -240,7 +278,7 @@
 
     {#if message}<p role="alert">{message}</p>{/if}
 
-    <h2>Checked in</h2>
+    <h2 bind:this={checkedInHeading} tabindex="-1">Checked in</h2>
     <ul aria-label="Checked in">
       {#each present as a (a.id)}
         {@const who = scoutsById.get(a.scoutId)}
@@ -279,7 +317,7 @@
       {/each}
     </ul>
 
-    <h2>Not checked in</h2>
+    <h2 bind:this={notCheckedInHeading} tabindex="-1">Not checked in</h2>
     {#if notYet.length > 0}
       <label>
         Find a Scout
@@ -287,6 +325,7 @@
           type="search"
           autocomplete="off"
           enterkeyhint="search"
+          bind:this={searchInput}
           bind:value={query}
         />
       </label>

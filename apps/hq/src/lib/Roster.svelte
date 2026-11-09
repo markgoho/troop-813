@@ -9,6 +9,8 @@
   // the form clears and focus returns to first name for the next Scout.
   import { tick } from "svelte";
   import { ApiError, type Api } from "./api";
+  import Announcer from "./Announcer.svelte";
+  import { focusAfterRemoval, focusedRow, nextRowButton } from "./focus";
   import type { AttendanceCount, Scout } from "./contract.gen";
   import type { Live, WithId } from "./live";
   import PencilSimple from "phosphor-svelte/lib/PencilSimple";
@@ -43,6 +45,8 @@
     text: string;
     reactivate?: { id: string; label: string };
   } | null>(null);
+  // Spoken, not shown: what a Roster action did.
+  let announcement = $state("");
   let firstInput: HTMLInputElement | undefined = $state();
 
   let editingId = $state<string | null>(null);
@@ -75,6 +79,7 @@
     saving = true;
     try {
       await api.addScout({ firstName: first, lastName: last });
+      announcement = `${first} ${last} added`;
       firstName = "";
       lastName = "";
       notice = null;
@@ -102,10 +107,12 @@
     name: string,
     verb: string,
     call: () => Promise<void>,
+    done = "",
   ): Promise<boolean> {
     try {
       await call();
       notice = null;
+      announcement = done;
       return true;
     } catch (err) {
       notice =
@@ -119,8 +126,11 @@
   async function reactivateNamesake() {
     const target = notice?.reactivate;
     if (!target) return;
-    const ok = await run(target.label, "reactivate", () =>
-      api.reactivateScout(target.id),
+    const ok = await run(
+      target.label,
+      "reactivate",
+      () => api.reactivateScout(target.id),
+      `${target.label} reactivated`,
     );
     if (ok) {
       firstName = "";
@@ -134,7 +144,7 @@
   const editButtons: Record<string, HTMLButtonElement | null> = {};
   const deleteButtons: Record<string, HTMLButtonElement | null> = {};
   let editFirstInput: HTMLInputElement | undefined = $state();
-  let confirmYes: HTMLButtonElement | undefined = $state();
+  let confirmKeep: HTMLButtonElement | undefined = $state();
 
   async function startEdit(s: WithId<Scout>) {
     editingId = s.id;
@@ -154,7 +164,7 @@
   async function askDelete(id: string) {
     confirmingId = id;
     await tick();
-    confirmYes?.focus();
+    confirmKeep?.focus();
   }
 
   async function keep(id: string) {
@@ -168,17 +178,47 @@
     const first = editFirst.trim();
     const last = editLast.trim();
     if (!first || !last) return;
-    const ok = await run(`${first} ${last}`, "rename", () =>
-      api.editScout(s.id, { firstName: first, lastName: last }),
+    const ok = await run(
+      `${first} ${last}`,
+      "rename",
+      () => api.editScout(s.id, { firstName: first, lastName: last }),
+      `${first} ${last} renamed`,
     );
     if (ok) await stopEdit(s.id);
   }
 
+  /** The row leaves its list: focus goes to the next row, else its heading. */
+  function handOffFocus(row: Element | null) {
+    const next = nextRowButton(row);
+    const headingId = row?.closest("ul")?.getAttribute("aria-labelledby");
+    void focusAfterRemoval(
+      row,
+      () => next,
+      () => (headingId ? document.getElementById(headingId) : null),
+      () => document.getElementById("active-heading"),
+    );
+  }
+
+  async function toggleActive(s: WithId<Scout>) {
+    const row = focusedRow();
+    const name = fullName(s);
+    const ok = await run(
+      name,
+      s.active ? "deactivate" : "reactivate",
+      () => (s.active ? api.deactivateScout(s.id) : api.reactivateScout(s.id)),
+      `${name} ${s.active ? "deactivated" : "reactivated"}`,
+    );
+    if (ok) handOffFocus(row);
+  }
+
   async function remove(s: WithId<Scout>) {
+    const row = focusedRow();
     confirmingId = null;
     try {
       await api.deleteScout(s.id);
       notice = null;
+      announcement = `${fullName(s)} deleted`;
+      handOffFocus(row);
     } catch (err) {
       if (err instanceof ApiError && err.body?.code === "in_use") {
         refused = [...refused, s.id];
@@ -194,6 +234,7 @@
 
 <main>
   <h1>Roster</h1>
+  <Announcer text={announcement} />
 
   <form onsubmit={add} aria-label="Add Scout" class="add">
     <label>
@@ -236,12 +277,12 @@
   {:else if sorted.length === 0}
     <p>No Scouts yet.</p>
   {:else}
-    <h2 id="active-heading">Active Scouts</h2>
+    <h2 id="active-heading" tabindex="-1">Active Scouts</h2>
     <ul aria-labelledby="active-heading">
       {#each active as s (s.id)}{@render scoutRow(s)}{/each}
     </ul>
     {#if inactive.length > 0}
-      <h2 id="inactive-heading">Inactive Scouts</h2>
+      <h2 id="inactive-heading" tabindex="-1">Inactive Scouts</h2>
       <ul aria-labelledby="inactive-heading">
         {#each inactive as s (s.id)}{@render scoutRow(s)}{/each}
       </ul>
@@ -293,10 +334,7 @@
         <button
           type="button"
           aria-label="{s.active ? 'Deactivate' : 'Reactivate'} {fullName(s)}"
-          onclick={() =>
-            void run(fullName(s), s.active ? "deactivate" : "reactivate", () =>
-              s.active ? api.deactivateScout(s.id) : api.reactivateScout(s.id),
-            )}
+          onclick={() => void toggleActive(s)}
           class="icon"
           >{#if s.active}<UserMinus
               weight="thin"
@@ -306,15 +344,27 @@
           ></button
         >
         {#if confirmingId === s.id}
-          <button
-            bind:this={confirmYes}
-            type="button"
-            class="danger solid"
-            onclick={() => void remove(s)}
+          <span
+            class="confirm-group"
+            role="group"
+            aria-labelledby="confirm-yes-{s.id}"
           >
-            Yes, delete {fullName(s)}
-          </button>
-          <button type="button" onclick={() => void keep(s.id)}> Keep </button>
+            <button
+              id="confirm-yes-{s.id}"
+              type="button"
+              class="danger solid"
+              onclick={() => void remove(s)}
+            >
+              Yes, delete {fullName(s)}
+            </button>
+            <button
+              bind:this={confirmKeep}
+              type="button"
+              onclick={() => void keep(s.id)}
+            >
+              Keep
+            </button>
+          </span>
         {:else if !inUse(s.id)}
           <button
             bind:this={deleteButtons[s.id]}
@@ -341,6 +391,9 @@
   .meta {
     margin-left: auto;
     font-variant-numeric: tabular-nums;
+  }
+  .confirm-group {
+    display: contents;
   }
   .actions {
     flex-basis: 100%;

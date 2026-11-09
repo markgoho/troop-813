@@ -147,9 +147,13 @@
     stroke-width: 1.5;
     stroke-linejoin: round;
   }
+  /* Fills the stage so the name list can stretch; the one-question screens
+     stay centred in it, and the RSVP card (its own flex: 1) stays top-aligned. */
   .flow {
+    flex: 1;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 1.5rem;
   }
   .flow[hidden] {

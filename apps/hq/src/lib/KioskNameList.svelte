@@ -239,7 +239,7 @@
       >
     </h1>
   {/key}
-  <div class="choices" aria-busy={saving}>
+  <div class="choices confirm" aria-busy={saving}>
     <button
       type="button"
       class="yes"
@@ -349,22 +349,38 @@
     font-size: 1.75rem;
     font-weight: 700;
   }
+  /* The one-question screens (confirm, Handoff) grow their buttons with the
+     viewport height, capped so the hero, prompt and buttons still fit. Yes
+     stays the dominant one: wider in the confirm row, taller on the Handoff. */
+  .confirm button,
+  .handoff button {
+    min-height: clamp(4.5rem, 10vh, 6rem);
+    font-size: clamp(1.375rem, 3vh, 1.75rem);
+  }
+  .confirm .yes {
+    flex-grow: 2;
+    min-height: clamp(5rem, 13vh, 7.5rem);
+    font-size: clamp(1.5rem, 4vh, 2.25rem);
+  }
   .handoff button {
     flex: 1 1 12rem;
   }
   .handoff .yes {
     flex-basis: 100%;
-    min-height: 5rem;
-    font-size: 1.75rem;
+    min-height: clamp(5rem, 15vh, 8rem);
+    font-size: clamp(1.75rem, 4.5vh, 2.5rem);
   }
   @media (orientation: portrait) {
+    .confirm button,
     .handoff button,
     .handoff .yes {
       flex-basis: auto;
     }
   }
   /* The name list may use more of a landscape tablet than the one-question
-     screens, so ~30 Scouts fit without scrolling. */
+     screens. The grid fills what is left of the stage: with few Scouts the
+     tiles grow (up to 8rem tall), with many they hold at 4rem and the page
+     scrolls only if they truly don't fit. */
   .listhead,
   .names {
     align-self: center;
@@ -376,22 +392,40 @@
     align-items: baseline;
     gap: 0.5rem 1.25rem;
   }
+  /* flex-basis 0 and min-height 0: the grid takes what is left of the stage
+     (an auto basis would size every row to its 8rem cap). Rows below 4rem
+     overflow the stage instead, so the page scrolls. */
   .names {
+    flex: 1 1 0;
+    min-height: 0;
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    grid-auto-rows: minmax(4rem, 8rem);
+    align-content: start;
     gap: 0.75rem;
+  }
+  /* Each tile is a size container, so the name's type grows with the tile
+     (never below 1.375rem, never above 2rem) and long names wrap. */
+  .names li {
+    container-type: size;
+    min-height: 4rem;
   }
   .names button {
     width: 100%;
+    height: 100%;
     min-height: 4rem;
+    padding-inline: 1rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     text-align: left;
-    font-size: 1.375rem;
+    font-size: clamp(1.375rem, min(24cqh, 12cqw), 2rem);
+    line-height: 1.15;
+    overflow-wrap: break-word;
+    text-wrap: balance;
   }
   .names .done {
     background: var(--bg);

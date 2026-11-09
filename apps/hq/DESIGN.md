@@ -312,7 +312,7 @@ One deep troop burgundy against warm-neutral greys with a faint rose cast, plus 
 
 ## Layout
 
-The Kiosk is a two-row grid: a thin text-only shell bar ("Troop 813 · Meeting") over a stage centred vertically, at most 60rem wide, with 1.5rem gaps and side padding that respects safe areas. The stage is a size container so the hero name scales with it. Answer buttons sit in a wrapping row (`flex: 1 1 14rem`, 1rem gap); in portrait orientation they stack full-width. The Handoff's Yes spans the full row at 5rem tall, with the two escapes side by side beneath it. The name list alone may widen to `min(76rem, 100vw - 3rem)` and uses an auto-fill grid of 11rem minimum columns so about 30 names fit one landscape screen.
+The Kiosk is a two-row grid: a thin text-only shell bar ("Troop 813 · Meeting") over a stage centred vertically, at most 60rem wide, with 1.5rem gaps and side padding that respects safe areas. The stage is a size container so the hero name scales with it. Answer buttons sit in a wrapping row (`flex: 1 1 14rem`, 1rem gap); in portrait orientation they stack full-width. The Handoff's Yes spans the full row, at least 5rem tall and growing with viewport height, with the two escapes side by side beneath it. The name list alone may widen to `min(76rem, 100vw - 3rem)` and uses an auto-fill grid of 11rem minimum columns that fills the rest of the stage's height: rows are 4rem to 8rem tall, so a small roster gets taller tiles and a large one holds at 4rem and scrolls only if it truly doesn't fit (40 names fit a 1280x800 landscape screen at about 77px). The Handoff's and the confirm screen's buttons grow with viewport height within caps (see Components).
 
 The Leader screens are phone-first (390px): a text-only shell bar, a single 42rem-max column with 1rem gaps and 1.25rem top padding, and a tab bar fixed to the bottom (6rem bottom padding keeps content clear of it). At 48rem and wider the tab bar moves to the top under the shell bar, centred, and the column's bottom padding drops to 3rem. Everything respects `env(safe-area-inset-*)`.
 
@@ -348,7 +348,7 @@ The troop logo is a circular monoline badge drawn in `currentColor` in a 380-uni
 
 Large, outlined and plain; the main action is filled.
 
-- **Kiosk:** 4rem tall, 0.75rem by 1.5rem padding, 1.375rem bold text, 2px `--line` outline, 12px corners, `--surface` background. Primary (`.primary`, `.yes`) fills with `--fill`. The Handoff's Yes and the RSVP Done button grow to 5rem and 1.75rem. Quiet buttons are transparent, muted, regular weight.
+- **Kiosk:** 4rem tall, 0.75rem by 1.5rem padding, 1.375rem bold text, 2px `--line` outline, 12px corners, `--surface` background. Primary (`.primary`, `.yes`) fills with `--fill`. The RSVP Done button grows to 5rem and 1.75rem. On the confirm and Handoff screens buttons scale with viewport height: 4.5rem to 6rem tall (`clamp(4.5rem, 10vh, 6rem)`), and Yes is dominant, 5rem to 8rem tall with 1.75rem to 2.5rem text on the Handoff, and twice as wide in the confirm row. Quiet buttons are transparent, muted, regular weight.
 - **Leader:** 2.75rem tall, 0.5rem by 0.875rem padding, 0.9375rem bold, 1px `--line` outline, 8px corners. Primary (`.primary` and every `type="submit"`) fills with `--fill`. Danger has red text on the outlined button; `.danger.solid` fills red with surface-coloured text for the final confirm. A disabled danger button turns muted with a dashed outline at full opacity; other disabled buttons drop to 45% opacity (55% on the Kiosk).
 - **Hover / Focus:** hover turns the outline burgundy (`--accent`) and darkens fills to `--fill-hover`; transitions run 160ms on `--ease`. On the Kiosk a pressed button scales to 0.98 when motion is allowed. Focus is a 3px `--focus` outline offset 2px everywhere.
 
@@ -392,7 +392,7 @@ The Handoff shows a small "Pass the tablet to" lead in body type and full ink, t
 
 ### Name List (Kiosk)
 
-A grid of outlined name buttons (4rem tall, 1.375rem text, left-aligned). A checked-in name keeps a quiet hairline outline on the ground colour so the grid holds its shape, goes muted and regular weight, and gains a drawn green check mark (a masked SVG, with a hidden "✓" in the text for screen readers), so checked-in state never relies on colour alone. After "No, I'm someone else", the tile of the Scout the Handoff named gets a burgundy outline (state only).
+A grid of outlined name buttons (4rem to 8rem tall, text 1.375rem growing to 2rem with the tile via container units and wrapping when long, left-aligned). A checked-in name keeps a quiet hairline outline on the ground colour so the grid holds its shape, goes muted and regular weight, and gains a drawn green check mark (a masked SVG, with a hidden "✓" in the text for screen readers), so checked-in state never relies on colour alone. After "No, I'm someone else", the tile of the Scout the Handoff named gets a burgundy outline (state only).
 
 ### Segmented RSVP Switch (signature, Leader)
 

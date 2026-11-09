@@ -5,7 +5,8 @@
 
 <script lang="ts">
   // The Meeting Kiosk (/kiosk, spec stories 1–12, 22, 40, 41). One route, no
-  // links out, so Back is harmless; everything it shows comes from the session
+  // links out while a Kiosk session is live (the lock screen links a signed-in
+  // Leader back to HQ), so Back is harmless; everything it shows comes from the session
   // and the live Meeting doc, so a reload or crash resumes where it was.
   //
   //   signed out             → the Admin's Google sign-in (unlock)
@@ -15,6 +16,7 @@
   //
   // The Google sign-in is offered only while no Kiosk session for today is
   // live: a Scout holding the tablet must never get the Admin's account chooser.
+  import { resolve } from "$app/paths";
   import { ApiError, type Api } from "./api";
   import { localDate } from "./dates";
   import KioskSession from "./KioskSession.svelte";
@@ -156,6 +158,11 @@
           {:else}
             <p class="sub">Only the Admin can unlock the Kiosk.</p>
           {/if}
+          {#if caller.role === "admin" || caller.role === "leader"}
+            <!-- No Kiosk session is live here, so a way back to the Leader
+                 screens is safe; the installed app has no address bar. -->
+            <a class="hq" href={resolve("/")}>Go to Troop 813 HQ</a>
+          {/if}
           {@render signOut()}
         </div>
       {:catch}
@@ -209,6 +216,11 @@
     align-items: center;
     text-align: center;
     gap: 1.25rem;
+  }
+  .hq {
+    color: var(--accent);
+    font-weight: 700;
+    padding: 0.75rem 1rem;
   }
   .lock h1 {
     font-size: 3rem;

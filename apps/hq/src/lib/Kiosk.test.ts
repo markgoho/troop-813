@@ -640,3 +640,11 @@ describe("a live read refused right after Start", () => {
     retry.ms = 2000;
   });
 });
+
+test("signed in with Google, a Leader gets a link back to HQ", async () => {
+  setup(google, { me: asAdmin });
+
+  expect(
+    await screen.findByRole("link", { name: "Go to Troop 813 HQ" }),
+  ).toHaveAttribute("href", "/");
+});

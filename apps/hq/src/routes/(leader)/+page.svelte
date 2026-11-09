@@ -1,6 +1,5 @@
 <script lang="ts">
   // Tonight: today's Meeting, live. Any Leader; Go and the rules refuse everyone else.
-  import HealthStatus from "#lib/HealthStatus.svelte";
   import Tonight from "#lib/Tonight.svelte";
   import { getHq } from "#lib/hq.ts";
 
@@ -8,4 +7,3 @@
 </script>
 
 <Tonight {api} {live} />
-<HealthStatus {api} />

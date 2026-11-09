@@ -2,6 +2,7 @@
   // Event page (spec stories 70–74): counts, every active Scout with a
   // Going / Not / — switch (— clears, so the Kiosk asks again), who answered
   // last with full history on tap, and Edit, Cancel / Uncancel, Delete.
+  // Status first: counts, then the list, then the actions below it.
   // Reads are live (onSnapshot); every change goes through the API.
   import EventForm from "./EventForm.svelte";
   import ScoutLink from "./ScoutLink.svelte";
@@ -152,42 +153,6 @@
         onSave={save}
         onCancel={() => (editing = false)}
       />
-    {:else}
-      <div class="actions row">
-        <button type="button" onclick={() => (editing = true)}>Edit</button>
-        <button
-          type="button"
-          disabled={busy}
-          onclick={() => void setCancelled(!event.cancelled)}
-        >
-          {event.cancelled ? "Uncancel Event" : "Cancel Event"}
-        </button>
-        <button
-          type="button"
-          disabled={inUse || busy}
-          aria-describedby={inUse ? "delete-reason" : undefined}
-          class="danger"
-          onclick={() => (confirmingDelete = true)}>Delete Event</button
-        >
-        {#if inUse}
-          <p id="delete-reason" class="reason">
-            Scouts have RSVP history for this Event, so it can't be deleted.
-            Cancel it instead.
-          </p>
-        {:else if confirmingDelete}
-          <button
-            type="button"
-            class="danger solid"
-            disabled={busy}
-            onclick={() => void remove()}
-          >
-            Yes, delete {event.name}
-          </button>
-          <button type="button" onclick={() => (confirmingDelete = false)}>
-            Keep it
-          </button>
-        {/if}
-      </div>
     {/if}
 
     {#if error}<p role="alert">{error}</p>{/if}
@@ -237,6 +202,44 @@
         </li>
       {/each}
     </ul>
+
+    {#if !editing}
+      <div class="actions row">
+        <button type="button" onclick={() => (editing = true)}>Edit</button>
+        <button
+          type="button"
+          disabled={busy}
+          onclick={() => void setCancelled(!event.cancelled)}
+        >
+          {event.cancelled ? "Uncancel Event" : "Cancel Event"}
+        </button>
+        <button
+          type="button"
+          disabled={inUse || busy}
+          aria-describedby={inUse ? "delete-reason" : undefined}
+          class="danger"
+          onclick={() => (confirmingDelete = true)}>Delete Event</button
+        >
+        {#if inUse}
+          <p id="delete-reason" class="reason">
+            Scouts have RSVP history for this Event, so it can't be deleted.
+            Cancel it instead.
+          </p>
+        {:else if confirmingDelete}
+          <button
+            type="button"
+            class="danger solid"
+            disabled={busy}
+            onclick={() => void remove()}
+          >
+            Yes, delete {event.name}
+          </button>
+          <button type="button" onclick={() => (confirmingDelete = false)}>
+            Keep it
+          </button>
+        {/if}
+      </div>
+    {/if}
   {/if}
 </main>
 

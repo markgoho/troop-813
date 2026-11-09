@@ -506,3 +506,62 @@ describe("Tonight Kiosk status", () => {
     expect(screen.queryByText(/Kiosk (awake|asleep)/)).not.toBeInTheDocument();
   });
 });
+
+describe("Tonight Find a Scout", () => {
+  function ready3() {
+    const { live } = setup();
+    tonight(live, { s1: "a1" }, [
+      attendanceDoc("a1", "s1", "nameList", "2026-11-10T00:05:00Z"),
+    ]);
+  }
+  const notIn = () => screen.getByRole("list", { name: "Not checked in" });
+
+  test("typing filters Not checked in by first or last name, any case", async () => {
+    ready3();
+    const box = await screen.findByRole("searchbox", { name: "Find a Scout" });
+    expect(within(notIn()).getAllByRole("listitem")).toHaveLength(2);
+
+    await userEvent.type(box, "  fen ");
+    const items = within(notIn()).getAllByRole("listitem");
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent("Rowan Fenwick");
+
+    await userEvent.clear(box);
+    await userEvent.type(box, "ELL");
+    expect(within(notIn()).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(notIn()).getByText(/Ellis/)).toBeInTheDocument();
+  });
+
+  test("no match says so; clearing restores the list", async () => {
+    ready3();
+    const box = await screen.findByRole("searchbox", { name: "Find a Scout" });
+    await userEvent.type(box, "xy");
+    expect(screen.getByText("No Scout matches “xy”.")).toBeInTheDocument();
+    expect(within(notIn()).queryAllByRole("listitem")).toHaveLength(0);
+
+    await userEvent.clear(box);
+    expect(screen.queryByText(/No Scout matches/)).not.toBeInTheDocument();
+    expect(within(notIn()).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  test("filter leaves the Checked in list alone and Check in still works", async () => {
+    const leaderCheckIn = vi.fn(async () => ({}) as never);
+    const { live } = setup({ leaderCheckIn });
+    tonight(live, { s1: "a1" }, [
+      attendanceDoc("a1", "s1", "nameList", "2026-11-10T00:05:00Z"),
+    ]);
+    await userEvent.type(
+      await screen.findByRole("searchbox", { name: "Find a Scout" }),
+      "rowan",
+    );
+    expect(
+      within(screen.getByRole("list", { name: "Checked in" })).getAllByRole(
+        "listitem",
+      ),
+    ).toHaveLength(1);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Check in Rowan Fenwick" }),
+    );
+    expect(leaderCheckIn).toHaveBeenCalledWith(TODAY, "s2");
+  });
+});

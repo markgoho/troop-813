@@ -94,6 +94,16 @@
       .sort(byName),
   );
 
+  // "Find a Scout": filters Not checked in by first or last name, any
+  // substring, case-insensitive. List order is unchanged.
+  let query = $state("");
+  const needle = $derived(query.trim().toLowerCase());
+  const shown = $derived(
+    needle
+      ? notYet.filter((s) => fullName(s).toLowerCase().includes(needle))
+      : notYet,
+  );
+
   // RSVPs given in each check-in: RSVP docs with an entry carrying its id.
   // Still loading or unreadable counts as none, so the list never waits on it.
   const rsvpsGiven = $derived.by(() => {
@@ -171,7 +181,7 @@
             : "no check-ins yet"}
         {:else if kiosk.state === "asleep"}
           <strong>Kiosk asleep</strong>
-          <button type="button" disabled={busy} onclick={wake}>
+          <button type="button" class="primary" disabled={busy} onclick={wake}>
             Wake Kiosk
           </button>
         {:else}
@@ -226,8 +236,22 @@
     </ul>
 
     <h2>Not checked in</h2>
+    {#if notYet.length > 0}
+      <label>
+        Find a Scout
+        <input
+          type="search"
+          autocomplete="off"
+          enterkeyhint="search"
+          bind:value={query}
+        />
+      </label>
+    {/if}
+    {#if needle && shown.length === 0}
+      <p class="no-match">No Scout matches “{query.trim()}”.</p>
+    {/if}
     <ul aria-label="Not checked in">
-      {#each notYet as s (s.id)}
+      {#each shown as s (s.id)}
         <li>
           <span class="name"><ScoutLink scout={s} /></span>
           {#if $meeting.state === "ready" && $meeting.doc?.notFound.includes(s.id)}

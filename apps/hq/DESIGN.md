@@ -229,7 +229,7 @@ The world was pinned by the user from the prototypes (`prototype/kiosk-flow`, `p
 
 - Condensed display (Barlow Condensed) over a legibility-first body (Atkinson Hyperlegible).
 - One burgundy accent; green only for success and Going.
-- Thin Phosphor line icons on Leader navigation and row actions, always paired with a text name.
+- Thin Phosphor line icons on Leader navigation and row actions. Tab bar icons always sit with a text label; Roster row actions drop their labels under 30rem and are icon-only, named by `aria-label`.
 - Flat: white cards on a tinted ground, 1px or 2px outlines, no drop shadows.
 - Two densities from one token set: Kiosk at a 1.25rem base with 4rem targets, Leader at 1rem with 2.75rem targets.
 - Light and dark themes; in dark mode the accent splits into light-rose text and deep-burgundy fills.
@@ -363,7 +363,7 @@ Large, outlined and plain; the main action is filled.
 Thin line icons from Phosphor (`phosphor-svelte` 3.1.1), weight `thin` (`duotone` only for the current tab's icon), imported one per file from `phosphor-svelte/lib/<Name>`. They draw in `currentColor`, so they follow the control's text colour (burgundy on the current tab, red on a danger button).
 
 - **Tab bar:** Campfire (Tonight), CalendarCheck (Meetings), Tent (Events), UsersThree (Roster), Key (Access). 1.75rem over the label on phones; beside the label at 48rem and up.
-- **Roster row actions:** PencilSimple (Edit), UserMinus / UserPlus (Deactivate / Reactivate), Trash (Delete), at 1.5rem beside the label with a 0.375rem gap. Delete appears only while the Scout has no Attendance or RSVPs (a typo entry); there is no disabled Delete and no reason text. Under 30rem the labels hide, the buttons become icon-only (at least 2.75rem wide, named by their `aria-label`, e.g. "Edit <Scout>"), and every row takes one shape: name over "Present x of y" on the left, the icons on the right.
+- **Roster row actions:** PencilSimple (Edit), UserMinus / UserPlus (Deactivate / Reactivate), Trash (Delete), at 1.5rem beside the label with a 0.375rem gap (0.75rem between the icon-only buttons on phones, so one-tap Deactivate is not a mis-tap beside Edit; Deactivate is reversible, so it has no confirm). Delete appears only while the Scout has no Attendance or RSVPs (a typo entry); there is no disabled Delete and no reason text. Under 30rem the labels hide, the buttons become icon-only (at least 2.75rem wide, named by their `aria-label`, e.g. "Edit <Scout>"), and every row takes one shape: name over "Present x of y" on the left, the icons on the right.
 - **Accessibility:** every icon is `aria-hidden="true"`; the control's visible text or `aria-label` names it.
 
 **The Thin Icons Need Room Rule.** Use icons at 1.5rem or larger; the thin weight goes faint below that at 1x. An icon never stands alone without an accessible name, and the logo is never an icon.
@@ -379,6 +379,12 @@ A grid of outlined name buttons (4rem tall, 1.375rem text, left-aligned). A chec
 ### Segmented RSVP Switch (signature, Leader)
 
 A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; each option is at least 3rem by 2.75rem with the real radio input stretched invisibly over it. The checked option fills: Going in `--ok`, Not going in `--bad` (both with `--surface` text), and the cleared "—" option in `--bg` with `--ink` text. Elsewhere the default checked fill is `--fill`. Keyboard focus draws the 3px ring inset (offset -3px) on the option.
+
+### Leader Pages
+
+- **Event page order:** title (struck through with a Cancelled pill when cancelled), date and location, the Going / Not going / No answer counts, the RSVP list, then the actions row (Edit, Cancel / Uncancel Event, Delete Event with its reason or confirm) below the list. Status first, actions last. While editing, the form replaces the actions row's place under the title.
+- **Scout page Events rows:** same shape as the other lists: Event name link in `.name`, dates in `.meta`, and the Scout's answer as a pill (Going `ok`, Not going `bad`, No answer plain muted).
+- **Tonight "Find a Scout":** a search field sits above the Not checked in list so a Leader can narrow it by name.
 
 ### Shared Vocabulary And Specificity
 

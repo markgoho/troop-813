@@ -369,10 +369,13 @@
 }
 :where(.leader details) {
   flex-basis: 100%;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--muted);
 }
 :where(.leader summary) {
+  /* 44px tap target from padding: display:flex would drop the ::marker. */
+  padding-block: 0.75rem;
+  min-height: 2.75rem;
   cursor: pointer;
 }
 :where(.leader) summary::marker {

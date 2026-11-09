@@ -342,6 +342,8 @@
       grid-row: 1 / span 2;
       flex-basis: auto;
       justify-content: flex-end;
+      /* One-tap Deactivate sits beside Edit: keep mis-taps unlikely. */
+      gap: 0.75rem;
     }
     .icon {
       min-width: 2.75rem;

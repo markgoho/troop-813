@@ -102,7 +102,7 @@
     text-align: center;
   }
   h1 {
-    font-size: 2.5rem;
+    font-size: 2.25rem;
   }
   .status {
     padding: 2rem;

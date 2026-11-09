@@ -38,6 +38,7 @@ Capture happens in the room, by the Scouts themselves: the tablet passes Scout t
 - Names on the Kiosk: first name, plus last initial only when two active Scouts share a first name.
 - Kiosk RSVP strings added by user decision 2026-11-09, beyond spec #17: the summary heading "<Scout>'s answers" (was "Your answers"), a quiet "n of N" counter on each RSVP question card, and a "You're checked in" tick line on the summary (reaching the RSVP stage means the check-in call succeeded, or a reload found the Scout in the Meeting's checkedIn).
 - Roster Delete is offered only while a Scout has no Attendance or RSVPs (typo entries); Scouts with history show Edit and Deactivate only. User decision 2026-11-08, amending spec #17 story 64 (which showed a disabled Delete with a reason). The server's `in_use` rule is unchanged.
+- Tonight "Find a Scout" field (a quiet search input above the Not checked in list that filters it by name as you type) added by user decision 2026-11-09, beyond spec #17. Filters Not checked in only; order unchanged.
 
 ## Brand Commitments
 

@@ -117,10 +117,17 @@
         {#each shown as e (e.id)}
           {@const a = answers.get(e.id)}
           <li>
-            <a href={resolve("/(leader)/events/[id]", { id: e.id })}>{e.name}</a
+            <span class="name"
+              ><a href={resolve("/(leader)/events/[id]", { id: e.id })}
+                >{e.name}</a
+              ></span
             >
-            {dateRange(e.startDate, e.endDate)}
-            {a ? label[a] : "No answer"}
+            <span class="meta">{dateRange(e.startDate, e.endDate)}</span>
+            <span
+              class="pill"
+              class:ok={a === "going"}
+              class:bad={a === "notGoing"}>{a ? label[a] : "No answer"}</span
+            >
           </li>
         {/each}
       </ul>

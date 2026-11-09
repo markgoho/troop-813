@@ -2,6 +2,7 @@
   // Tonight tab (spec stories 44–52): today's Meeting live. Counts, the
   // Checked in list (newest first, with Undo and an inline confirm) and the
   // Not checked in list (Leader check-in). A phone never starts a Meeting.
+  import { tick } from "svelte";
   import { resolve } from "$app/paths";
   import type { Api } from "./api";
   import type { Attendance, RSVPRollbackItem, Scout } from "./contract.gen";
@@ -56,6 +57,17 @@
       : ({ state: "awake" } as const);
   });
 
+  // Spoken, not shown: Leader actions and the Kiosk falling asleep (polite
+  // region), and the Find a Scout result (its own region, so typing never
+  // overwrites an action).
+  let announcement = $state("");
+  let wasAwake = false;
+  $effect(() => {
+    const state = kiosk?.state;
+    if (wasAwake && state === "asleep") announcement = "Kiosk asleep";
+    wasAwake = state === "awake";
+  });
+
   // Leader uid → name, for "Leader: <name>". Unknown → just "Leader".
   let leaderNames = $state<Record<string, string>>({});
   $effect(() => {
@@ -103,6 +115,14 @@
       ? notYet.filter((s) => fullName(s).toLowerCase().includes(needle))
       : notYet,
   );
+  const noMatch = $derived(needle && shown.length === 0);
+  const searchResult = $derived(
+    !needle
+      ? ""
+      : noMatch
+        ? `No Scout matches “${query.trim()}”.`
+        : `${shown.length} ${shown.length === 1 ? "Scout matches" : "Scouts match"}`,
+  );
 
   // RSVPs given in each check-in: RSVP docs with an entry carrying its id.
   // Still loading or unreadable counts as none, so the list never waits on it.
@@ -137,15 +157,32 @@
   const message = $derived(guard.message);
 
   /** Runs a guarded call; a success closes the inline confirm. */
-  async function run(failure: string, action: () => Promise<unknown>) {
-    if (await guard.run(failure, action)) confirming = null;
+  async function run(
+    failure: string,
+    action: () => Promise<unknown>,
+    done = "",
+  ) {
+    if (await guard.run(failure, action)) {
+      confirming = null;
+      announcement = done;
+    }
+  }
+
+  // Undo buttons by attendance id, to hand focus back on Cancel.
+  const undoButtons: Record<string, HTMLButtonElement | null> = {};
+  async function cancelUndo(id: string) {
+    confirming = null;
+    await tick();
+    undoButtons[id]?.focus();
   }
 
   const wake = () =>
     run("Couldn't wake the Kiosk. Try again.", () => api.wakeKiosk());
   const checkIn = (s: WithId<Scout>) =>
-    run(`Couldn't check in ${fullName(s)}. Try again.`, () =>
-      api.leaderCheckIn(meetingId, s.id),
+    run(
+      `Couldn't check in ${fullName(s)}. Try again.`,
+      () => api.leaderCheckIn(meetingId, s.id),
+      `${fullName(s)} checked in`,
     );
   /** Previews the RSVP rollback, then shows the inline confirm. */
   async function askUndo(a: WithId<Attendance>) {
@@ -156,13 +193,19 @@
     if (ok) confirming = a.id;
   }
   const undo = (a: WithId<Attendance>) =>
-    run(`Couldn't undo ${nameOf(a.scoutId)}'s check-in. Try again.`, () =>
-      api.undoCheckIn(meetingId, a.id),
+    run(
+      `Couldn't undo ${nameOf(a.scoutId)}'s check-in. Try again.`,
+      () => api.undoCheckIn(meetingId, a.id),
+      `${nameOf(a.scoutId)}'s check-in undone`,
     );
 </script>
 
+<svelte:head><title>Tonight · Troop 813 HQ</title></svelte:head>
+
 <main>
   <h1>Tonight</h1>
+  <p class="sr-only" role="status" aria-live="polite">{announcement}</p>
+  <p class="sr-only" role="status" aria-live="polite">{searchResult}</p>
 
   {#if $meeting.state === "ready" && !$meeting.doc}
     <p>No Meeting today: the Admin starts it on the Kiosk</p>
@@ -170,7 +213,7 @@
   {:else if $meeting.state === "error" || $attendance.state === "error" || $scouts.state === "error"}
     <p role="alert">Couldn't load tonight's Meeting. Reload to try again.</p>
   {:else if $meeting.state === "loading" || $attendance.state === "loading" || $scouts.state === "loading"}
-    <p>Loading…</p>
+    <p role="status">Loading…</p>
   {:else}
     {#if kiosk}
       <p class="kiosk-status banner" class:warn={kiosk.state !== "awake"}>
@@ -219,10 +262,11 @@
               {rollback}
               {busy}
               onConfirm={() => undo(a)}
-              onCancel={() => (confirming = null)}
+              onCancel={() => void cancelUndo(a.id)}
             />
           {:else}
             <button
+              bind:this={undoButtons[a.id]}
               type="button"
               aria-label="Undo {nameOf(a.scoutId)}"
               disabled={busy}
@@ -247,8 +291,10 @@
         />
       </label>
     {/if}
-    {#if needle && shown.length === 0}
-      <p class="no-match">No Scout matches “{query.trim()}”.</p>
+    {#if noMatch}
+      <p class="no-match" aria-hidden="true">
+        No Scout matches “{query.trim()}”.
+      </p>
     {/if}
     <ul aria-label="Not checked in">
       {#each shown as s (s.id)}

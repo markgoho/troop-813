@@ -4,6 +4,7 @@
   // last with full history on tap, and Edit, Cancel / Uncancel, Delete.
   // Status first: counts, then the list, then the actions below it.
   // Reads are live (onSnapshot); every change goes through the API.
+  import { tick } from "svelte";
   import EventForm from "./EventForm.svelte";
   import ScoutLink from "./ScoutLink.svelte";
   import { ApiError, type Api } from "./api";
@@ -103,6 +104,21 @@
     }
   }
 
+  // Focus follows the inline delete confirm: into it on open, back to
+  // Delete Event on Keep it.
+  let deleteButton: HTMLButtonElement | undefined = $state();
+  let confirmYes: HTMLButtonElement | undefined = $state();
+  async function askDelete() {
+    confirmingDelete = true;
+    await tick();
+    confirmYes?.focus();
+  }
+  async function keepIt() {
+    confirmingDelete = false;
+    await tick();
+    deleteButton?.focus();
+  }
+
   async function save(input: EventInput) {
     await api.updateEvent(eventId, input);
     editing = false;
@@ -121,11 +137,15 @@
     }, "Couldn't delete the Event. Try again.");
 </script>
 
+<svelte:head
+  ><title>{event ? event.name : "Events"} · Troop 813 HQ</title></svelte:head
+>
+
 <main>
   {#if $events.state === "error"}
     <p role="alert">Couldn't load this Event. Reload to try again.</p>
   {:else if $events.state === "loading"}
-    <p>Loading…</p>
+    <p role="status">Loading…</p>
   {:else if !event}
     <p>This Event doesn't exist (it may have been deleted).</p>
   {:else}
@@ -214,11 +234,12 @@
           {event.cancelled ? "Uncancel Event" : "Cancel Event"}
         </button>
         <button
+          bind:this={deleteButton}
           type="button"
           disabled={inUse || busy}
           aria-describedby={inUse ? "delete-reason" : undefined}
           class="danger"
-          onclick={() => (confirmingDelete = true)}>Delete Event</button
+          onclick={() => void askDelete()}>Delete Event</button
         >
         {#if inUse}
           <p id="delete-reason" class="reason">
@@ -227,6 +248,7 @@
           </p>
         {:else if confirmingDelete}
           <button
+            bind:this={confirmYes}
             type="button"
             class="danger solid"
             disabled={busy}
@@ -234,9 +256,7 @@
           >
             Yes, delete {event.name}
           </button>
-          <button type="button" onclick={() => (confirmingDelete = false)}>
-            Keep it
-          </button>
+          <button type="button" onclick={() => void keepIt()}> Keep it </button>
         {/if}
       </div>
     {/if}
@@ -267,12 +287,12 @@
   }
   [role="radiogroup"] label.c-going:has(input:checked) {
     background: var(--ok);
-    color: var(--surface);
+    color: var(--on-ok);
   }
   /* "Not going" chosen reads red, "—" (cleared) neutral, as in the prototype. */
   [role="radiogroup"] label.c-notGoing:has(input:checked) {
     background: var(--bad);
-    color: var(--surface);
+    color: var(--on-bad);
   }
   [role="radiogroup"] label.c-clear:has(input:checked) {
     background: var(--bg);

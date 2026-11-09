@@ -95,7 +95,7 @@ typography:
   shell:
     fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
     fontSize: "1.0625rem"
-    fontWeight: 600
+    fontWeight: 700
     letterSpacing: "0.06em"
   headline-event:
     fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
@@ -111,7 +111,7 @@ typography:
   kiosk-shell:
     fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
     fontSize: "1.125rem"
-    fontWeight: 600
+    fontWeight: 700
     letterSpacing: "0.06em"
 rounded:
   sm: "8px"
@@ -262,6 +262,7 @@ One deep troop burgundy against warm-neutral greys with a faint rose cast, plus 
 - **Hairline** (`line`): card borders and row dividers.
 - **Field Edge** (`field-line`): the border of inputs, selects, textareas and the RSVP radiogroup; 3.5:1 or better against `--bg` and `--surface` in both themes (WCAG 1.4.11), where `--line` is only about 1.4:1.
 - **Focus** (`focus`): the focus ring; follows the accent in both themes.
+- **On Green / On Red** (`on-ok`, `on-bad`): text on an `--ok` or `--bad` fill (Going / Not going, the destructive confirm). Equal to `--surface` in each theme; use these, not `--surface`, so the pairing stays explicit.
 
 ### Named Rules
 
@@ -273,7 +274,7 @@ One deep troop burgundy against warm-neutral greys with a faint rose cast, plus 
 
 ## Typography
 
-**Display Font:** Barlow Condensed 600/700 (with Arial Narrow, system-ui)
+**Display Font:** Barlow Condensed 700 (with Arial Narrow, system-ui)
 **Body Font:** Atkinson Hyperlegible 400/700 (with system-ui, -apple-system, Segoe UI)
 
 **Character:** A tall, tight condensed face for names, headings and numbers, paired with a body face designed for legibility, which matters for young readers and a tablet at arm's length. Both are self-hosted through fontsource.
@@ -289,7 +290,7 @@ One deep troop burgundy against warm-neutral greys with a faint rose cast, plus 
 - **Body** (400, 1rem, 1.45): Leader text. The Kiosk raises its base to 1.25rem, and its sub-lines, status text, buttons, name-list tiles and the Handoff's "Pass the tablet to" lead to 1.375rem.
 - **Meta** (400, 0.875rem, muted): times, methods, emails, reasons and notes under a row's name.
 - **Label** (Atkinson 700, 0.75rem, 0.06em, uppercase): status pills only.
-- **Shell** (Barlow Condensed 600, 1.0625rem Leader / 1.125rem Kiosk, 0.06em, uppercase, muted): the shell bar's troop name ("Troop 813 HQ", "Troop 813 · Meeting").
+- **Shell** (Barlow Condensed 700, 1.0625rem Leader / 1.125rem Kiosk, 0.06em, uppercase, muted): the shell bar's troop name ("Troop 813 HQ", "Troop 813 · Meeting").
 
 ### Named Rules
 
@@ -314,6 +315,8 @@ Rhythm: 0.25 / 0.5 / 0.75 / 1 / 1.5rem gaps; list rows pad 0.625rem by 0.875rem 
 Flat. Depth comes from tonal layering only: white surfaces on the tinted ground, separated by 1px hairline borders. There are no drop shadows anywhere.
 
 ### Named Rules
+
+**The Leader Access Conventions.** Every Leader route sets its own `<title>` ("Tonight · Troop 813 HQ"; detail pages lead with the Scout, Event or Meeting date). "Loading…" lines are `role="status"`; Tonight also keeps visually hidden polite regions for check-in / undo results, the Find a Scout count and the Kiosk falling asleep. When an inline confirm or edit form replaces its trigger, focus moves to its first control, and returns to the trigger on Cancel / Keep. On phones `scroll-padding-bottom` clears the fixed tab bar, tab labels may wrap, and destructive confirm buttons wrap rather than overflow.
 
 **The Flat Paper Rule.** Separate layers with `--surface` against `--bg` and a `--line` border, never with a drop shadow.
 
@@ -381,7 +384,7 @@ A grid of outlined name buttons (4rem tall, 1.375rem text, left-aligned). A chec
 
 ### Segmented RSVP Switch (signature, Leader)
 
-A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; each option is at least 3rem by 2.75rem with the real radio input stretched invisibly over it. The checked option fills: Going in `--ok`, Not going in `--bad` (both with `--surface` text), and the cleared "—" option in `--bg` with `--ink` text. Elsewhere the default checked fill is `--fill`. Its outer border is `--field-line`. Keyboard focus draws the 3px ring inset (offset -3px) on the option: `--focus` on an unchecked option, and the option's own text colour (`currentColor`, 5.7:1 or better on every fill) on a checked one, where `--focus` would vanish into the fill.
+A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; each option is at least 3rem by 2.75rem with the real radio input stretched invisibly over it. The checked option fills: Going in `--ok`, Not going in `--bad` (with `--on-ok` / `--on-bad` text), and the cleared "—" option in `--bg` with `--ink` text. Elsewhere the default checked fill is `--fill`. Its outer border is `--field-line`. Keyboard focus draws the 3px ring inset (offset -3px) on the option: `--focus` on an unchecked option, and the option's own text colour (`currentColor`, 5.7:1 or better on every fill) on a checked one, where `--focus` would vanish into the fill.
 
 ### Leader Pages
 

@@ -7,6 +7,7 @@
   // after a Meeting or two (2026-11-08).
   // Rapid entry: Enter in last name submits (native form submit); on success
   // the form clears and focus returns to first name for the next Scout.
+  import { tick } from "svelte";
   import { ApiError, type Api } from "./api";
   import type { AttendanceCount, Scout } from "./contract.gen";
   import type { Live, WithId } from "./live";
@@ -128,11 +129,38 @@
     }
   }
 
-  function startEdit(s: WithId<Scout>) {
+  // Focus follows inline swaps: into the edit form / delete confirm when it
+  // opens, back to the row's trigger when it closes.
+  const editButtons: Record<string, HTMLButtonElement | null> = {};
+  const deleteButtons: Record<string, HTMLButtonElement | null> = {};
+  let editFirstInput: HTMLInputElement | undefined = $state();
+  let confirmYes: HTMLButtonElement | undefined = $state();
+
+  async function startEdit(s: WithId<Scout>) {
     editingId = s.id;
     editFirst = s.firstName;
     editLast = s.lastName;
     confirmingId = null;
+    await tick();
+    editFirstInput?.focus();
+  }
+
+  async function stopEdit(id: string) {
+    editingId = null;
+    await tick();
+    editButtons[id]?.focus();
+  }
+
+  async function askDelete(id: string) {
+    confirmingId = id;
+    await tick();
+    confirmYes?.focus();
+  }
+
+  async function keep(id: string) {
+    confirmingId = null;
+    await tick();
+    deleteButtons[id]?.focus();
   }
 
   async function saveEdit(e: SubmitEvent, s: WithId<Scout>) {
@@ -143,7 +171,7 @@
     const ok = await run(`${first} ${last}`, "rename", () =>
       api.editScout(s.id, { firstName: first, lastName: last }),
     );
-    if (ok) editingId = null;
+    if (ok) await stopEdit(s.id);
   }
 
   async function remove(s: WithId<Scout>) {
@@ -161,6 +189,8 @@
     }
   }
 </script>
+
+<svelte:head><title>Roster · Troop 813 HQ</title></svelte:head>
 
 <main>
   <h1>Roster</h1>
@@ -200,7 +230,7 @@
   {/if}
 
   {#if $scouts.state === "loading"}
-    <p>Loading…</p>
+    <p role="status">Loading…</p>
   {:else if $scouts.state === "error"}
     <p>Couldn't load the Roster. Reload to try again.</p>
   {:else if sorted.length === 0}
@@ -220,7 +250,7 @@
 </main>
 
 {#snippet scoutRow(s: WithId<Scout>)}
-  <li>
+  <li class:confirming={confirmingId === s.id}>
     {#if editingId === s.id}
       <form
         aria-label="Edit {fullName(s)}"
@@ -228,14 +258,20 @@
       >
         <label>
           First name
-          <input bind:value={editFirst} autocomplete="off" required />
+          <input
+            bind:this={editFirstInput}
+            bind:value={editFirst}
+            autocomplete="off"
+            required
+          />
         </label>
         <label>
           Last name
           <input bind:value={editLast} autocomplete="off" required />
         </label>
         <button type="submit">Save</button>
-        <button type="button" onclick={() => (editingId = null)}>Cancel</button>
+        <button type="button" onclick={() => void stopEdit(s.id)}>Cancel</button
+        >
       </form>
     {:else}
       <span class="name"><ScoutLink scout={s} /></span>
@@ -245,6 +281,7 @@
       {/if}
       <span class="actions">
         <button
+          bind:this={editButtons[s.id]}
           type="button"
           aria-label="Edit {fullName(s)}"
           class="icon"
@@ -270,21 +307,21 @@
         >
         {#if confirmingId === s.id}
           <button
+            bind:this={confirmYes}
             type="button"
             class="danger solid"
             onclick={() => void remove(s)}
           >
             Yes, delete {fullName(s)}
           </button>
-          <button type="button" onclick={() => (confirmingId = null)}>
-            Keep
-          </button>
+          <button type="button" onclick={() => void keep(s.id)}> Keep </button>
         {:else if !inUse(s.id)}
           <button
+            bind:this={deleteButtons[s.id]}
             type="button"
             aria-label="Delete {fullName(s)}"
             class="danger icon"
-            onclick={() => (confirmingId = s.id)}
+            onclick={() => void askDelete(s.id)}
             ><Trash weight="thin" aria-hidden="true" /><span class="label"
               >Delete</span
             ></button
@@ -344,6 +381,13 @@
       justify-content: flex-end;
       /* One-tap Deactivate sits beside Edit: keep mis-taps unlikely. */
       gap: 0.75rem;
+    }
+    /* Confirming a delete: the buttons need the width, so the actions drop
+       below the name and span the row. */
+    li.confirming:has(> .actions) > .actions {
+      grid-column: 1 / -1;
+      grid-row: auto;
+      justify-content: flex-start;
     }
     .icon {
       min-width: 2.75rem;

@@ -56,6 +56,8 @@
   </section>
 {/snippet}
 
+<svelte:head><title>Events · Troop 813 HQ</title></svelte:head>
+
 <main>
   <h1>Events</h1>
   <EventForm submitLabel="Add Event" onSave={add} />
@@ -65,6 +67,6 @@
   {:else if $events.state === "error"}
     <p role="alert">Couldn't load Events. Reload to try again.</p>
   {:else}
-    <p>Loading…</p>
+    <p role="status">Loading…</p>
   {/if}
 </main>

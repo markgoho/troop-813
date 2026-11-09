@@ -56,10 +56,12 @@
   }
 </script>
 
+<svelte:head><title>Add a past Meeting · Troop 813 HQ</title></svelte:head>
+
 <main>
   <h1>Add a past Meeting</h1>
   {#if $meetings.state === "loading"}
-    <p>Loading…</p>
+    <p role="status">Loading…</p>
   {:else if $meetings.state === "error"}
     <p role="alert">Couldn't load the Meetings. Reload to try again.</p>
   {:else}

@@ -184,6 +184,58 @@ describe("Tonight", () => {
     expect(leaderCheckIn).toHaveBeenCalledExactlyOnceWith(TODAY, "s3");
   });
 
+  test("sets the page title", async () => {
+    const { live } = setup();
+    tonight(live, { s1: "a1" });
+    await screen.findByRole("button", { name: "Check in Ellis Thorne" });
+    expect(document.title).toBe("Tonight · Troop 813 HQ");
+  });
+
+  test("announces a Leader check-in and its undo for screen readers", async () => {
+    const { live } = setup({
+      leaderCheckIn: vi.fn(async () => ({ attendanceId: "a9" })),
+      undoCheckIn: vi.fn(async () => {}),
+    });
+    tonight(live, { s1: "a1", s2: "a2" });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Check in Ellis Thorne" }),
+    );
+    expect(await screen.findByText("Ellis Thorne checked in")).toHaveClass(
+      "sr-only",
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Undo Avery Quill" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Yes, undo" }));
+    expect(
+      await screen.findByText("Avery Quill's check-in undone"),
+    ).toBeInTheDocument();
+  });
+
+  test("announces the Find a Scout result", async () => {
+    const { live } = setup();
+    tonight(live, {});
+    await userEvent.type(await screen.findByLabelText("Find a Scout"), "e");
+    expect(await screen.findByText("3 Scouts match")).toHaveClass("sr-only");
+    await userEvent.type(screen.getByLabelText("Find a Scout"), "zzz");
+    expect(screen.getAllByText("No Scout matches “ezzz”.")).toHaveLength(2);
+  });
+
+  test("the Undo confirm takes focus, and Cancel hands it back to Undo", async () => {
+    const { live } = setup();
+    tonight(live, { s1: "a1", s2: "a2" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Undo Avery Quill" }),
+    );
+    expect(screen.getByRole("button", { name: "Yes, undo" })).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(
+      screen.getByRole("button", { name: "Undo Avery Quill" }),
+    ).toHaveFocus();
+  });
+
   test("a failed Check in shows a message", async () => {
     const { live } = setup({
       leaderCheckIn: async () => {
@@ -463,7 +515,8 @@ describe("Tonight Kiosk status", () => {
     at = new Date(at.getTime() + 5 * MIN);
     await vi.advanceTimersByTimeAsync(5 * MIN);
 
-    expect(screen.getByText("Kiosk asleep")).toBeInTheDocument();
+    // The banner, and once more through the polite region.
+    expect(screen.getAllByText("Kiosk asleep")).toHaveLength(2);
   });
 
   test("a failed Wake says so", async () => {
@@ -536,7 +589,8 @@ describe("Tonight Find a Scout", () => {
     ready3();
     const box = await screen.findByRole("searchbox", { name: "Find a Scout" });
     await userEvent.type(box, "xy");
-    expect(screen.getByText("No Scout matches “xy”.")).toBeInTheDocument();
+    // Shown, and spoken once through the polite region.
+    expect(screen.getAllByText("No Scout matches “xy”.")).toHaveLength(2);
     expect(within(notIn()).queryAllByRole("listitem")).toHaveLength(0);
 
     await userEvent.clear(box);

@@ -152,12 +152,12 @@
       Done, pass the tablet on
     </button>
   {:else if !loaded || queue === null}
-    <p class="status">Loading…</p>
+    <p class="status" role="status">Loading…</p>
   {:else if current}
     {@const event = current}
     <div class="head">
       <div class="event">
-        <h1>{event.name}</h1>
+        {#key event.id}<h1 tabindex="-1">{event.name}</h1>{/key}
         <p class="when">
           {dateRange(event.startDate, event.endDate)}{#if event.location}<span
               class="where">{event.location}</span
@@ -174,7 +174,7 @@
       {/if}
     </div>
     <p class="ask">{scout.label}, are you going?</p>
-    <div class="choices">
+    <div class="choices" aria-busy={saving}>
       <button
         type="button"
         class="yes"
@@ -205,7 +205,7 @@
       <p class="progress">{index + 1} of {queue.length}</p>
     {/if}
   {:else}
-    <h1>{scout.label}'s answers</h1>
+    <h1 tabindex="-1">{scout.label}'s answers</h1>
     <p class="checked-in">
       <Check size="1.5rem" aria-hidden="true" />You're checked in
     </p>
@@ -321,7 +321,7 @@
   }
   .summary li button {
     grid-row: 1 / span 2;
-    min-height: 3.5rem;
+    min-height: 4rem;
   }
   .answer {
     grid-row: 1 / span 2;

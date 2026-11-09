@@ -38,6 +38,7 @@
     onExpired,
     onAsleep,
     onScreen,
+    onCheckedIn,
   }: {
     api: Api;
     live: Live;
@@ -48,6 +49,8 @@
     onAsleep: () => void;
     /** Which screen is showing; changes when the Scout sees a new one. */
     onScreen?: (screen: string) => void;
+    /** A Scout was just checked in from this screen (for a status announcement). */
+    onCheckedIn?: (label: string) => void;
   } = $props();
 
   // The parent re-creates this component for a new session.
@@ -179,6 +182,7 @@
     after = entry.id;
     handingOff = true;
     broken = null;
+    onCheckedIn?.(entry.label);
   }
 
   async function cantFind(entry: NameListEntry) {
@@ -196,13 +200,13 @@
 </script>
 
 {#if $meeting.state === "loading" || $scouts.state === "loading"}
-  <p class="status">Loading…</p>
+  <p class="status" role="status">Loading…</p>
 {:else if $meeting.state === "error" || $scouts.state === "error"}
   <p class="status">Couldn't load the Meeting. Reload to try again.</p>
 {:else if !$meeting.doc}
   <p class="status">Today's Meeting hasn't started. Ask the Admin.</p>
 {:else if !resumed}
-  <p class="status">Loading…</p>
+  <p class="status" role="status">Loading…</p>
 {:else if rsvping}
   {#key rsvping.id}
     <KioskRsvp
@@ -220,14 +224,14 @@
 {:else if confirming}
   {@const entry = confirming}
   {#key entry.id}
-    <h1 class="hero">
+    <h1 class="hero" tabindex="-1">
       <span class="lead">Are you</span>
       <span class="bigname" style:--len={entry.label.length + 1}
         >{entry.label}?</span
       >
     </h1>
   {/key}
-  <div class="choices">
+  <div class="choices" aria-busy={saving}>
     <button
       type="button"
       class="yes"
@@ -244,14 +248,14 @@
 {:else if offered}
   {@const entry = offered}
   {#key entry.id}
-    <h1 class="hero">
+    <h1 class="hero" tabindex="-1">
       <span class="lead">Pass the tablet to</span>
       <span class="bigname" style:--len={entry.label.length}>{entry.label}</span
       >
     </h1>
   {/key}
   <p class="ask">Are you {entry.label}?</p>
-  <div class="choices handoff">
+  <div class="choices handoff" aria-busy={saving}>
     <button
       type="button"
       class="yes"
@@ -274,7 +278,7 @@
   {#if message}<p role="alert" class="alert">{message}</p>{/if}
 {:else}
   <div class="listhead">
-    <h1>{anyoneIn ? "Tap your name" : "Who's first?"}</h1>
+    <h1 tabindex="-1">{anyoneIn ? "Tap your name" : "Who's first?"}</h1>
     {#if due}<p class="sub">{due.label} was next</p>{/if}
   </div>
   {#if message}<p role="alert" class="alert">{message}</p>{/if}

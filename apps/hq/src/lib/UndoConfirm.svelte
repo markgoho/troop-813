@@ -22,6 +22,7 @@
 <script lang="ts">
   // The inline "Undo <Scout>'s check-in?" confirm shared by Tonight and a
   // Meeting's page, with the RSVPs the Undo rolls back.
+  import { onMount } from "svelte";
   import type { RSVPAnswer } from "./contract.gen";
 
   let {
@@ -38,6 +39,10 @@
     onConfirm: () => void;
     onCancel: () => void;
   } = $props();
+
+  // The confirm replaces the Undo button, so focus moves into it.
+  let yes: HTMLButtonElement | undefined = $state();
+  onMount(() => yes?.focus());
 
   const answerText = (a: RSVPAnswer | null) =>
     a === "going" ? "Going" : a === "notGoing" ? "Not going" : "No answer";
@@ -59,8 +64,12 @@
       {/each}
     </ul>
   {/if}
-  <button type="button" class="danger solid" disabled={busy} onclick={onConfirm}
-    >Yes, undo</button
+  <button
+    bind:this={yes}
+    type="button"
+    class="danger solid"
+    disabled={busy}
+    onclick={onConfirm}>Yes, undo</button
   >
   <button type="button" disabled={busy} onclick={onCancel}>Cancel</button>
 </span>

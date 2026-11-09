@@ -131,6 +131,39 @@ describe("Kiosk unlock", () => {
     expect(screen.getByRole("list", { name: "Scouts" })).toBeInTheDocument();
   });
 
+  test("focus moves to the confirm screen's heading after tapping a name", async () => {
+    const { live } = setup(kioskUser);
+    live.meetingStore(TODAY).set(meeting(TODAY));
+    await tick();
+
+    await userEvent.click(screen.getByRole("button", { name: "Rowan" }));
+
+    await vi.waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 })).toHaveFocus(),
+    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Are you Rowan?",
+    );
+  });
+
+  test("a check-in is announced in a polite status region", async () => {
+    const { live } = setup(kioskUser, {
+      kioskCheckIn: async () => ({ attendanceId: "a1" }),
+    });
+    live.meetingStore(TODAY).set(meeting(TODAY));
+    await tick();
+
+    await userEvent.click(screen.getByRole("button", { name: "Rowan" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, I'm Rowan" }),
+    );
+
+    expect(await screen.findByText("Rowan checked in")).toHaveAttribute(
+      "role",
+      "status",
+    );
+  });
+
   for (const role of ["leader", "parent"] as const) {
     test(`a ${role} can't unlock the Kiosk`, async () => {
       const { session } = setup(google, {

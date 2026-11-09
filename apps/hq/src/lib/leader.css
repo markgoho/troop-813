@@ -29,7 +29,7 @@
   border-bottom: 1px solid var(--line);
   background: var(--surface);
   font-family: var(--display);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.0625rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -59,6 +59,21 @@
 }
 :where(.leader nav[aria-label="Leader tabs"] a[aria-current="page"]) {
   color: var(--accent);
+}
+/* Phones: five tabs share the bar, so a label may shrink and wrap (200% text,
+   320px wide) instead of pushing the bar past the screen. */
+@media (max-width: 47.99rem) {
+  :where(.leader nav[aria-label="Leader tabs"] a) {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+  /* Focused controls scroll clear of the fixed tab bar (tab bar + safe area
+     + 1rem). */
+  :where(html) {
+    scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
 }
 @media (min-width: 48rem) {
   :where(.leader nav[aria-label="Leader tabs"]) {
@@ -277,7 +292,10 @@
 :where(.leader button.danger.solid) {
   background: var(--bad);
   border-color: var(--bad);
-  color: var(--surface);
+  color: var(--on-bad);
+  /* Long confirm labels ("Yes, delete <name>") wrap rather than overflow. */
+  white-space: normal;
+  text-align: start;
 }
 :where(.leader .row) {
   display: flex;

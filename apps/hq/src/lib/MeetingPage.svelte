@@ -3,6 +3,7 @@
   // a Leader check-in and unticking asks, then undoes through the same
   // endpoint Tonight uses (so the RSVP rollback applies). "Delete this
   // Meeting" only while nobody is present, and never for tonight's.
+  import { tick } from "svelte";
   import { resolve } from "$app/paths";
   import { ApiError, type Api } from "./api";
   import type { RSVPRollbackItem, Scout } from "./contract.gen";
@@ -59,6 +60,27 @@
     return ok;
   }
 
+  // Focus follows the inline swaps: into a confirm when it opens, back to its
+  // trigger (the Scout's checkbox, the Delete button) when it is dismissed.
+  const checkboxes: Record<string, HTMLInputElement | null> = {};
+  let deleteButton: HTMLButtonElement | undefined = $state();
+  let deleteYes: HTMLButtonElement | undefined = $state();
+  async function cancelUndo(id: string) {
+    confirming = null;
+    await tick();
+    checkboxes[id]?.focus();
+  }
+  async function askDelete() {
+    deleting = true;
+    await tick();
+    deleteYes?.focus();
+  }
+  async function keepMeeting() {
+    deleting = false;
+    await tick();
+    deleteButton?.focus();
+  }
+
   async function askUndo(s: WithId<Scout>) {
     // loadRollback never throws: a failed preview is null.
     const ok = await guard.run("", async () => {
@@ -100,13 +122,15 @@
   }
 </script>
 
+<svelte:head><title>{shortDay(meetingId)} · Troop 813 HQ</title></svelte:head>
+
 <main>
   <h1>{shortDay(meetingId)}</h1>
 
   {#if $meeting.state === "error" || $scouts.state === "error"}
     <p role="alert">Couldn't load this Meeting. Reload to try again.</p>
   {:else if $meeting.state === "loading" || $scouts.state === "loading"}
-    <p>Loading…</p>
+    <p role="status">Loading…</p>
   {:else if !$meeting.doc}
     <p>No Meeting on {shortDay(meetingId)}.</p>
   {:else}
@@ -122,12 +146,16 @@
     <ul aria-label="Scouts">
       {#each checklist as s (s.id)}
         <li>
-          <input
-            type="checkbox"
-            aria-label={fullName(s)}
-            checked={s.id in checkedIn}
-            onclick={(e) => toggle(e, s)}
-          />
+          <!-- The label only widens the tap target to 44px. -->
+          <label class="check">
+            <input
+              bind:this={checkboxes[s.id]}
+              type="checkbox"
+              aria-label={fullName(s)}
+              checked={s.id in checkedIn}
+              onclick={(e) => toggle(e, s)}
+            />
+          </label>
           <span class="name"><ScoutLink scout={s} /></span>
           {#if confirming === s.id}
             <UndoConfirm
@@ -135,7 +163,7 @@
               {rollback}
               {busy}
               onConfirm={() => undo(s)}
-              onCancel={() => (confirming = null)}
+              onCancel={() => void cancelUndo(s.id)}
             />
           {/if}
         </li>
@@ -146,6 +174,7 @@
       {#if deleting}
         <p>
           <button
+            bind:this={deleteYes}
             type="button"
             class="danger solid"
             disabled={busy}
@@ -156,7 +185,7 @@
           <button
             type="button"
             disabled={busy}
-            onclick={() => (deleting = false)}
+            onclick={() => void keepMeeting()}
           >
             Cancel
           </button>
@@ -164,9 +193,10 @@
       {:else}
         <p>
           <button
+            bind:this={deleteButton}
             type="button"
             class="danger"
-            onclick={() => (deleting = true)}
+            onclick={() => void askDelete()}
           >
             Delete this Meeting
           </button>
@@ -175,3 +205,17 @@
     {/if}
   {/if}
 </main>
+
+<style>
+  /* A 44px tap target around the 1.5rem checkbox; the negative margin keeps
+     the row's height and the checkbox's place unchanged. */
+  .check {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: -0.625rem;
+    cursor: pointer;
+  }
+</style>

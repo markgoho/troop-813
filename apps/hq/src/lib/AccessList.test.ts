@@ -71,13 +71,13 @@ describe("AccessList", () => {
 
     await userEvent.click(
       within(row("Blake Fictional")).getByRole("button", {
-        name: "Make Leader",
+        name: "Make Leader: Blake Fictional",
       }),
     );
     expect(api.setRole).toHaveBeenCalledWith("u-blake", "leader");
     expect(
       await within(row("Blake Fictional")).findByRole("button", {
-        name: "Leader ✓",
+        name: "Leader: Blake Fictional",
       }),
     ).toBeInTheDocument();
     expect(
@@ -85,12 +85,14 @@ describe("AccessList", () => {
     ).not.toBeInTheDocument();
 
     await userEvent.click(
-      within(row("Avery Fictional")).getByRole("button", { name: "Leader ✓" }),
+      within(row("Avery Fictional")).getByRole("button", {
+        name: "Leader: Avery Fictional",
+      }),
     );
     expect(api.setRole).toHaveBeenCalledWith("u-avery", "parent");
     expect(
       await within(row("Avery Fictional")).findByRole("button", {
-        name: "Make Leader",
+        name: "Make Leader: Avery Fictional",
       }),
     ).toBeInTheDocument();
   });
@@ -101,6 +103,7 @@ describe("AccessList", () => {
     await screen.findByText("Dana Fictional");
     const own = within(row("Dana Fictional")).getByRole("button");
     expect(own).toBeDisabled();
+    expect(own).toHaveAccessibleDescription("You can't change your own access");
     await userEvent.click(own);
     expect(api.setRole).not.toHaveBeenCalled();
   });

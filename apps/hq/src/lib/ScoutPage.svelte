@@ -73,6 +73,10 @@
   const label = { going: "Going", notGoing: "Not going" } as const;
 </script>
 
+<svelte:head>
+  <title>{scout ? fullName(scout) : "Roster"} · Troop 813 HQ</title>
+</svelte:head>
+
 <main>
   {#if missing}
     <p>This Scout isn't on the Roster.</p>

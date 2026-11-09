@@ -54,7 +54,7 @@
 {/snippet}
 
 {#if user === undefined || kiosk}
-  <p class="status">Loading…</p>
+  <p class="status" role="status">Loading…</p>
 {:else if me === null}
   <main class="gate">
     <Logo size="10rem" />
@@ -66,7 +66,7 @@
   </main>
 {:else}
   {#await me}
-    <p class="status">Loading…</p>
+    <p class="status" role="status">Loading…</p>
   {:then caller}
     {#if caller.role === "leader" || caller.role === "admin"}
       {@render children(caller)}

@@ -122,6 +122,11 @@ function scoutRow(name: string) {
 }
 
 describe("EventPage", () => {
+  test("the page title is the Event name", () => {
+    setup();
+    expect(document.title).toBe("Fall Campout · Troop 813 HQ");
+  });
+
   test("each Scout's name links to their page", () => {
     setup({ rsvps: [] });
 
@@ -269,6 +274,16 @@ describe("EventPage", () => {
     expect(del).toHaveAccessibleDescription(
       "Scouts have RSVP history for this Event, so it can't be deleted. Cancel it instead.",
     );
+  });
+
+  test("the delete confirm takes focus; Keep it returns it to Delete Event", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "Delete Event" }));
+    expect(
+      screen.getByRole("button", { name: "Yes, delete Fall Campout" }),
+    ).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Keep it" }));
+    expect(screen.getByRole("button", { name: "Delete Event" })).toHaveFocus();
   });
 
   test("Delete works on an Event nobody has answered, after a confirm", async () => {

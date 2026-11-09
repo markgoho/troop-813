@@ -20,6 +20,8 @@
   );
 </script>
 
+<svelte:head><title>Meetings · Troop 813 HQ</title></svelte:head>
+
 <main>
   <h1>Meetings</h1>
   <p><a href={resolve("/(leader)/meetings/new")}>Add a past Meeting</a></p>
@@ -27,7 +29,7 @@
   {#if $meetings.state === "error"}
     <p role="alert">Couldn't load the Meetings. Reload to try again.</p>
   {:else if $meetings.state === "loading"}
-    <p>Loading…</p>
+    <p role="status">Loading…</p>
   {:else if rows.length === 0}
     <p>No Meetings yet.</p>
   {:else}

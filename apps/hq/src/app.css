@@ -5,7 +5,6 @@
 
 @import "@fontsource/atkinson-hyperlegible/400.css";
 @import "@fontsource/atkinson-hyperlegible/700.css";
-@import "@fontsource/barlow-condensed/600.css";
 @import "@fontsource/barlow-condensed/700.css";
 
 :root {
@@ -26,10 +25,12 @@
   --fill-hover: var(--accent-hover);
   --fill-ink: var(--accent-ink);
   --ok: oklch(49.9% 0.098 154.5);
+  --on-ok: oklch(100.0% 0 0);
   --ok-soft: oklch(92.6% 0.020 159.7);
   --warn: oklch(49.2% 0.110 66.0);
   --warn-soft: oklch(94.8% 0.038 81.5);
   --bad: oklch(48.5% 0.150 28.1);
+  --on-bad: oklch(100.0% 0 0);
   --bad-soft: oklch(91.6% 0.030 25.3);
   --focus: oklch(32.2% 0.121 355.3);
 
@@ -58,10 +59,12 @@
     --fill-ink: oklch(100% 0 0);
     --accent-soft: oklch(29.2% 0.047 348.0);
     --ok: oklch(77.4% 0.097 159.7);
+    --on-ok: oklch(22.7% 0.012 350.4);
     --ok-soft: oklch(31.8% 0.035 159.7);
     --warn: oklch(79.5% 0.120 77.6);
     --warn-soft: oklch(30.9% 0.040 82.5);
     --bad: oklch(73.9% 0.125 26.5);
+    --on-bad: oklch(22.7% 0.012 350.4);
     --bad-soft: oklch(28.7% 0.042 24.6);
     --focus: oklch(80% 0.075 355);
   }

@@ -185,6 +185,15 @@ describe("Delete", () => {
     expect(deleteScout).toHaveBeenCalledExactlyOnceWith("s3");
   });
 
+  test("the confirm takes focus; Keep returns it to Delete", async () => {
+    setup({}, [rsvpFor("s1")], true);
+
+    await userEvent.click(button("Delete Quincy Harrow"));
+    expect(button("Yes, delete Quincy Harrow")).toHaveFocus();
+    await userEvent.click(button("Keep"));
+    expect(button("Delete Quincy Harrow")).toHaveFocus();
+  });
+
   test("a 409 in_use (Attendance the page can't see) withdraws it", async () => {
     const deleteScout = vi.fn(async () => {
       throw new ApiError(409, { code: "in_use" });

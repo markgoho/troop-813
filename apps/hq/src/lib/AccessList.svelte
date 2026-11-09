@@ -32,28 +32,41 @@
   }
 </script>
 
+<svelte:head><title>Access · Troop 813 HQ</title></svelte:head>
+
 <main>
   <h1>Access</h1>
   {#if failed}
     <p role="alert">Couldn't update Access. Reload and try again.</p>
   {/if}
   {#if users === null && !failed}
-    <p>Loading…</p>
+    <p role="status">Loading…</p>
   {:else if users}
     <ul>
       {#each users as u (u.uid)}
+        {@const fixed = u.uid === myUid || u.role === "admin"}
         <li>
           <span class="name">{u.displayName}</span>
           <span class="email">{u.email}</span>
           {#if u.role === "parent"}<span class="pill warn">Waiting</span>{/if}
           <button
             type="button"
-            disabled={u.uid === myUid || u.role === "admin" || busy === u.uid}
-            aria-pressed={u.role !== "parent"}
+            disabled={fixed || busy === u.uid}
+            aria-label={u.role === "parent"
+              ? `Make Leader: ${u.displayName}`
+              : `Leader: ${u.displayName}`}
+            aria-describedby={fixed ? `fixed-${u.uid}` : undefined}
             onclick={() => void toggle(u)}
           >
             {u.role === "parent" ? "Make Leader" : "Leader ✓"}
           </button>
+          {#if fixed}
+            <span id="fixed-{u.uid}" class="sr-only">
+              {u.uid === myUid
+                ? "You can't change your own access"
+                : "Admins always have access"}
+            </span>
+          {/if}
         </li>
       {/each}
     </ul>

@@ -13,6 +13,7 @@
   //
   // The name list stays mounted while asleep (just hidden), so a Scout who
   // was mid-confirm when the tablet slept finds their screen again.
+  import { tick } from "svelte";
   import type { Api } from "./api";
   import { asleep } from "./kiosk-flow";
   import KioskNameList from "./KioskNameList.svelte";
@@ -51,14 +52,22 @@
   // would act for the wrong Scout. For `settle.ms` after the screen changes,
   // clicks are swallowed in the capture phase, before any button sees them.
   // Nothing changes visually; keyboard Enter after the window works as usual.
+  // Focus follows the screen (WCAG 2.4.3): the new screen's <h1> takes it. Not
+  // on first render, nor leaving the loading "status" screen. Focus is no tap,
+  // so the guard above is unaffected.
+  let flowEl: HTMLElement | undefined;
+  let checkedInText = $state("");
   let settling = false;
   let shown: string | null = null;
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
   function onScreen(screen: string) {
     if (screen === shown) return;
-    const first = shown === null;
+    const from = shown;
     shown = screen;
-    if (first || settle.ms <= 0) return;
+    if (from === null) return;
+    if (from !== "status")
+      void tick().then(() => flowEl?.querySelector("h1")?.focus());
+    if (settle.ms <= 0) return;
     settling = true;
     clearTimeout(settleTimer);
     settleTimer = setTimeout(() => (settling = false), settle.ms);
@@ -74,6 +83,7 @@
   // value is lastActivityAt then (0 if the doc hadn't arrived).
   let serverSaysAsleepFrom = $state<number | null>(null);
 
+  // Polite live region: the outcome of a check-in, and the asleep screen.
   const sleeping = $derived(
     (lastActivity !== undefined &&
       asleep(
@@ -83,8 +93,14 @@
       (serverSaysAsleepFrom !== null &&
         serverSaysAsleepFrom === (lastActivity?.getTime() ?? 0)),
   );
+  // A stale "checked in" must not be read out again when the Kiosk wakes.
+  $effect(() => {
+    if (sleeping) checkedInText = "";
+  });
+  const announcement = $derived(sleeping ? "Kiosk asleep" : checkedInText);
 </script>
 
+<p class="sr-only" role="status">{announcement}</p>
 {#if sleeping}
   <div class="asleep">
     <svg viewBox="0 0 24 24" aria-hidden="true" class="moon">
@@ -94,13 +110,19 @@
     <p class="sub">A Leader can wake it from their phone.</p>
   </div>
 {/if}
-<div class="flow" hidden={sleeping} onclickcapture={swallowWhileSettling}>
+<div
+  class="flow"
+  bind:this={flowEl}
+  hidden={sleeping}
+  onclickcapture={swallowWhileSettling}
+>
   <KioskNameList
     {api}
     {live}
     {kiosk}
     {onExpired}
     {onScreen}
+    onCheckedIn={(label) => (checkedInText = `${label} checked in`)}
     onAsleep={() => (serverSaysAsleepFrom = lastActivity?.getTime() ?? 0)}
   />
 </div>

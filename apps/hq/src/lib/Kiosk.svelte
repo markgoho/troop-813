@@ -90,7 +90,7 @@
   </header>
   <main class="stage">
     {#if user === undefined || stale}
-      <p class="status">Loading…</p>
+      <p class="status" role="status">Loading…</p>
     {:else if user === null}
       <div class="lock">
         <Logo size="12rem" />
@@ -116,7 +116,7 @@
       {/key}
     {:else if me}
       {#await me}
-        <p class="status">Loading…</p>
+        <p class="status" role="status">Loading…</p>
       {:then caller}
         <div class="lock">
           <Logo size="12rem" />
@@ -162,7 +162,7 @@
     gap: 0.625rem;
     padding: 0.75rem max(1.5rem, env(safe-area-inset-left));
     font-family: var(--display);
-    font-weight: 600;
+    font-weight: 700;
     font-size: 1.125rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -202,6 +202,10 @@
   }
   :global(:where(.kiosk .status)) {
     text-align: center;
+  }
+  /* Screens move focus to their <h1> (KioskSession); no ring unless keyboard. */
+  :global(:where(.kiosk h1:focus:not(:focus-visible))) {
+    outline: none;
   }
   :global(:where(.kiosk .alert)) {
     background: var(--bad-soft);

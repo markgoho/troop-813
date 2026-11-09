@@ -7,6 +7,8 @@
   const me = getCaller();
 </script>
 
+<svelte:head><title>Access · Troop 813 HQ</title></svelte:head>
+
 {#if me.role === "admin"}
   <AccessList {api} myUid={me.uid} />
 {:else}

@@ -26,6 +26,7 @@
     kiosk,
     at,
     onExpired,
+    onLoadFailed,
   }: {
     api: Api;
     live: Live;
@@ -34,6 +35,8 @@
     at: Date;
     /** The server says the session is over (22:00 or replaced). */
     onExpired: () => void;
+    /** A live read failed (see Kiosk's retry). */
+    onLoadFailed?: (error: Error) => void;
   } = $props();
 
   // The parent re-creates this component for a new session.
@@ -122,6 +125,7 @@
     {kiosk}
     {onExpired}
     {onScreen}
+    {onLoadFailed}
     onCheckedIn={(label) => (checkedInText = `${label} checked in`)}
     onAsleep={() => (serverSaysAsleepFrom = lastActivity?.getTime() ?? 0)}
   />

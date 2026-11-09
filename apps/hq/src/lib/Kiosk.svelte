@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  /** Live-read retries after a failure. Tests set ms 0. */
+  export const retry = { ms: 2000, max: 3 };
+</script>
+
 <script lang="ts">
   // The Meeting Kiosk (/kiosk, spec stories 1–12, 22, 40, 41). One route, no
   // links out, so Back is harmless; everything it shows comes from the session
@@ -57,6 +62,22 @@
 
   $effect(() => holdScreenAwake());
 
+  // Right after Start swaps the Admin's sign-in for the Kiosk's, the first
+  // live reads can be refused before the new credential settles; a reload
+  // fixed it on 2026-11-09. No one is at the tablet to reload, so the session
+  // is re-created (fresh listeners) a few times before the error stays.
+  let attempt = $state(0);
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  function loadFailed(error: Error) {
+    console.error("Kiosk live read failed", error);
+    if (attempt >= retry.max || retryTimer) return;
+    retryTimer = setTimeout(() => {
+      retryTimer = undefined;
+      attempt++;
+    }, retry.ms);
+  }
+  $effect(() => () => clearTimeout(retryTimer));
+
   let starting = $state(false);
   let startError = $state<string | null>(null);
 
@@ -105,13 +126,14 @@
         </button>
       </div>
     {:else if user.kiosk}
-      {#key user.kiosk.sessionId}
+      {#key `${user.kiosk.sessionId}:${attempt}`}
         <KioskSession
           {api}
           {live}
           kiosk={user.kiosk}
           {at}
           onExpired={() => void session.signOut()}
+          onLoadFailed={loadFailed}
         />
       {/key}
     {:else if me}

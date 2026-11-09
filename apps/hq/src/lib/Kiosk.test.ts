@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { settle } from "./KioskSession.svelte";
-import Kiosk from "./Kiosk.svelte";
+import Kiosk, { retry } from "./Kiosk.svelte";
 import { ApiError } from "./api";
 import type { Me } from "./contract.gen";
 import type { SignedInUser } from "./session";
@@ -600,5 +600,43 @@ describe("Kiosk sleep", () => {
     await advance(5 * 60 * MIN); // 00:05 the next day
 
     expect(session.signOut).toHaveBeenCalled();
+  });
+});
+
+describe("a live read refused right after Start", () => {
+  test("is retried with fresh listeners, then the names show", async () => {
+    retry.ms = 0;
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { live } = setup(kioskUser);
+    const opened = vi.spyOn(live, "meeting");
+    const store = live.meetingStore(TODAY);
+    store.set({ state: "error", error: new Error("permission-denied") });
+    await vi.waitFor(() => expect(opened).toHaveBeenCalled());
+
+    store.set(meeting(TODAY));
+    expect(
+      await screen.findByRole("button", { name: "Rowan" }),
+    ).toBeInTheDocument();
+    retry.ms = 2000;
+  });
+
+  test("stops after a few tries and says so", async () => {
+    retry.ms = 0;
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { live } = setup(kioskUser);
+    const opened = vi.spyOn(live, "meeting");
+    live
+      .meetingStore(TODAY)
+      .set({ state: "error", error: new Error("permission-denied") });
+
+    expect(
+      await screen.findByText(
+        "Couldn't load the Meeting. Reload to try again.",
+      ),
+    ).toBeInTheDocument();
+    await vi.waitFor(() => expect(opened).toHaveBeenCalledTimes(retry.max));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(opened).toHaveBeenCalledTimes(retry.max);
+    retry.ms = 2000;
   });
 });

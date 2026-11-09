@@ -39,6 +39,7 @@
     onAsleep,
     onScreen,
     onCheckedIn,
+    onLoadFailed,
   }: {
     api: Api;
     live: Live;
@@ -51,6 +52,8 @@
     onScreen?: (screen: string) => void;
     /** A Scout was just checked in from this screen (for a status announcement). */
     onCheckedIn?: (label: string) => void;
+    /** A live read failed: the parent re-creates this component to retry. */
+    onLoadFailed?: (error: Error) => void;
   } = $props();
 
   // The parent re-creates this component for a new session.
@@ -58,6 +61,11 @@
   const meeting = live.meeting(kiosk.meetingId);
   // svelte-ignore state_referenced_locally
   const scouts = live.scouts();
+
+  $effect(() => {
+    if ($meeting.state === "error") onLoadFailed?.($meeting.error);
+    else if ($scouts.state === "error") onLoadFailed?.($scouts.error);
+  });
 
   const names = $derived(
     $scouts.state === "ready" ? nameList($scouts.docs) : [],

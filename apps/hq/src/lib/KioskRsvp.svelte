@@ -251,6 +251,13 @@
     gap: 1.5rem;
     min-height: 11.5rem;
   }
+  /* Portrait: the last-chance reminder wraps to an extra line (measured
+     209px at 800px wide), so the slot is taller. */
+  @media (orientation: portrait) {
+    .head {
+      min-height: 13.5rem;
+    }
+  }
   .progress {
     color: var(--muted);
     font-variant-numeric: tabular-nums;

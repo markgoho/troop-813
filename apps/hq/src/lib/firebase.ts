@@ -61,7 +61,9 @@ function firebaseApp(): FirebaseApp {
 function firebaseAuth(): Auth {
   if (!auth) {
     auth = getAuth(firebaseApp());
-    const url = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL;
+    // "same-origin" (`bun run dev:lan`): the dev server proxies the emulator.
+    const env = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL;
+    const url = env === "same-origin" ? location.origin : env;
     if (url) connectAuthEmulator(auth, url, { disableWarnings: true });
   }
   return auth;
@@ -71,7 +73,8 @@ function firebaseAuth(): Auth {
 export function firestore(): Firestore {
   if (!db) {
     db = getFirestore(firebaseApp());
-    const host = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST;
+    const env = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST;
+    const host = env === "same-origin" ? location.host : env;
     if (host) {
       const [hostname = "127.0.0.1", port = "8080"] = host.split(":");
       connectFirestoreEmulator(db, hostname, Number(port));

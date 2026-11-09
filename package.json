@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "bun scripts/dev.ts",
+    "dev:lan": "bun scripts/dev.ts --lan",
     "build": "bun run --filter '*' build",
     "check": "tsc -p . && bun run --filter '*' check && go -C api vet ./...",
     "lint": "bun run --filter '*' lint && cd api && golangci-lint run ./...",

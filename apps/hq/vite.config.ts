@@ -5,6 +5,7 @@ import { defineConfig } from "vitest/config";
 import { loadLocalStack } from "../../scripts/ports.ts";
 
 const { ports } = loadLocalStack();
+const lan = process.env.HQ_LAN === "1";
 
 export default defineConfig({
   plugins: [
@@ -17,7 +18,25 @@ export default defineConfig({
   server: {
     port: ports.hq,
     strictPort: true,
-    proxy: { "/api": `http://127.0.0.1:${ports.api}` },
+    // `bun run dev:lan`: listen on the network and proxy the Auth and
+    // Firestore emulators through this port (the app connects same-origin).
+    host: lan ? true : undefined,
+    proxy: {
+      "/api": `http://127.0.0.1:${ports.api}`,
+      ...(lan
+        ? Object.fromEntries([
+            ...[
+              "/identitytoolkit.googleapis.com",
+              "/securetoken.googleapis.com",
+              "/emulator",
+            ].map((p) => [p, `http://127.0.0.1:${ports.auth}`]),
+            [
+              "/google.firestore.v1.Firestore",
+              `http://127.0.0.1:${ports.firestore}`,
+            ],
+          ])
+        : {}),
+    },
   },
   test: {
     expect: { requireAssertions: true },

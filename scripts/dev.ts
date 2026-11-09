@@ -50,6 +50,8 @@ function start(
   });
 }
 
+const lan = process.argv.includes("--lan");
+
 async function waitForPort(
   name: string,
   port: number,
@@ -109,15 +111,26 @@ start(
     VITE_FIREBASE_API_KEY: "demo-api-key",
     VITE_FIREBASE_APP_ID: "demo-app-id",
     VITE_FIREBASE_PROJECT_ID: stack.projectId,
-    VITE_FIREBASE_AUTH_EMULATOR_URL: `http://127.0.0.1:${ports.auth}`,
-    VITE_FIRESTORE_EMULATOR_HOST: `127.0.0.1:${ports.firestore}`,
+    // --lan (`bun run dev:lan`): HQ listens on every interface and proxies
+    // the emulators through its own port, so a tablet on the home network
+    // needs only http://<this machine>:<hq port>.
+    ...(lan
+      ? {
+          HQ_LAN: "1",
+          VITE_FIREBASE_AUTH_EMULATOR_URL: "same-origin",
+          VITE_FIRESTORE_EMULATOR_HOST: "same-origin",
+        }
+      : {
+          VITE_FIREBASE_AUTH_EMULATOR_URL: `http://127.0.0.1:${ports.auth}`,
+          VITE_FIRESTORE_EMULATOR_HOST: `127.0.0.1:${ports.firestore}`,
+        }),
   },
 );
 await waitForPort("hq", ports.hq);
 
 console.error(`
 dev: ready (port offset ${stack.offset}, project ${stack.projectId})
-  HQ            http://127.0.0.1:${ports.hq}
+  HQ            http://127.0.0.1:${ports.hq}${lan ? " (and on this machine's network address)" : ""}
   API           http://127.0.0.1:${ports.api}/api/health
   Emulator UI   http://127.0.0.1:${ports.ui}
 `);

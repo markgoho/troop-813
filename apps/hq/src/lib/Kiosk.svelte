@@ -161,6 +161,7 @@
     align-items: center;
     gap: 0.625rem;
     padding: 0.75rem max(1.5rem, env(safe-area-inset-left));
+    padding-top: max(0.75rem, env(safe-area-inset-top));
     font-family: var(--display);
     font-weight: 700;
     font-size: 1.125rem;

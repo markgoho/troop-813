@@ -46,6 +46,14 @@
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
+/* Installed (the manifest is fullscreen, for the Kiosk): the page reaches the
+   screen's bottom edge, under the gesture area and rounded corners, which a
+   phone may report as a 0 inset. Keep the labels clear of it. */
+@media (display-mode: fullscreen), (display-mode: standalone) {
+  :where(.leader nav[aria-label="Leader tabs"]) {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+}
 :where(.leader nav[aria-label="Leader tabs"] a) {
   flex: 1;
   display: grid;

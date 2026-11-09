@@ -254,7 +254,11 @@
             Cancel it instead.
           </p>
         {:else if confirmingDelete}
-          <span class="confirm-group" role="group" aria-labelledby="delete-yes">
+          <span
+            class="confirm-group"
+            role="group"
+            aria-label="Delete {event.name}?"
+          >
             <button
               id="delete-yes"
               type="button"
@@ -280,7 +284,10 @@
 
 <style>
   .confirm-group {
-    display: contents;
+    /* A real box (not display: contents) so the group role survives. */
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
   .when {
     display: grid;

@@ -190,7 +190,7 @@
 
     {#if presentCount === 0 && !isTonight}
       {#if deleting}
-        <p role="group" aria-labelledby="delete-yes">
+        <p role="group" aria-label="Delete this Meeting?">
           <button
             id="delete-yes"
             type="button"

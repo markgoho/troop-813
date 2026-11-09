@@ -33,6 +33,9 @@ export async function focusAfterRemoval(
   }
   if (row.isConnected || !page?.isConnected) return;
   await tick();
+  // The user moved on while the row was leaving: leave their focus alone.
+  const now = document.activeElement;
+  if (now && now !== document.body) return;
   for (const t of targets) {
     const el = t();
     if (el?.isConnected) {

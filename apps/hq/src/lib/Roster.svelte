@@ -347,7 +347,7 @@
           <span
             class="confirm-group"
             role="group"
-            aria-labelledby="confirm-yes-{s.id}"
+            aria-label="Delete {fullName(s)}?"
           >
             <button
               id="confirm-yes-{s.id}"
@@ -393,7 +393,10 @@
     font-variant-numeric: tabular-nums;
   }
   .confirm-group {
-    display: contents;
+    /* A real box (not display: contents) so the group role survives. */
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
   .actions {
     flex-basis: 100%;

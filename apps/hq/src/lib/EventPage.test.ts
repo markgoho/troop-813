@@ -281,7 +281,7 @@ describe("EventPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Delete Event" }));
     expect(screen.getByRole("button", { name: "Keep it" })).toHaveFocus();
     expect(
-      screen.getByRole("group", { name: "Yes, delete Fall Campout" }),
+      screen.getByRole("group", { name: "Delete Fall Campout?" }),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Keep it" }));
     expect(screen.getByRole("button", { name: "Delete Event" })).toHaveFocus();

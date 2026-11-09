@@ -308,7 +308,7 @@ Rhythm: 0.25 / 0.5 / 0.75 / 1 / 1.5rem gaps; list rows pad 0.625rem by 0.875rem 
 
 ## Elevation & Depth
 
-Flat. Depth comes from tonal layering only: white surfaces on the tinted ground, separated by 1px hairline borders. There are no drop shadows anywhere. The only `box-shadow` in the system is the current-tab marker, an inset 3px burgundy bar (`inset 0 3px 0 var(--accent)` at the top edge on phones, `inset 0 -3px 0` at the bottom edge on wide screens).
+Flat. Depth comes from tonal layering only: white surfaces on the tinted ground, separated by 1px hairline borders. There are no drop shadows anywhere.
 
 ### Named Rules
 
@@ -356,7 +356,7 @@ Large, outlined and plain; the main action is filled.
 ### Navigation
 
 - **Shell bar:** text only, no logo: the uppercase condensed troop name in muted grey ("Troop 813 HQ" on Leader screens, a `--surface` strip with a hairline under it; "Troop 813 · Meeting" on the Kiosk, without the surface fill).
-- **Tab bar (Leader):** Tonight / Meetings / Events / Roster (plus Access for the Admin), each an icon over a bold 0.875rem muted label in a 3.5rem-tall cell. The current tab (icon and label, which follow the text colour) turns burgundy with the inset 3px bar, and its icon switches from `thin` to `duotone` (a soft 20% fill under the line). Fixed to the bottom on phones; at 48rem it moves to the top under the shell bar, centred, with the icon beside a 0.9375rem label in 3rem cells.
+- **Tab bar (Leader):** Tonight / Meetings / Events / Roster (plus Access for the Admin), each an icon over a bold 0.875rem muted label in a 3.5rem-tall cell. The current tab (icon and label, which follow the text colour) turns burgundy (no marker bar: the user dropped it 2026-11-09, colour plus duotone is enough), and its icon switches from `thin` to `duotone` (a soft 20% fill under the line). Fixed to the bottom on phones; at 48rem it moves to the top under the shell bar, centred, with the icon beside a 0.9375rem label in 3rem cells.
 
 ### Icons
 
@@ -410,7 +410,7 @@ A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; 
 
 - **Don't** use green as a brand or accent colour, or burgundy for success.
 - **Don't** use `--accent` as a background fill; it turns light rose in dark mode.
-- **Don't** add drop shadows; the inset tab marker is the only box-shadow.
+- **Don't** add drop shadows or box-shadows; depth is tonal only.
 - **Don't** add a shared selector outside `:where()`.
 - **Don't** mix icon sets or weights, or use emoji or text glyphs as icons.
 - **Don't** make a grid of identical cards the main Kiosk experience; the Handoff's single big name is the main screen and the name list stays secondary.

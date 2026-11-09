@@ -7,6 +7,7 @@ colors:
   ink: "oklch(22.9% 0.015 346.7)"
   muted: "oklch(47.5% 0.019 348.3)"
   line: "oklch(87.6% 0.012 351.0)"
+  field-line: "oklch(58% 0.012 351)"
   accent: "oklch(32.2% 0.121 355.3)"
   accent-hover: "oklch(27.4% 0.102 354.9)"
   accent-ink: "oklch(100.0% 0 0)"
@@ -26,6 +27,7 @@ colors:
   dark-ink: "oklch(93.5% 0.010 352.4)"
   dark-muted: "oklch(73.6% 0.018 349.7)"
   dark-line: "oklch(33.1% 0.018 349.0)"
+  dark-field-line: "oklch(56% 0.018 349)"
   dark-accent: "oklch(80% 0.075 355)"
   dark-accent-hover: "oklch(86% 0.06 355)"
   dark-accent-ink: "oklch(20% 0.06 357)"
@@ -257,7 +259,8 @@ One deep troop burgundy against warm-neutral greys with a faint rose cast, plus 
 - **Paper White** (`surface`): cards, buttons, inputs, the Leader shell bar and tab bar.
 - **Charcoal Ink** (`ink`): body text and outlined-button text.
 - **Pencil Grey** (`muted`): secondary text, meta lines, the shell label, inactive tabs, quiet buttons.
-- **Hairline** (`line`): every border and row divider.
+- **Hairline** (`line`): card borders and row dividers.
+- **Field Edge** (`field-line`): the border of inputs, selects, textareas and the RSVP radiogroup; 3.5:1 or better against `--bg` and `--surface` in both themes (WCAG 1.4.11), where `--line` is only about 1.4:1.
 - **Focus** (`focus`): the focus ring; follows the accent in both themes.
 
 ### Named Rules
@@ -350,7 +353,7 @@ Large, outlined and plain; the main action is filled.
 
 ### Inputs / Fields
 
-- **Style:** full-width, 2.75rem tall, 0.5rem by 0.75rem, 1px `--line` border, 8px corners, `--surface` background, 1rem regular text. Labels stack above in 0.875rem bold muted text. Checkboxes are 1.5rem with `accent-color: var(--fill)`.
+- **Style:** full-width, 2.75rem tall, 0.5rem by 0.75rem, 1px `--field-line` border, 8px corners, `--surface` background, 1rem regular text. Labels stack above in 0.875rem bold muted text. Checkboxes are 1.5rem with `accent-color: var(--fill)`.
 - **Focus:** the border turns `--accent` in addition to the shared 3px focus ring.
 
 ### Navigation
@@ -378,7 +381,7 @@ A grid of outlined name buttons (4rem tall, 1.375rem text, left-aligned). A chec
 
 ### Segmented RSVP Switch (signature, Leader)
 
-A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; each option is at least 3rem by 2.75rem with the real radio input stretched invisibly over it. The checked option fills: Going in `--ok`, Not going in `--bad` (both with `--surface` text), and the cleared "—" option in `--bg` with `--ink` text. Elsewhere the default checked fill is `--fill`. Keyboard focus draws the 3px ring inset (offset -3px) on the option.
+A radiogroup drawn as one 8px-cornered outlined control with hairline dividers; each option is at least 3rem by 2.75rem with the real radio input stretched invisibly over it. The checked option fills: Going in `--ok`, Not going in `--bad` (both with `--surface` text), and the cleared "—" option in `--bg` with `--ink` text. Elsewhere the default checked fill is `--fill`. Its outer border is `--field-line`. Keyboard focus draws the 3px ring inset (offset -3px) on the option: `--focus` on an unchecked option, and the option's own text colour (`currentColor`, 5.7:1 or better on every fill) on a checked one, where `--focus` would vanish into the fill.
 
 ### Leader Pages
 

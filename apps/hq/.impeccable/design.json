@@ -94,6 +94,14 @@
           "oklch(95% 0.002 351)"
         ]
       },
+      "field-line": {
+        "role": "neutral",
+        "displayName": "Field Edge",
+        "canonical": "oklch(58% 0.012 351)",
+        "cssVar": "--field-line",
+        "theme": "light",
+        "dark": "oklch(56% 0.018 349)"
+      },
       "accent": {
         "role": "primary",
         "displayName": "Troop Burgundy (text)",
@@ -430,6 +438,13 @@
           "oklch(85% 0.007 349)",
           "oklch(95% 0.002 349)"
         ]
+      },
+      "dark-field-line": {
+        "role": "neutral",
+        "displayName": "Field Edge (dark theme)",
+        "canonical": "oklch(56% 0.018 349)",
+        "cssVar": "--field-line",
+        "theme": "dark"
       },
       "dark-accent": {
         "role": "primary",
@@ -856,7 +871,7 @@
       "refersTo": "input",
       "description": "Leader text field with a stacked muted label.",
       "html": "<label class=\"ds-label\">Event name<input class=\"ds-input\" value=\"Fall Campout\"></label>",
-      "css": ".ds-label { display: grid; gap: 0.25rem; font-family: var(--body); font-size: 0.875rem; font-weight: 700; color: var(--muted); } .ds-input { width: 100%; min-height: 2.75rem; padding: 0.5rem 0.75rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: 1rem; font-weight: 400; } .ds-input:focus-visible { border-color: var(--accent); outline: 3px solid var(--focus); outline-offset: 2px; }"
+      "css": ".ds-label { display: grid; gap: 0.25rem; font-family: var(--body); font-size: 0.875rem; font-weight: 700; color: var(--muted); } .ds-input { width: 100%; min-height: 2.75rem; padding: 0.5rem 0.75rem; border: 1px solid var(--field-line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: 1rem; font-weight: 400; } .ds-input:focus-visible { border-color: var(--accent); outline: 3px solid var(--focus); outline-offset: 2px; }"
     },
     {
       "name": "Leader Tab Bar",
@@ -872,7 +887,7 @@
       "refersTo": "",
       "description": "Signature Leader control: Going / Not / — as one outlined segmented radiogroup; checked Going green, Not red, — neutral.",
       "html": "<div class=\"ds-seg\" role=\"radiogroup\" aria-label=\"Scout Name\"><label class=\"ds-going ds-on\"><input type=\"radio\" name=\"r\" checked>Going</label><label class=\"ds-not\"><input type=\"radio\" name=\"r\">Not</label><label class=\"ds-clear\"><input type=\"radio\" name=\"r\">—</label></div>",
-      "css": ".ds-seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; font-family: var(--body); font-weight: 700; } .ds-seg label { position: relative; display: grid; place-items: center; min-width: 3rem; min-height: 2.75rem; padding: 0 0.75rem; color: var(--muted); background: var(--surface); cursor: pointer; } .ds-seg label + label { border-left: 1px solid var(--line); } .ds-seg input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; } .ds-seg label:hover { color: var(--ink); } .ds-seg .ds-going:has(input:checked) { background: var(--ok); color: var(--surface); } .ds-seg .ds-not:has(input:checked) { background: var(--bad); color: var(--surface); } .ds-seg .ds-clear:has(input:checked) { background: var(--bg); color: var(--ink); } .ds-seg label:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: -3px; }"
+      "css": ".ds-seg { display: inline-flex; border: 1px solid var(--field-line); border-radius: var(--radius-sm); overflow: hidden; font-family: var(--body); font-weight: 700; } .ds-seg label { position: relative; display: grid; place-items: center; min-width: 3rem; min-height: 2.75rem; padding: 0 0.75rem; color: var(--muted); background: var(--surface); cursor: pointer; } .ds-seg label + label { border-left: 1px solid var(--line); } .ds-seg input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; } .ds-seg label:hover { color: var(--ink); } .ds-seg .ds-going:has(input:checked) { background: var(--ok); color: var(--surface); } .ds-seg .ds-not:has(input:checked) { background: var(--bad); color: var(--surface); } .ds-seg .ds-clear:has(input:checked) { background: var(--bg); color: var(--ink); } .ds-seg label:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: -3px; }"
     },
     {
       "name": "Hero Name",

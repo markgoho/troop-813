@@ -224,8 +224,10 @@
       background-color 160ms var(--ease),
       transform 160ms var(--ease);
   }
-  :global(:where(.kiosk button:not(:disabled):hover)) {
-    border-color: var(--accent);
+  @media (hover: hover) {
+    :global(:where(.kiosk button:not(:disabled):hover)) {
+      border-color: var(--accent);
+    }
   }
   @media (prefers-reduced-motion: no-preference) {
     :global(:where(.kiosk button:not(:disabled):active)) {
@@ -241,10 +243,12 @@
     border-color: var(--fill);
     color: var(--fill-ink);
   }
-  :global(:where(.kiosk button.primary:not(:disabled):hover)),
-  :global(:where(.kiosk button.yes:not(:disabled):hover)) {
-    background: var(--fill-hover);
-    border-color: var(--fill-hover);
+  @media (hover: hover) {
+    :global(:where(.kiosk button.primary:not(:disabled):hover)),
+    :global(:where(.kiosk button.yes:not(:disabled):hover)) {
+      background: var(--fill-hover);
+      border-color: var(--fill-hover);
+    }
   }
   :global(:where(.kiosk button.quiet)) {
     border-color: transparent;

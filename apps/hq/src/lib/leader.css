@@ -162,9 +162,11 @@
   color: var(--ink);
   text-decoration: none;
 }
-:where(.leader .name a:hover),
-:where(.leader li > a:first-child:hover) {
-  text-decoration: underline;
+@media (hover: hover) {
+  :where(.leader .name a:hover),
+  :where(.leader li > a:first-child:hover) {
+    text-decoration: underline;
+  }
 }
 /* A row with details under the name: name on its own line, details and the
    row's action on the next, the action pushed to the end. */
@@ -242,8 +244,10 @@
     border-color 160ms var(--ease),
     background-color 160ms var(--ease);
 }
-:where(.leader button:not(:disabled):hover) {
-  border-color: var(--accent);
+@media (hover: hover) {
+  :where(.leader button:not(:disabled):hover) {
+    border-color: var(--accent);
+  }
 }
 :where(.leader button:disabled) {
   opacity: 0.45;
@@ -254,10 +258,12 @@
   border-color: var(--fill);
   color: var(--fill-ink);
 }
-:where(.leader button[type="submit"]:not(:disabled):hover),
-:where(.leader button.primary:not(:disabled):hover) {
-  background: var(--fill-hover);
-  border-color: var(--fill-hover);
+@media (hover: hover) {
+  :where(.leader button[type="submit"]:not(:disabled):hover),
+  :where(.leader button.primary:not(:disabled):hover) {
+    background: var(--fill-hover);
+    border-color: var(--fill-hover);
+  }
 }
 :where(.leader button.danger) {
   color: var(--bad);
@@ -307,7 +313,7 @@
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-line);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
@@ -381,8 +387,10 @@
   cursor: pointer;
   opacity: 0.6;
 }
-:where(.leader) input::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
+@media (hover: hover) {
+  :where(.leader) input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
 }
 :where(.leader details ol) {
   margin: 0.25rem 0 0;
@@ -426,7 +434,7 @@
 :where(.leader [role="radiogroup"]) {
   display: inline-flex;
   flex: none;
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-line);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -457,4 +465,11 @@
 :where(.leader [role="radiogroup"] label:has(input:focus-visible)) {
   outline: 3px solid var(--focus);
   outline-offset: -3px;
+}
+/* On a filled (checked) option the --focus ring has no contrast, so the ring
+   takes the option's own text colour, which is set to read on that fill. */
+:where(
+  .leader [role="radiogroup"] label:has(input:checked):has(input:focus-visible)
+) {
+  outline-color: currentColor;
 }

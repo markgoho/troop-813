@@ -15,6 +15,7 @@
   --ink: oklch(22.9% 0.015 346.7);
   --muted: oklch(47.5% 0.019 348.3);
   --line: oklch(87.6% 0.012 351.0);
+  --field-line: oklch(58% 0.012 351);
   --accent: oklch(32.2% 0.121 355.3);
   --accent-hover: oklch(27.4% 0.102 354.9);
   --accent-ink: oklch(100.0% 0 0);
@@ -48,6 +49,7 @@
     --ink: oklch(93.5% 0.010 352.4);
     --muted: oklch(73.6% 0.018 349.7);
     --line: oklch(33.1% 0.018 349.0);
+    --field-line: oklch(56% 0.018 349);
     --accent: oklch(80% 0.075 355);
     --accent-hover: oklch(86% 0.06 355);
     --accent-ink: oklch(20% 0.06 357);

@@ -37,6 +37,7 @@
     kiosk,
     onExpired,
     onAsleep,
+    onScreen,
   }: {
     api: Api;
     live: Live;
@@ -45,6 +46,8 @@
     onExpired: () => void;
     /** The server says the session is asleep: the parent shows the asleep screen. */
     onAsleep: () => void;
+    /** Which screen is showing; changes when the Scout sees a new one. */
+    onScreen?: (screen: string) => void;
   } = $props();
 
   // The parent re-creates this component for a new session.
@@ -120,6 +123,21 @@
   const dueId = $derived(wasNext(broken, flow));
   const due = $derived(names.find((n) => n.id === dueId) ?? null);
 
+  // Identifies the screen on show (not its answers), so the session can
+  // swallow a laggy second tap that would land on the next screen.
+  const screen = $derived(
+    !resumed
+      ? "status"
+      : rsvping
+        ? `rsvp:${rsvping.id}`
+        : confirming
+          ? `confirm:${confirming.id}`
+          : offered
+            ? `handoff:${offered.id}`
+            : "list",
+  );
+  $effect(() => onScreen?.(screen));
+
   function pick(entry: NameListEntry) {
     message = null;
     confirming = entry;
@@ -194,6 +212,7 @@
       scout={rsvping}
       resume={resumedRsvp}
       onDone={() => (rsvping = null)}
+      {onScreen}
       {onExpired}
       {onAsleep}
     />
@@ -266,6 +285,7 @@
         <button
           type="button"
           class:done
+          class:due={entry.id === dueId}
           disabled={done}
           onclick={() => pick(entry)}
         >
@@ -285,17 +305,17 @@
   .lead {
     font-family: var(--body);
     font-weight: 400;
-    font-size: 1.5rem;
+    font-size: 1.375rem;
     letter-spacing: 0;
-    color: var(--muted);
+    color: var(--ink);
   }
   /* The Handoff's hero: as big as the stage allows, and shrunk to fit so a
      long name (--len characters) stays on one line instead of breaking. */
   .bigname {
     font-size: clamp(
       3rem,
-      min(18cqi, 22vh, 11rem, calc(190cqi / var(--len, 8))),
-      11rem
+      min(24cqi, 28vh, 14rem, calc(190cqi / var(--len, 8))),
+      14rem
     );
     line-height: 0.95;
     color: var(--accent);
@@ -359,14 +379,20 @@
     align-items: center;
     gap: 0.5rem;
     text-align: left;
-    font-size: 1.5rem;
+    font-size: 1.375rem;
   }
   .names .done {
-    background: transparent;
-    border-color: transparent;
+    background: var(--bg);
+    border-color: var(--line);
     color: var(--muted);
     font-weight: 400;
     opacity: 1;
+  }
+  /* The tile for the Scout the Handoff named ("<Scout> was next"): a burgundy
+     outline, thicker than the 2px hover outline. State only. */
+  .names .due {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 2px var(--accent);
   }
   /* The check mark (spec story 11), drawn; the button text carries a hidden
      "✓" for screen readers. */

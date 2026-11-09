@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  /** How long taps are swallowed after the Kiosk shows a new screen. Tests set 0. */
+  export const settle = { ms: 400 };
+</script>
+
 <script lang="ts">
   // A live Kiosk session (spec stories 37–39): the name list, or "Kiosk asleep,
   // ask a Leader" once the session has been idle 30 minutes or 22:00 has
@@ -41,6 +46,29 @@
       : undefined,
   );
 
+  // Tap guard: a double or laggy tap on one screen's button lands on the
+  // next screen's button in the same spot (RSVP "Done" -> Handoff "Yes") and
+  // would act for the wrong Scout. For `settle.ms` after the screen changes,
+  // clicks are swallowed in the capture phase, before any button sees them.
+  // Nothing changes visually; keyboard Enter after the window works as usual.
+  let settling = false;
+  let shown: string | null = null;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  function onScreen(screen: string) {
+    if (screen === shown) return;
+    const first = shown === null;
+    shown = screen;
+    if (first || settle.ms <= 0) return;
+    settling = true;
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => (settling = false), settle.ms);
+  }
+  function swallowWhileSettling(e: Event) {
+    if (!settling) return;
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
   // The server said "asleep" (401 session_asleep) while this tablet's clock
   // said awake: believe the server until lastActivityAt moves (a Wake). The
   // value is lastActivityAt then (0 if the doc hadn't arrived).
@@ -66,12 +94,13 @@
     <p class="sub">A Leader can wake it from their phone.</p>
   </div>
 {/if}
-<div class="flow" hidden={sleeping}>
+<div class="flow" hidden={sleeping} onclickcapture={swallowWhileSettling}>
   <KioskNameList
     {api}
     {live}
     {kiosk}
     {onExpired}
+    {onScreen}
     onAsleep={() => (serverSaysAsleepFrom = lastActivity?.getTime() ?? 0)}
   />
 </div>

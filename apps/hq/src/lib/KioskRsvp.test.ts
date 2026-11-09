@@ -2,7 +2,8 @@ import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { Timestamp } from "firebase/firestore";
 import { tick } from "svelte";
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { settle } from "./KioskSession.svelte";
 import Kiosk from "./Kiosk.svelte";
 import { ApiError } from "./api";
 import type { Event, Meeting, RSVP, RSVPAnswer } from "./contract.gen";
@@ -95,6 +96,11 @@ async function checkInRowan() {
 const click = (name: string | RegExp) =>
   userEvent.click(screen.getByRole("button", { name }));
 
+// The tap guard is covered in KioskGuard.test.ts; these tests tap at once.
+beforeEach(() => {
+  settle.ms = 0;
+});
+
 describe("Kiosk RSVP cards", () => {
   test("after a check-in, asks one card per pending Event, soonest first, skipping cancelled and begun Events", async () => {
     setup();
@@ -174,8 +180,30 @@ describe("Kiosk RSVP cards", () => {
 
     expect(kioskSetRsvp).not.toHaveBeenCalled();
     expect(
-      await screen.findByRole("heading", { name: "Your answers" }),
+      await screen.findByRole("heading", { name: "Rowan's answers" }),
     ).toBeInTheDocument();
+  });
+
+  test("each card shows a quiet 'n of N' for this Scout's queue", async () => {
+    setup();
+    await checkInRowan();
+
+    expect(await screen.findByText("1 of 2")).toBeInTheDocument();
+    await click("Not sure"); // Fall: last chance
+    expect(await screen.findByText("2 of 2")).toBeInTheDocument();
+  });
+
+  test("the summary says the Scout is checked in; Change cards show no counter", async () => {
+    setup({}, events, [
+      saved("fall", "s2", "notGoing"),
+      saved("winter", "s2", "going"),
+    ]);
+    await checkInRowan();
+
+    await screen.findByRole("heading", { name: "Rowan's answers" });
+    expect(screen.getByText("You're checked in")).toBeInTheDocument();
+    await click("Change Winter Campout");
+    expect(screen.queryByText(/\d of \d/)).toBeNull();
   });
 
   test("Events already answered are not asked again", async () => {
@@ -204,7 +232,7 @@ describe("Kiosk RSVP cards", () => {
     await checkInRowan();
 
     expect(
-      await screen.findByRole("heading", { name: "Your answers" }),
+      await screen.findByRole("heading", { name: "Rowan's answers" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Pass the tablet to Avery" }),
@@ -268,7 +296,7 @@ describe("Kiosk RSVP summary", () => {
     await checkInRowan();
     await click("Going"); // Fall
     await click("Ask me next week"); // Winter
-    await screen.findByRole("heading", { name: "Your answers" });
+    await screen.findByRole("heading", { name: "Rowan's answers" });
     return ctx;
   }
 
@@ -301,7 +329,7 @@ describe("Kiosk RSVP summary", () => {
       answer: "notGoing",
     });
     expect(
-      await screen.findByRole("heading", { name: "Your answers" }),
+      await screen.findByRole("heading", { name: "Rowan's answers" }),
     ).toBeInTheDocument();
     expect(rows()[1]).toBe(
       "Winter Campout Fri 12/11 – Sun 12/13 Not going Change",
@@ -355,7 +383,9 @@ describe("Kiosk reload resumes from the Meeting doc (story 22)", () => {
     expect(
       await screen.findByRole("heading", { name: "Pass the tablet to Avery" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Your answers" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Rowan's answers" }),
+    ).toBeNull();
   });
 
   test("a Leader undid the last check-in: no RSVP stage, the Handoff continues after them", async () => {
@@ -374,5 +404,35 @@ describe("Kiosk reload resumes from the Meeting doc (story 22)", () => {
     expect(
       screen.getByRole("heading", { name: "Who's first?" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Kiosk RSVP tap guard", () => {
+  test("a double tap on an answer doesn't also answer the next card", async () => {
+    const { kioskSetRsvp } = setup();
+    await checkInRowan();
+    await screen.findByRole("heading", { name: "Fall Campout" });
+    settle.ms = 400;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      screen.getByRole("button", { name: "Going" }).click();
+      await vi.advanceTimersByTimeAsync(0);
+      await tick();
+      expect(
+        screen.getByRole("heading", { name: "Winter Campout" }),
+      ).toBeInTheDocument();
+      // The second tap of the double tap lands on the next card's Going.
+      screen.getByRole("button", { name: "Going" }).click();
+      await tick();
+      expect(kioskSetRsvp).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(400);
+      screen.getByRole("button", { name: "Going" }).click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(kioskSetRsvp).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+      settle.ms = 0;
+    }
   });
 });

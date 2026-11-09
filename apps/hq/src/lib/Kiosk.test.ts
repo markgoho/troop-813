@@ -1,7 +1,8 @@
 import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { tick } from "svelte";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { settle } from "./KioskSession.svelte";
 import Kiosk from "./Kiosk.svelte";
 import { ApiError } from "./api";
 import type { Me } from "./contract.gen";
@@ -50,6 +51,11 @@ function setup(
 }
 
 const asAdmin = async (): Promise<Me> => ({ uid: "u-admin", role: "admin" });
+
+// The tap guard is covered in KioskGuard.test.ts; these tests tap at once.
+beforeEach(() => {
+  settle.ms = 0;
+});
 
 describe("Kiosk unlock", () => {
   test("signed out: offers the Admin's Google sign-in", async () => {

@@ -43,7 +43,7 @@ colors:
 typography:
   display:
     fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
-    fontSize: "clamp(3rem, min(18cqi, 22vh, 11rem, calc(190cqi / var(--len, 8))), 11rem)"
+    fontSize: "clamp(3rem, min(24cqi, 28vh, 14rem, calc(190cqi / var(--len, 8))), 14rem)"
     fontWeight: 700
     lineHeight: 0.95
     letterSpacing: "0.01em"
@@ -93,6 +93,22 @@ typography:
   shell:
     fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
     fontSize: "1.0625rem"
+    fontWeight: 600
+    letterSpacing: "0.06em"
+  headline-event:
+    fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
+    fontSize: "3.5rem"
+    fontWeight: 700
+    lineHeight: 1.05
+    letterSpacing: "0.01em"
+  kiosk-body:
+    fontFamily: "Atkinson Hyperlegible, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "1.25rem"
+    fontWeight: 400
+    lineHeight: 1.45
+  kiosk-shell:
+    fontFamily: "Barlow Condensed, Arial Narrow, system-ui, sans-serif"
+    fontSize: "1.125rem"
     fontWeight: 600
     letterSpacing: "0.06em"
 rounded:
@@ -261,13 +277,13 @@ One deep troop burgundy against warm-neutral greys with a faint rose cast, plus 
 
 ### Hierarchy
 
-- **Display** (700, `clamp()` up to 11rem, 0.95): the Kiosk Handoff's hero name only. Sized from the stage's width (`cqi`) and the name's length (`--len`) so a long name stays on one line.
+- **Display** (700, `clamp()` up to 14rem, 0.95): the Kiosk Handoff's hero name only. Sized from the stage's width (`cqi`) and the name's length (`--len`) so a long name stays on one line.
 - **Headline** (700, 3rem, 1.05): Kiosk screen titles (3.5rem for the Event name on an RSVP screen).
 - **Stat** (700, 2.5 to 2.75rem, 1 to 1.1): Leader headline counts ("N checked in", burgundy, beside a muted "N not yet") and big stat numbers.
 - **Title** (700, 2.25rem, 1.05): Leader page titles.
 - **Section** (700, 1.375rem): Leader section headings.
 - **Prompt** (Atkinson 700, 1.75rem): the Kiosk's one question per screen ("Are you …?", the RSVP ask).
-- **Body** (400, 1rem, 1.45): Leader text. The Kiosk raises its base to 1.25rem, and its sub-lines and status text to 1.375rem.
+- **Body** (400, 1rem, 1.45): Leader text. The Kiosk raises its base to 1.25rem, and its sub-lines, status text, buttons, name-list tiles and the Handoff's "Pass the tablet to" lead to 1.375rem.
 - **Meta** (400, 0.875rem, muted): times, methods, emails, reasons and notes under a row's name.
 - **Label** (Atkinson 700, 0.75rem, 0.06em, uppercase): status pills only.
 - **Shell** (Barlow Condensed 600, 1.0625rem Leader / 1.125rem Kiosk, 0.06em, uppercase, muted): the shell bar's troop name ("Troop 813 HQ", "Troop 813 · Meeting").
@@ -354,11 +370,11 @@ Thin line icons from Phosphor (`phosphor-svelte` 3.1.1), weight `thin` (`duotone
 
 ### Hero Name (signature, Kiosk)
 
-The Handoff shows a small muted "Pass the tablet to" lead in body type, then the Scout's name in Display type in `--accent`, kept on one line, then the prompt and the buttons. When the name changes it rises 0.12em into place from 60% opacity over 420ms on `--ease` (only when motion is allowed); it never fades in from nothing.
+The Handoff shows a small "Pass the tablet to" lead in body type and full ink, then the Scout's name in Display type in `--accent`, kept on one line, then the prompt and the buttons. When the name changes it rises 0.12em into place from 60% opacity over 420ms on `--ease` (only when motion is allowed); it never fades in from nothing.
 
 ### Name List (Kiosk)
 
-A grid of outlined name buttons (4rem tall, 1.5rem text, left-aligned). A checked-in name drops its outline and background, goes muted and regular weight, and gains a drawn green check mark (a masked SVG, with a hidden "✓" in the text for screen readers), so checked-in state never relies on colour alone.
+A grid of outlined name buttons (4rem tall, 1.375rem text, left-aligned). A checked-in name keeps a quiet hairline outline on the ground colour so the grid holds its shape, goes muted and regular weight, and gains a drawn green check mark (a masked SVG, with a hidden "✓" in the text for screen readers), so checked-in state never relies on colour alone. After "No, I'm someone else", the tile of the Scout the Handoff named gets a burgundy outline (state only).
 
 ### Segmented RSVP Switch (signature, Leader)
 

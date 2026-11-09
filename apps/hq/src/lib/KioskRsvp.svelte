@@ -12,6 +12,7 @@
   // summary too: it only brings the stage back while cards are pending.
   // The cards are fixed when the data first loads, so answering one doesn't
   // reshuffle the rest.
+  import Check from "phosphor-svelte/lib/Check";
   import { ApiError, type Api } from "./api";
   import type { RSVPAnswer } from "./contract.gen";
   import { dateRange } from "./dates";
@@ -33,6 +34,7 @@
     onDone,
     onExpired,
     onAsleep,
+    onScreen,
   }: {
     api: Api;
     live: Live;
@@ -46,6 +48,8 @@
     onDone: () => void;
     /** The server says the session is over (22:00 or replaced). */
     onExpired: () => void;
+    /** Which card is showing (the Kiosk's tap guard keys off changes). */
+    onScreen?: (screen: string) => void;
     /** The server says the session is asleep: the parent shows the asleep screen. */
     onAsleep: () => void;
   } = $props();
@@ -92,6 +96,13 @@
         : null,
   );
 
+  // Each card and the summary is its own screen for the tap guard: answer
+  // buttons stay put between cards, so a double tap would answer the next one.
+  $effect(() => {
+    if (queue !== null)
+      onScreen?.(`rsvp:${scout.id}:${current?.id ?? "summary"}`);
+  });
+
   function answerOf(eventId: string): RSVPAnswer | null {
     return (
       sent[eventId] ??
@@ -134,85 +145,123 @@
   }
 </script>
 
-{#if failed}
-  <p role="alert" class="alert">Couldn't load the Events.</p>
-  <button type="button" class="primary" onclick={onDone}>
-    Done, pass the tablet on
-  </button>
-{:else if !loaded || queue === null}
-  <p class="status">Loading…</p>
-{:else if current}
-  {@const event = current}
-  <div class="event">
-    <h1>{event.name}</h1>
-    <p class="when">
-      {dateRange(event.startDate, event.endDate)}{#if event.location}<span
-          class="where">{event.location}</span
-        >{/if}
-    </p>
-  </div>
-  {#if changing === null && isLastChance(event.startDate, meetingId)}
-    <p class="last-chance">
-      This is the last chance: {event.name} is this coming weekend ({dateRange(
-        event.startDate,
-        event.endDate,
-      )})
-    </p>
-  {/if}
-  <p class="ask">{scout.label}, are you going?</p>
-  <div class="choices">
-    <button
-      type="button"
-      class="yes"
-      disabled={saving}
-      onclick={() => void answer(event.id, "going")}
-    >
-      Going
+<div class="rsvp">
+  {#if failed}
+    <p role="alert" class="alert">Couldn't load the Events.</p>
+    <button type="button" class="primary" onclick={onDone}>
+      Done, pass the tablet on
     </button>
-    <button
-      type="button"
-      disabled={saving}
-      onclick={() => void answer(event.id, "notGoing")}
-    >
-      Not going
-    </button>
-    {#if changing !== null}
-      <button type="button" disabled={saving} onclick={advance}>Back</button>
-    {:else}
-      <button type="button" disabled={saving} onclick={advance}>
-        {isLastChance(event.startDate, meetingId)
-          ? "Not sure"
-          : "Ask me next week"}
+  {:else if !loaded || queue === null}
+    <p class="status">Loading…</p>
+  {:else if current}
+    {@const event = current}
+    <div class="head">
+      <div class="event">
+        <h1>{event.name}</h1>
+        <p class="when">
+          {dateRange(event.startDate, event.endDate)}{#if event.location}<span
+              class="where">{event.location}</span
+            >{/if}
+        </p>
+      </div>
+      {#if changing === null && isLastChance(event.startDate, meetingId)}
+        <p class="last-chance">
+          This is the last chance: {event.name} is this coming weekend ({dateRange(
+            event.startDate,
+            event.endDate,
+          )})
+        </p>
+      {/if}
+    </div>
+    <p class="ask">{scout.label}, are you going?</p>
+    <div class="choices">
+      <button
+        type="button"
+        class="yes"
+        disabled={saving}
+        onclick={() => void answer(event.id, "going")}
+      >
+        Going
       </button>
-    {/if}
-  </div>
-  {#if message}<p role="alert" class="alert">{message}</p>{/if}
-{:else}
-  <h1>Your answers</h1>
-  <ul aria-label="Upcoming Events" class="summary">
-    {#each upcoming as event (event.id)}
-      <li>
-        <strong>{event.name}</strong>
-        <span>{dateRange(event.startDate, event.endDate)}</span>
-        <span class="answer {answerOf(event.id) ?? 'none'}"
-          >{answerText(answerOf(event.id))}</span
-        >
-        <button
-          type="button"
-          aria-label="Change {event.name}"
-          onclick={() => (changing = event.id)}
-        >
-          Change
+      <button
+        type="button"
+        disabled={saving}
+        onclick={() => void answer(event.id, "notGoing")}
+      >
+        Not going
+      </button>
+      {#if changing !== null}
+        <button type="button" disabled={saving} onclick={advance}>Back</button>
+      {:else}
+        <button type="button" disabled={saving} onclick={advance}>
+          {isLastChance(event.startDate, meetingId)
+            ? "Not sure"
+            : "Ask me next week"}
         </button>
-      </li>
-    {/each}
-  </ul>
-  <button type="button" class="primary" onclick={onDone}>
-    Done, pass the tablet on
-  </button>
-{/if}
+      {/if}
+    </div>
+    {#if message}<p role="alert" class="alert">{message}</p>{/if}
+    {#if changing === null && queue.length > 0}
+      <p class="progress">{index + 1} of {queue.length}</p>
+    {/if}
+  {:else}
+    <h1>{scout.label}'s answers</h1>
+    <p class="checked-in">
+      <Check size="1.5rem" aria-hidden="true" />You're checked in
+    </p>
+    <ul aria-label="Upcoming Events" class="summary">
+      {#each upcoming as event (event.id)}
+        <li>
+          <strong>{event.name}</strong>
+          <span>{dateRange(event.startDate, event.endDate)}</span>
+          <span class="answer {answerOf(event.id) ?? 'none'}"
+            >{answerText(answerOf(event.id))}</span
+          >
+          <button
+            type="button"
+            aria-label="Change {event.name}"
+            onclick={() => (changing = event.id)}
+          >
+            Change
+          </button>
+        </li>
+      {/each}
+    </ul>
+    <button type="button" class="primary" onclick={onDone}>
+      Done, pass the tablet on
+    </button>
+  {/if}
+</div>
 
 <style>
+  /* Top-aligned, not centred like the other Kiosk screens: the question and
+     answer buttons must sit in the same place on every card. The head slot
+     is sized for the tallest card (Event, date, last-chance reminder), so a
+     card without the reminder doesn't pull the buttons up. */
+  .rsvp {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-top: 1.5rem;
+  }
+  .head {
+    display: grid;
+    align-content: end; /* spare room sits above the title, not between it and the question */
+    gap: 1.5rem;
+    min-height: 11.5rem;
+  }
+  .progress {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .checked-in {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ok);
+    font-weight: 700;
+  }
   .event {
     display: grid;
     gap: 0.5rem;
@@ -262,19 +311,16 @@
     grid-column: 1;
     grid-row: 2;
     color: var(--muted);
-    font-size: 1.125rem;
   }
   .summary li button {
     grid-row: 1 / span 2;
     min-height: 3.5rem;
-    font-size: 1.25rem;
   }
   .answer {
     grid-row: 1 / span 2;
     padding: 0.25rem 0.875rem;
     border-radius: 999px;
     font-weight: 700;
-    font-size: 1.125rem;
     white-space: nowrap;
   }
   .answer.going {

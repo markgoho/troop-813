@@ -48,6 +48,7 @@ func Routes(d Deps) *router.Router {
 	acc := access.Handlers{FS: d.Firestore}
 	r.Gated("GET /api/users", []router.Accept{router.Admin}, acc.List)
 	r.Gated("PUT /api/users/{uid}/role", []router.Accept{router.Admin}, acc.SetRole)
+	r.Gated("POST /api/users/{uid}/dismiss", []router.Accept{router.Admin}, acc.Dismiss)
 	ev := events.Handlers{FS: d.Firestore}
 	leader := []router.Accept{router.Leader}
 	r.Gated("POST /api/events", leader, ev.Create)

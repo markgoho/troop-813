@@ -151,3 +151,84 @@ func TestSetRoleRefusals(t *testing.T) {
 		t.Error("u-nobody doc created")
 	}
 }
+
+func dismiss(t *testing.T, env *testenv.Env, token, uid string) (int, contract.ErrorCode) {
+	t.Helper()
+	resp := env.Request(t, http.MethodPost, "/api/users/"+uid+"/dismiss", token, nil)
+	defer func() { _ = resp.Body.Close() }()
+	var e contract.ErrorBody
+	if resp.StatusCode != http.StatusNoContent {
+		_ = json.NewDecoder(resp.Body).Decode(&e)
+	}
+	return resp.StatusCode, e.Code
+}
+
+func listed(l contract.UserList, uid string) bool {
+	for _, u := range l.Users {
+		if u.UID == uid {
+			return true
+		}
+	}
+	return false
+}
+
+func TestDismissHidesAWaitingRequestAcrossSignIns(t *testing.T) {
+	t.Parallel()
+	env := testenv.Setup(t)
+	admin := env.RoleToken(t, "u-admin", contract.RoleAdmin)
+	quinn := env.RoleToken(t, "u-quinn", contract.RoleParent)
+
+	if s, code := dismiss(t, env, admin, "u-quinn"); s != http.StatusNoContent {
+		t.Fatalf("dismiss = %d %q, want 204", s, code)
+	}
+	// Signing in again keeps the doc (and the dismissal) and stays a Parent.
+	if r := roleOf(t, env, quinn); r != contract.RoleParent {
+		t.Fatalf("role after dismiss: %q", r)
+	}
+	if _, l := listUsers(t, env, admin); listed(l, "u-quinn") {
+		t.Fatalf("dismissed request still listed: %+v", l)
+	}
+	// Promoting anyway (e.g. straight through the API) clears it, so a later
+	// demotion lists them again.
+	if s, _ := setRole(t, env, admin, "u-quinn", contract.RoleLeader); s != http.StatusNoContent {
+		t.Fatalf("promote: %d", s)
+	}
+	if s, _ := setRole(t, env, admin, "u-quinn", contract.RoleParent); s != http.StatusNoContent {
+		t.Fatalf("demote: %d", s)
+	}
+	if _, l := listUsers(t, env, admin); !listed(l, "u-quinn") {
+		t.Fatalf("demoted Leader not listed: %+v", l)
+	}
+}
+
+func TestDismissRefusals(t *testing.T) {
+	t.Parallel()
+	env := testenv.Setup(t)
+	admin := env.RoleToken(t, "u-admin", contract.RoleAdmin)
+	leader := env.RoleToken(t, "u-leader", contract.RoleLeader)
+	env.SetRole(t, "u-parent", contract.RoleParent)
+	cases := []struct {
+		name, token, uid string
+		status           int
+		code             contract.ErrorCode
+	}{
+		{"a Leader", admin, "u-leader", http.StatusConflict, contract.ErrorCodeNotWaiting},
+		{"own row", admin, "u-admin", http.StatusConflict, contract.ErrorCodeNotWaiting},
+		{"no such user", admin, "u-nobody", http.StatusNotFound, contract.ErrorCodeNotFound},
+		{"not the Admin", leader, "u-parent", http.StatusForbidden, contract.ErrorCodeForbidden},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s, code := dismiss(t, env, c.token, c.uid)
+			if s != c.status || code != c.code {
+				t.Fatalf("= %d %q, want %d %q", s, code, c.status, c.code)
+			}
+		})
+	}
+	if _, l := listUsers(t, env, admin); !listed(l, "u-parent") || !listed(l, "u-leader") {
+		t.Fatalf("refused dismissals hid someone: %+v", l)
+	}
+	if _, ok := env.User(t, "u-nobody"); ok {
+		t.Error("u-nobody doc created")
+	}
+}

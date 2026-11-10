@@ -34,6 +34,7 @@ function fakeApi(): Api {
   return baseFakeApi({
     users: async () => ({ users: structuredClone(users) }),
     setRole: vi.fn(async () => {}),
+    dismissUser: vi.fn(async () => {}),
   });
 }
 
@@ -109,5 +110,44 @@ describe("AccessList", () => {
     expect(own).toHaveAccessibleDescription("You can't change your own access");
     await userEvent.click(own);
     expect(api.setRole).not.toHaveBeenCalled();
+  });
+
+  test("Dismiss asks first, then hides a Waiting request", async () => {
+    const api = fakeApi();
+    render(AccessList, { api, myUid: "u-admin" });
+    await screen.findByText("Blake Fictional");
+    expect(
+      within(row("Avery Fictional")).queryByRole("button", {
+        name: /Dismiss/,
+      }),
+    ).not.toBeInTheDocument();
+
+    const dismiss = within(row("Blake Fictional")).getByRole("button", {
+      name: "Dismiss request: Blake Fictional",
+    });
+    await userEvent.click(dismiss);
+    const keep = within(row("Blake Fictional")).getByRole("button", {
+      name: "Keep",
+    });
+    expect(keep).toHaveFocus();
+    await userEvent.click(keep);
+    expect(api.dismissUser).not.toHaveBeenCalled();
+    expect(
+      within(row("Blake Fictional")).getByRole("button", {
+        name: "Dismiss request: Blake Fictional",
+      }),
+    ).toHaveFocus();
+
+    await userEvent.click(
+      within(row("Blake Fictional")).getByRole("button", {
+        name: "Dismiss request: Blake Fictional",
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Yes, dismiss" }));
+    expect(api.dismissUser).toHaveBeenCalledWith("u-blake");
+    expect(
+      await screen.findByText("Blake Fictional's request dismissed"),
+    ).toHaveClass("sr-only");
+    expect(screen.queryByText("Blake Fictional")).not.toBeInTheDocument();
   });
 });

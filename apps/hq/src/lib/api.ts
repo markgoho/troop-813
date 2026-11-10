@@ -35,6 +35,8 @@ export interface Api {
   users(): Promise<UserList>;
   /** Admin only: Parent↔Leader. Applies on that person's next request. */
   setRole(uid: string, role: "parent" | "leader"): Promise<void>;
+  /** Admin only: hide a Parent's Waiting request. 409 not_waiting for a Leader or Admin. */
+  dismissUser(uid: string): Promise<void>;
   /** Adds an Event (not cancelled); resolves to its id. */
   createEvent(input: EventInput): Promise<EventCreated>;
   /** Replaces an Event's name, dates and location; keeps cancelled. */
@@ -170,6 +172,14 @@ export function httpApi(
         "PUT",
         `/api/users/${encodeURIComponent(uid)}/role`,
         body,
+      );
+    },
+    dismissUser: async (uid) => {
+      await send(
+        fetchFn,
+        token,
+        "POST",
+        `/api/users/${encodeURIComponent(uid)}/dismiss`,
       );
     },
     createEvent: async (input) => {

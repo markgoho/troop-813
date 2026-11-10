@@ -28,6 +28,7 @@ const (
 	ErrorCodeBadRequest      ErrorCode = "bad_request"     // malformed or disallowed request body (400)
 	ErrorCodeNotFound        ErrorCode = "not_found"       // the thing named in the path doesn't exist (404)
 	ErrorCodeFixedRole       ErrorCode = "fixed_role"      // an Admin's role can't be changed from HQ (409)
+	ErrorCodeNotWaiting      ErrorCode = "not_waiting"     // only a Parent's (Waiting) request can be dismissed; a Leader is demoted instead (409)
 	ErrorCodeInUse           ErrorCode = "in_use"          // can't delete: other records point at it (409)
 	ErrorCodeDuplicateScout  ErrorCode = "duplicate_scout" // another Scout has this first + last name (409); inactiveMatchId when that Scout is inactive
 	ErrorCodeMeetingExists   ErrorCode = "meeting_exists"  // a Meeting already exists for that date (409)
@@ -62,6 +63,9 @@ type User struct {
 	DisplayName string    `json:"displayName" firestore:"displayName"`
 	Role        Role      `json:"role" firestore:"role"`
 	CreatedAt   time.Time `json:"createdAt" firestore:"createdAt"`
+	// Dismissed hides a Parent's Waiting request from the Access tab. It stays
+	// set across later sign-ins; making them a Leader (or demoting) clears it.
+	Dismissed bool `json:"dismissed,omitempty" firestore:"dismissed,omitempty"`
 }
 
 // Me is the body of GET /api/me: who the caller is, so HQ can route them.
@@ -139,7 +143,7 @@ type UserSummary struct {
 }
 
 // UserList is the body of GET /api/users (Admin only): everyone who has
-// signed in, newest first.
+// signed in, newest first, minus dismissed Waiting requests.
 type UserList struct {
 	Users []UserSummary `json:"users"`
 }
